@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import {
-  HiShoppingCart, HiMenu, HiX, HiUser, HiSearch, HiLogout,
+  HiShoppingCart, HiMenu, HiX, HiSearch, HiLogout,
   HiChartBar, HiStar
 } from 'react-icons/hi';
 import UserAvatar from './UserAvatar';
@@ -142,7 +142,7 @@ export default function Navbar() {
                   </div>
                 </div>
               ) : (
-                <Link to="/login" className="hidden sm:inline-block btn-primary text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2 whitespace-nowrap">Sign In</Link>
+                <Link to="/login" className="btn-primary text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2 whitespace-nowrap">Sign In</Link>
               )}
 
               {/* Mobile Hamburger */}
@@ -171,26 +171,67 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Mobile Menu */}
-        {open && (
-          <div className="md:hidden border-t border-dark-600 bg-dark-900/98 px-4 py-4 animate-slide-up">
+        {/* Mobile Slide-out Drawer Overlay */}
+        <div
+          className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+            open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={() => setOpen(false)}
+        />
+
+        {/* Mobile Slide-out Drawer */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[80vw] h-screen bg-dark-900 border-r border-dark-600 flex flex-col transform transition-transform duration-300 ease-in-out md:hidden ${
+            open ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          {/* Header of Drawer */}
+          <div className="flex items-center justify-between p-4 border-b border-dark-600 bg-dark-950">
+            <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
+              <img
+                src="https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336535/style-heaven-assets/logo.png"
+                alt="Style Heaven"
+                className="h-8 w-8 object-contain rounded-full ring-2 ring-gold-500/80"
+              />
+              <div className="flex flex-col leading-tight">
+                <span className="font-serif text-sm font-bold gold-text whitespace-nowrap">Style Heaven</span>
+                <span className="text-[8px] text-gray-400 tracking-widest uppercase whitespace-nowrap">Mens Wear</span>
+              </div>
+            </Link>
+            <button
+              onClick={() => setOpen(false)}
+              className="btn-ghost p-1 rounded-lg text-gray-400 hover:text-white"
+              aria-label="Close menu"
+            >
+              <HiX className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Links of Drawer */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
             {navLinks.map((l) => (
               <Link
                 key={l.label}
                 to={l.href}
                 onClick={() => setOpen(false)}
-                className="block py-3 text-gray-300 hover:text-gold-400 border-b border-dark-700 text-sm font-medium"
+                className={`block py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
+                  isActive(l.href)
+                    ? 'bg-dark-800 text-gold-400'
+                    : 'text-gray-300 hover:text-gold-400 hover:bg-dark-800/40'
+                }`}
               >
                 {l.label}
               </Link>
             ))}
+          </div>
 
-            {/* Mobile User Profile Section */}
+          {/* User Profile Section in Drawer Footer */}
+          <div className="p-4 border-t border-dark-600 bg-dark-950">
             {user ? (
-              <div className="mt-4 pt-4 border-t border-dark-600 space-y-1">
+              <div className="space-y-1">
                 <div className="px-3 py-2 flex items-center gap-3 mb-2 bg-dark-800/50 rounded-xl">
                   <UserAvatar name={user.name} size={36} ring />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-white font-bold text-sm truncate">{user.name}</p>
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest">{isAdmin ? 'Admin' : 'Member'}</p>
                   </div>
@@ -199,14 +240,14 @@ export default function Navbar() {
                 <Link
                   to="/orders"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-gray-300 hover:text-white transition-all"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-dark-800 text-sm text-gray-300 hover:text-white transition-all"
                 >
                   <HiShoppingCart className="w-4 h-4 text-gray-450" /> My Orders
                 </Link>
                 <Link
                   to="/rewards"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-gold-400 hover:text-gold-300 transition-all"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-dark-800 text-sm text-gold-400 hover:text-gold-300 transition-all"
                 >
                   <HiStar className="w-4 h-4 text-gold-500" /> My Rewards
                 </Link>
@@ -215,7 +256,7 @@ export default function Navbar() {
                   <Link
                     to="/admin"
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-gold-400 transition-all"
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-dark-800 text-sm text-gold-400 transition-all"
                   >
                     <HiChartBar className="w-4 h-4 text-gold-500" /> Admin Panel
                   </Link>
@@ -225,13 +266,13 @@ export default function Navbar() {
                     setOpen(false);
                     logout();
                   }}
-                  className="flex items-center gap-2.5 w-full px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-red-400 hover:text-red-300 text-left transition-all"
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl hover:bg-dark-800 text-sm text-red-400 hover:text-red-300 text-left transition-all"
                 >
                   <HiLogout className="w-4 h-4 text-red-400" /> Logout
                 </button>
               </div>
             ) : (
-              <div className="mt-4 pt-4 border-t border-dark-600">
+              <div>
                 <Link
                   to="/login"
                   onClick={() => setOpen(false)}
@@ -242,7 +283,7 @@ export default function Navbar() {
               </div>
             )}
           </div>
-        )}
+        </aside>
       </nav>
       {/* Spacer */}
       <div className="h-16 md:h-20" />
