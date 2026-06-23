@@ -2,6 +2,7 @@ services:
   # Backend API Web Service
   - type: web
     name: style-heaven-backend
+    plan: free
     runtime: node
     rootDir: backend
     buildCommand: npm install
