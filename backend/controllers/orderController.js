@@ -3,18 +3,21 @@ const path = require('path');
 const fs = require('fs');
 const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification } = require('../utils/whatsapp');
 
-const getAdminWhatsappNumber = () => {
+const getSiteSettings = () => {
   const settingsFile = path.join(__dirname, '../data/site_settings.json');
-  const defaultNumber = '917676558335';
+  const defaults = {
+    whatsappNumber: '917676558335',
+    orderNotifications: true
+  };
   try {
     if (fs.existsSync(settingsFile)) {
       const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
-      return settings.whatsappNumber || defaultNumber;
+      return { ...defaults, ...settings };
     }
   } catch (err) {
-    console.warn('Could not read whatsappNumber from settings:', err.message);
+    console.warn('Could not read site settings:', err.message);
   }
-  return defaultNumber;
+  return defaults;
 };
 
 exports.createOrder = async (req, res) => {
@@ -185,24 +188,29 @@ exports.createOrder = async (req, res) => {
         .eq('user_id', user_id);
     }
 
-    // 4. Send WhatsApp Notification to the Admin
+    // 4. Send WhatsApp Notification to the Admin (only if orderNotifications is enabled)
     try {
-      const { data: fullOrder } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          items:order_items (
-            quantity, price_at_time, size,
-            product:products (id, name, image_url, category)
-          )
-        `)
-        .eq('id', order.id)
-        .single();
+      const settings = getSiteSettings();
+      if (settings.orderNotifications) {
+        const { data: fullOrder } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            items:order_items (
+              quantity, price_at_time, size,
+              product:products (id, name, image_url, category)
+            )
+          `)
+          .eq('id', order.id)
+          .single();
 
-      if (fullOrder) {
-        const adminWhatsapp = getAdminWhatsappNumber();
-        const customerName = req.user?.name || 'Customer';
-        await sendOrderWhatsappNotification(adminWhatsapp, fullOrder, customerName);
+        if (fullOrder) {
+          const adminWhatsapp = settings.whatsappNumber;
+          const customerName = req.user?.name || 'Customer';
+          await sendOrderWhatsappNotification(adminWhatsapp, fullOrder, customerName);
+        }
+      } else {
+        console.log('Skipping WhatsApp order notification: orderNotifications is disabled in settings.');
       }
     } catch (wsErr) {
       console.error('Failed to trigger WhatsApp notification:', wsErr.message);
@@ -338,24 +346,29 @@ exports.cancelOrder = async (req, res) => {
         .eq('user_id', user_id);
     }
 
-    // 7. Send cancellation WhatsApp notification to the Admin
+    // 7. Send cancellation WhatsApp notification to the Admin (only if orderNotifications is enabled)
     try {
-      const { data: fullOrder } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          items:order_items (
-            quantity, price_at_time, size,
-            product:products (id, name, image_url, category)
-          )
-        `)
-        .eq('id', id)
-        .single();
+      const settings = getSiteSettings();
+      if (settings.orderNotifications) {
+        const { data: fullOrder } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            items:order_items (
+              quantity, price_at_time, size,
+              product:products (id, name, image_url, category)
+            )
+          `)
+          .eq('id', id)
+          .single();
 
-      if (fullOrder) {
-        const adminWhatsapp = getAdminWhatsappNumber();
-        const customerName = req.user?.name || 'Customer';
-        await sendOrderCancelWhatsappNotification(adminWhatsapp, fullOrder, customerName);
+        if (fullOrder) {
+          const adminWhatsapp = settings.whatsappNumber;
+          const customerName = req.user?.name || 'Customer';
+          await sendOrderCancelWhatsappNotification(adminWhatsapp, fullOrder, customerName);
+        }
+      } else {
+        console.log('Skipping WhatsApp cancellation notification: orderNotifications is disabled in settings.');
       }
     } catch (wsErr) {
       console.error('Failed to trigger WhatsApp cancellation notification:', wsErr.message);
