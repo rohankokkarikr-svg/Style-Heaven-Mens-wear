@@ -461,14 +461,14 @@ export default function Rewards() {
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 bg-dark-900 border border-dashed border-gold-500/50 rounded-xl px-5 py-3 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-900 border border-dashed border-gold-500/50 rounded-xl px-5 py-4 mb-6 text-center sm:text-left">
                   <div>
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Your Coupon Code</p>
                     <span className="text-xl font-mono font-bold text-gold-400 tracking-widest">{rewardCode}</span>
                   </div>
                   <button
                     onClick={handleCopyCode}
-                    className="flex items-center gap-2 text-xs font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500 px-3 py-2 rounded-lg bg-gold-500/5 hover:bg-gold-500/10 transition-all"
+                    className="flex items-center justify-center gap-2 text-xs font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500 px-3 py-2 rounded-lg bg-gold-500/5 hover:bg-gold-500/10 transition-all w-full sm:w-auto"
                   >
                     <HiClipboardCopy className="w-4 h-4" /> Copy Code
                   </button>

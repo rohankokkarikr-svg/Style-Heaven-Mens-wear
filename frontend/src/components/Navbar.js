@@ -56,18 +56,18 @@ export default function Navbar() {
           scrolled ? 'bg-dark-900/95 backdrop-blur-md shadow-lg border-b border-dark-600' : 'bg-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2 md:gap-3">
               <img
                 src="https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336535/style-heaven-assets/logo.png"
                 alt="Style Heaven"
-                className="h-11 w-11 md:h-12 md:w-12 object-contain rounded-full ring-2 ring-gold-500/80 shadow-gold"
+                className="h-9 w-9 md:h-12 md:w-12 object-contain rounded-full ring-2 ring-gold-500/80 shadow-gold"
               />
               <div className="flex flex-col leading-tight">
-                <span className="font-serif text-lg md:text-xl font-bold gold-text">Style Heaven</span>
-                <span className="text-[10px] md:text-xs text-gray-400 tracking-widest uppercase">Mens Wear</span>
+                <span className="font-serif text-base md:text-xl font-bold gold-text whitespace-nowrap">Style Heaven</span>
+                <span className="text-[9px] md:text-xs text-gray-400 tracking-widest uppercase whitespace-nowrap">Mens Wear</span>
               </div>
             </Link>
 
@@ -85,18 +85,18 @@ export default function Navbar() {
             </div>
 
             {/* Right Icons */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 md:gap-3">
               {/* Search */}
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="btn-ghost p-2 rounded-lg"
+                className="btn-ghost p-1.5 md:p-2 rounded-lg"
                 aria-label="Search"
               >
                 <HiSearch className="w-5 h-5" />
               </button>
 
               {/* Cart */}
-              <Link to="/cart" className="btn-ghost p-2 rounded-lg relative">
+              <Link to="/cart" className="btn-ghost p-1.5 md:p-2 rounded-lg relative">
                 <HiShoppingCart className="w-5 h-5" />
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-gold-500 text-dark-900 text-xs
@@ -142,11 +142,11 @@ export default function Navbar() {
                   </div>
                 </div>
               ) : (
-                <Link to="/login" className="btn-primary text-sm px-4 py-2">Sign In</Link>
+                <Link to="/login" className="btn-primary text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2 whitespace-nowrap">Sign In</Link>
               )}
 
               {/* Mobile Hamburger */}
-              <button className="md:hidden btn-ghost p-2" onClick={() => setOpen(!open)}>
+              <button className="md:hidden btn-ghost p-1.5" onClick={() => setOpen(!open)}>
                 {open ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
               </button>
             </div>
