@@ -19,17 +19,21 @@ services:
         value: "149393542854794"
       - key: TWILIO_WHATSAPP_FROM
         value: "+14155238886"
-      # Sensitive variables that the user must input or sync
+      # Secure and sensitive variables with sync protection
       - key: JWT_SECRET
-        sync: true
+        generateValue: true
       - key: SUPABASE_SERVICE_KEY
-        sync: true
+        value: replace_with_supabase_service_role_key
+        sync: false
       - key: CLOUDINARY_API_SECRET
-        sync: true
+        value: replace_with_cloudinary_api_secret
+        sync: false
       - key: TWILIO_ACCOUNT_SID
-        sync: true
+        value: replace_with_twilio_account_sid
+        sync: false
       - key: TWILIO_AUTH_TOKEN
-        sync: true
+        value: replace_with_twilio_auth_token
+        sync: false
 
   # Frontend Static Site
   - type: web
@@ -45,9 +49,7 @@ services:
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmxuanN3bGVicHZhcG9sZmZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODAzMjQsImV4cCI6MjA5MzU1NjMyNH0.TyziKPzjkZzhZK68rNl9Zzj-21uVrIhFSIuKuQdHkHY
       - key: REACT_APP_LOCATIONIQ_API_KEY
         value: pk.f2bad577bd835e11c81ffd571d5c353b
-      # Dynamically reference backend URL
+      # Public URL of the backend web service (user overrides if backend name changes)
       - key: REACT_APP_API_URL
-        fromService:
-          type: web
-          name: style-heaven-backend
-          property: url
+        value: https://style-heaven-backend.onrender.com
+        sync: false
