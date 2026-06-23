@@ -51,7 +51,6 @@ const DEFAULT_SLIDES = [
 
 export default function HeroSettings() {
   const [slides, setSlides] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [editingSlide, setEditingSlide] = useState(null);
 
   useEffect(() => {

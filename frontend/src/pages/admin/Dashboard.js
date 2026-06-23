@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { dashboardAPI } from '../../services/api';
-import { 
-  HiCurrencyRupee, HiShoppingBag, HiCollection, HiTrendingUp, 
-  HiTrendingDown, HiStar, HiClock, HiCheckCircle, HiXCircle, HiTruck,
-  HiShoppingCart
+import {
+  HiCurrencyRupee, HiShoppingBag, HiCollection, HiTrendingUp,
+  HiTrendingDown, HiXCircle
 } from 'react-icons/hi';
 import { StatCardSkeleton } from '../../components/Skeleton';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line
+  BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import { Link } from 'react-router-dom';
 

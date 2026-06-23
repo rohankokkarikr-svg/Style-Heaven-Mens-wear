@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import {
-  HiShoppingCart, HiMenu, HiX, HiUser, HiSearch, HiLogout,
+  HiShoppingCart, HiMenu, HiX, HiSearch, HiLogout,
   HiChartBar, HiStar
 } from 'react-icons/hi';
 import UserAvatar from './UserAvatar';

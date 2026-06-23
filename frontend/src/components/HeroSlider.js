@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiArrowRight, HiChevronLeft, HiChevronRight } from 'react-icons/hi';
@@ -59,8 +59,6 @@ const textVariants = {
 export default function HeroSlider() {
   const [activeSlides, setActiveSlides] = useState(DEFAULT_SLIDES);
   const [current, setCurrent] = useState(0);
-  const [direction, setDirection] = useState(1);
-  const [isPaused, setIsPaused] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -99,37 +97,33 @@ export default function HeroSlider() {
     }
   }, []);
 
-  const startTimer = () => {
+  const startTimer = useCallback(() => {
     timerRef.current = setInterval(() => {
-      setDirection(1);
       setCurrent((prev) => (prev + 1) % activeSlides.length);
     }, 4500);
-  };
+  }, [activeSlides.length]);
 
   useEffect(() => {
     if (activeSlides.length > 0) {
       startTimer();
     }
     return () => clearInterval(timerRef.current);
-  }, [activeSlides]);
+  }, [activeSlides, startTimer]);
 
   const goTo = (index) => {
     clearInterval(timerRef.current);
-    setDirection(index > current ? 1 : -1);
     setCurrent(index);
     startTimer();
   };
 
   const prev = () => {
     clearInterval(timerRef.current);
-    setDirection(-1);
     setCurrent((c) => (c - 1 + activeSlides.length) % activeSlides.length);
     startTimer();
   };
 
   const next = () => {
     clearInterval(timerRef.current);
-    setDirection(1);
     setCurrent((c) => (c + 1) % activeSlides.length);
     startTimer();
   };
@@ -141,8 +135,6 @@ export default function HeroSlider() {
     <section
       className="relative w-full overflow-hidden bg-black"
       style={{ height: 'min(100vh, 820px)', minHeight: '560px' }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
     >
       {/* ── Slide Images with Zoom Effect ── */}
       <AnimatePresence mode="sync">

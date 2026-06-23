@@ -1,8 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { couponAPI } from '../services/api';
+
+const rewards = [
+  { label: '5% OFF', color: '#1a1a1a', textColor: '#D4AF37' },
+  { label: '10% OFF', color: '#D4AF37', textColor: '#1a1a1a' },
+  { label: '₹100 OFF', color: '#1a1a1a', textColor: '#D4AF37' },
+  { label: 'Free Delivery', color: '#D4AF37', textColor: '#1a1a1a' },
+  { label: '20% OFF', color: '#1a1a1a', textColor: '#D4AF37' },
+  { label: 'Better Luck', color: '#D4AF37', textColor: '#1a1a1a' },
+];
 
 const SpinWheelPopup = () => {
   const { user } = useAuth();
@@ -13,15 +22,6 @@ const SpinWheelPopup = () => {
   const [reward, setReward] = useState(null);
   const [coupon, setCoupon] = useState(null);
   const canvasRef = useRef(null);
-
-  const rewards = [
-    { label: '5% OFF', color: '#1a1a1a', textColor: '#D4AF37' },
-    { label: '10% OFF', color: '#D4AF37', textColor: '#1a1a1a' },
-    { label: '₹100 OFF', color: '#1a1a1a', textColor: '#D4AF37' },
-    { label: 'Free Delivery', color: '#D4AF37', textColor: '#1a1a1a' },
-    { label: '20% OFF', color: '#1a1a1a', textColor: '#D4AF37' },
-    { label: 'Better Luck', color: '#D4AF37', textColor: '#1a1a1a' },
-  ];
 
   useEffect(() => {
     // Show popup after 7 seconds if on Home page
@@ -35,13 +35,7 @@ const SpinWheelPopup = () => {
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
-  useEffect(() => {
-    if (isVisible && canvasRef.current) {
-      drawWheel(0);
-    }
-  }, [isVisible]);
-
-  const drawWheel = (angle) => {
+  const drawWheel = useCallback((angle) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -85,7 +79,13 @@ const SpinWheelPopup = () => {
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 3;
     ctx.stroke();
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isVisible && canvasRef.current) {
+      drawWheel(0);
+    }
+  }, [isVisible, drawWheel]);
 
   const handleSpin = async () => {
     if (!user) {
@@ -101,11 +101,10 @@ const SpinWheelPopup = () => {
       const response = await couponAPI.spin();
 
       const { reward: wonReward, coupon: wonCoupon } = response.data;
-      
+
       setIsSpinning(true);
-      
+
       // Animation logic
-      let currentAngle = 0;
       const spinDuration = 3000;
       const startTime = Date.now();
       const totalRotation = 10 * Math.PI + (rewards.findIndex(r => r.label === wonReward || (wonReward === 'Better Luck Next Time' && r.label === 'Better Luck')) * (2 * Math.PI / rewards.length));
@@ -127,7 +126,7 @@ const SpinWheelPopup = () => {
           if (wonCoupon) {
             toast.success(`Congratulations! You won ${wonReward}`);
           } else {
-            toast('Better luck next time! \ud83c\udfa9');
+            toast('Better luck next time! 🎩');
           }
         }
       };
@@ -150,7 +149,7 @@ const SpinWheelPopup = () => {
         <div className="absolute -top-12 -left-12 w-32 h-32 bg-[#D4AF37]/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-[#D4AF37]/10 rounded-full blur-3xl"></div>
 
-        <button 
+        <button
           onClick={() => setIsVisible(false)}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
         >
@@ -163,15 +162,15 @@ const SpinWheelPopup = () => {
           <>
             <h2 className="text-3xl font-bold text-white mb-2 font-serif">Spin & Win!</h2>
             <p className="text-gray-400 mb-8">Try your luck and win exclusive discount coupons for Style Heaven.</p>
-            
+
             <div className="relative inline-block mb-8">
               {/* Arrow Indicator */}
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-[#D4AF37]"></div>
-              
-              <canvas 
-                ref={canvasRef} 
-                width={300} 
-                height={300} 
+
+              <canvas
+                ref={canvasRef}
+                width={300}
+                height={300}
                 className="rounded-full shadow-[0_0_50px_rgba(212,175,55,0.2)]"
               ></canvas>
             </div>
@@ -180,14 +179,14 @@ const SpinWheelPopup = () => {
               onClick={handleSpin}
               disabled={isSpinning}
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 ${
-                isSpinning 
-                ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                isSpinning
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-black hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]'
               }`}
             >
               {isSpinning ? 'Spinning...' : 'Spin Now'}
             </button>
-            
+
             {!user && <p className="mt-4 text-xs text-[#D4AF37]/60">Login required to claim rewards</p>}
           </>
         ) : (
@@ -197,11 +196,11 @@ const SpinWheelPopup = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            
+
             <h2 className="text-3xl font-bold text-white mb-2 font-serif">
               {coupon ? 'Congratulations!' : 'Maybe Next Time!'}
             </h2>
-            
+
             {coupon ? (
               <>
                 <p className="text-gray-400 mb-6">You won <span className="text-[#D4AF37] font-bold">{reward}</span></p>

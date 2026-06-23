@@ -1,4 +1,4 @@
-import React, { Navigate } from 'react';
+import React from 'react';
 import { Navigate as NavRedirect } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
