@@ -1,0 +1,22 @@
+{
+  "name": "style-heaven-root",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend start"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "html-pdf-node": "^1.0.8",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "nodemailer": "^8.0.7",
+    "qrcode": "^1.5.4",
+    "razorpay": "^2.9.6",
+    "twilio": "^6.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

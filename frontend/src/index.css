@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base Resets ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-dark-900 text-gray-100 font-sans;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { @apply bg-dark-800; }
+::-webkit-scrollbar-thumb { @apply bg-gold-600 rounded-full; }
+
+/* ─── Component Layers ─── */
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-luxury text-dark-900 font-semibold rounded-lg
+           hover:shadow-gold-lg transition-all duration-300 hover:scale-105
+           active:scale-95 cursor-pointer;
+  }
+
+  .btn-outline {
+    @apply px-6 py-3 border border-gold-500 text-gold-400 font-semibold rounded-lg
+           hover:bg-gold-500 hover:text-dark-900 transition-all duration-300
+           cursor-pointer;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-gray-300 hover:text-gold-400 transition-colors duration-200 cursor-pointer;
+  }
+
+  .card {
+    @apply bg-dark-700 border border-dark-500 rounded-xl shadow-card
+           hover:border-gold-600 transition-all duration-300;
+  }
+
+  .input-field {
+    @apply w-full bg-dark-600 border border-dark-400 rounded-lg px-4 py-3
+           text-gray-100 placeholder-gray-500 focus:outline-none focus:border-gold-500
+           focus:ring-1 focus:ring-gold-500 transition-all duration-200;
+  }
+
+  .section-title {
+    @apply font-serif text-3xl md:text-4xl font-bold text-white;
+  }
+
+  .gold-text {
+    @apply text-transparent bg-clip-text bg-gradient-luxury;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .glass {
+    @apply backdrop-blur-md bg-white/5 border border-white/10;
+  }
+
+  .nav-link {
+    @apply text-gray-300 hover:text-gold-400 transition-colors duration-200
+           font-medium relative after:absolute after:bottom-0 after:left-0
+           after:w-0 after:h-0.5 after:bg-gold-500 after:transition-all
+           after:duration-300 hover:after:w-full;
+  }
+
+  .product-card {
+    @apply card overflow-hidden cursor-pointer;
+  }
+
+  .admin-sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300
+           hover:bg-dark-600 hover:text-gold-400 transition-all duration-200
+           cursor-pointer;
+  }
+
+  .admin-sidebar-item.active {
+    @apply bg-gold-500/10 text-gold-400 border-l-2 border-gold-500;
+  }
+
+  .stat-card {
+    @apply card p-6 flex items-center gap-4;
+  }
+}
