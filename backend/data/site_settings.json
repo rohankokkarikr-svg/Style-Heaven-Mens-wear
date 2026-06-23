@@ -6,7 +6,7 @@
   "currency": "INR (₹)",
   "taxRate": "18",
   "maintenanceMode": false,
-  "orderNotifications": false,
+  "orderNotifications": true,
   "instagramUrl": "https://www.instagram.com/style_heaven_mens_wear?igsh=MXVueXV5ejc1bXVvNQ==",
   "whatsappNumber": "917349083982",
   "footerTagline": "Redefining men's fashion with premium quality fabrics, timeless designs, and unmatched elegance."
