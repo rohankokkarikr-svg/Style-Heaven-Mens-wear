@@ -142,7 +142,7 @@ export default function Navbar() {
                   </div>
                 </div>
               ) : (
-                <Link to="/login" className="btn-primary text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2 whitespace-nowrap">Sign In</Link>
+                <Link to="/login" className="hidden sm:inline-block btn-primary text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2 whitespace-nowrap">Sign In</Link>
               )}
 
               {/* Mobile Hamburger */}
