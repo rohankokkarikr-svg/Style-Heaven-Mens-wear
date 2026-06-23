@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   HiGift, HiStar, HiClock, HiCheckCircle, HiArrowRight,
   HiShieldCheck, HiTruck, HiTicket, HiLightningBolt, HiShoppingBag,
-  HiClipboardCopy, HiChevronRight
+  HiClipboardCopy
 } from 'react-icons/hi';
 import { authAPI, productAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -154,8 +154,6 @@ export default function Rewards() {
   const progressPct = Math.min((data.progress / threshold) * 100, 100);
   const rewardCode = data.history?.find(h => h.status === 'Available')?.code || `FREESHIRT${threshold}`;
   const levelCfg = getLevelConfig(data.membershipLevel);
-  const currentLevelIdx = LEVELS.findIndex(l => l.name === data.membershipLevel);
-
   return (
     <div className="min-h-screen bg-dark-900 pb-24">
 

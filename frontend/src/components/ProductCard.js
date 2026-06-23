@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -17,11 +17,7 @@ export default function ProductCard({ product }) {
 
   if (!product) return null;
 
-  const { id, name, price, original_price, rating, review_count, sizes, category, image_url } = product;
-
-  const discount = original_price
-    ? Math.round(((original_price - price) / original_price) * 100)
-    : null;
+  const { id, name, price, original_price, rating, review_count, sizes, image_url } = product;
 
   const handleQuickAdd = (e) => {
     e.preventDefault();

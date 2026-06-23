@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { productAPI } from '../../services/api';
 import {
   HiPlus, HiPencil, HiTrash, HiSearch, HiX,
@@ -41,10 +41,7 @@ export default function AdminProducts() {
   const [submitting, setSubmitting]   = useState(false);
   const fileRef = useRef();
 
-  // ── fetch ──────────────────────────────────────────────────────────────────
-  useEffect(() => { fetchProducts(); }, [search]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const { data } = await productAPI.getAll({ search });
       setProducts(data);
@@ -53,7 +50,10 @@ export default function AdminProducts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
+
+  // ── fetch ──────────────────────────────────────────────────────────────────
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   // ── filtered list ──────────────────────────────────────────────────────────
   const filtered = filterCat === 'all'
