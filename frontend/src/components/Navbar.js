@@ -179,11 +179,68 @@ export default function Navbar() {
                 key={l.label}
                 to={l.href}
                 onClick={() => setOpen(false)}
-                className="block py-3 text-gray-300 hover:text-gold-400 border-b border-dark-700"
+                className="block py-3 text-gray-300 hover:text-gold-400 border-b border-dark-700 text-sm font-medium"
               >
                 {l.label}
               </Link>
             ))}
+
+            {/* Mobile User Profile Section */}
+            {user ? (
+              <div className="mt-4 pt-4 border-t border-dark-600 space-y-1">
+                <div className="px-3 py-2 flex items-center gap-3 mb-2 bg-dark-800/50 rounded-xl">
+                  <UserAvatar name={user.name} size={36} ring />
+                  <div className="min-w-0">
+                    <p className="text-white font-bold text-sm truncate">{user.name}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">{isAdmin ? 'Admin' : 'Member'}</p>
+                  </div>
+                </div>
+
+                <Link
+                  to="/orders"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-gray-300 hover:text-white transition-all"
+                >
+                  <HiShoppingCart className="w-4 h-4 text-gray-450" /> My Orders
+                </Link>
+                <Link
+                  to="/rewards"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-gold-400 hover:text-gold-300 transition-all"
+                >
+                  <HiStar className="w-4 h-4 text-gold-500" /> My Rewards
+                </Link>
+
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-gold-400 transition-all"
+                  >
+                    <HiChartBar className="w-4 h-4 text-gold-500" /> Admin Panel
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    logout();
+                  }}
+                  className="flex items-center gap-2.5 w-full px-3 py-3 rounded-xl hover:bg-dark-800 text-sm text-red-400 hover:text-red-300 text-left transition-all"
+                >
+                  <HiLogout className="w-4 h-4 text-red-400" /> Logout
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 pt-4 border-t border-dark-600">
+                <Link
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                  className="w-full btn-primary py-2.5 flex justify-center items-center text-sm"
+                >
+                  Sign In
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </nav>
