@@ -2,7 +2,11 @@ import axios from 'axios';
 
 // Base API instance pointing to backend
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: (() => {
+    const envUrl = process.env.REACT_APP_API_URL;
+    if (!envUrl) return 'http://localhost:5000/api';
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl.replace(/\/$/, '')}/api`;
+  })(),
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });

@@ -1,0 +1,53 @@
+services:
+  # Backend API Web Service
+  - type: web
+    name: style-heaven-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        value: https://usvlnjswlebpvapolffo.supabase.co
+      - key: CLOUDINARY_CLOUD_NAME
+        value: dcmmxmikz
+      - key: CLOUDINARY_API_KEY
+        value: "149393542854794"
+      - key: TWILIO_WHATSAPP_FROM
+        value: "+14155238886"
+      # Sensitive variables that the user must input or sync
+      - key: JWT_SECRET
+        sync: true
+      - key: SUPABASE_SERVICE_KEY
+        sync: true
+      - key: CLOUDINARY_API_SECRET
+        sync: true
+      - key: TWILIO_ACCOUNT_SID
+        sync: true
+      - key: TWILIO_AUTH_TOKEN
+        sync: true
+
+  # Frontend Static Site
+  - type: web
+    name: style-heaven-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_SUPABASE_URL
+        value: https://usvlnjswlebpvapolffo.supabase.co
+      - key: REACT_APP_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmxuanN3bGVicHZhcG9sZmZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODAzMjQsImV4cCI6MjA5MzU1NjMyNH0.TyziKPzjkZzhZK68rNl9Zzj-21uVrIhFSIuKuQdHkHY
+      - key: REACT_APP_LOCATIONIQ_API_KEY
+        value: pk.f2bad577bd835e11c81ffd571d5c353b
+      # Dynamically reference backend URL
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: style-heaven-backend
+          property: url
