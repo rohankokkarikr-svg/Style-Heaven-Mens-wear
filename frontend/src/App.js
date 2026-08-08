@@ -25,6 +25,7 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Rewards from './pages/Rewards';
+import Profile from './pages/Profile';
 import PaymentGateway from './pages/PaymentGateway';
 
 
@@ -105,6 +106,7 @@ function App() {
                     <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
                     <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
                     <Route path="/rewards" element={<PrivateRoute><Rewards /></PrivateRoute>} />
+                    <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                   </Routes>
 
                 </main>

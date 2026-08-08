@@ -235,3 +235,86 @@ exports.getRewards = async (req, res) => {
   }
 };
 
+exports.getLeaderboard = async (req, res) => {
+  try {
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, name, email, created_at');
+
+    if (usersError) throw usersError;
+
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('user_id, total_price, status')
+      .eq('status', 'delivered');
+
+    if (ordersError) throw ordersError;
+
+    const userSpendMap = {};
+    const userOrdersCountMap = {};
+
+    if (orders) {
+      orders.forEach(o => {
+        const price = Number(o.total_price) || 0;
+        userSpendMap[o.user_id] = (userSpendMap[o.user_id] || 0) + price;
+        userOrdersCountMap[o.user_id] = (userOrdersCountMap[o.user_id] || 0) + 1;
+      });
+    }
+
+    const leaderboard = (users || []).map(u => {
+      const totalSpent = Math.round(userSpendMap[u.id] || 0);
+      const totalOrders = userOrdersCountMap[u.id] || 0;
+
+      let level = 'Bronze';
+      if (totalSpent > 50000)      level = 'Elite';
+      else if (totalSpent > 35000) level = 'Diamond';
+      else if (totalSpent > 20000) level = 'Gold';
+      else if (totalSpent > 5000)  level = 'Silver';
+
+      return {
+        id: u.id,
+        name: u.name,
+        totalSpent,
+        totalOrders,
+        membershipLevel: level,
+        joinedAt: u.created_at
+      };
+    });
+
+    leaderboard.sort((a, b) => b.totalSpent - a.totalSpent || b.totalOrders - a.totalOrders);
+
+    const currentUserId = req.user?.id;
+    const rankedLeaderboard = leaderboard.map((item, index) => ({
+      ...item,
+      rank: index + 1,
+      isCurrentUser: currentUserId ? item.id === currentUserId : false
+    }));
+
+    const currentUserItem = rankedLeaderboard.find(item => item.id === currentUserId);
+
+    let nextRankAmountNeeded = 0;
+    if (currentUserItem && currentUserItem.rank > 1) {
+      const userAbove = rankedLeaderboard[currentUserItem.rank - 2];
+      if (userAbove) {
+        nextRankAmountNeeded = Math.max(0, userAbove.totalSpent - currentUserItem.totalSpent + 1);
+      }
+    }
+
+    res.json({
+      leaderboard: rankedLeaderboard,
+      currentUserRank: currentUserItem ? {
+        rank: currentUserItem.rank,
+        totalSpent: currentUserItem.totalSpent,
+        totalOrders: currentUserItem.totalOrders,
+        membershipLevel: currentUserItem.membershipLevel,
+        nextRankAmountNeeded
+      } : null,
+      totalUsers: rankedLeaderboard.length
+    });
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard data' });
+  }
+};
+
+

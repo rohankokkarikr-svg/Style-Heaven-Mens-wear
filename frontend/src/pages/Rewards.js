@@ -5,6 +5,7 @@ import {
   HiShieldCheck, HiTruck, HiTicket, HiLightningBolt, HiShoppingBag,
   HiClipboardCopy, HiChevronRight
 } from 'react-icons/hi';
+import { FaTrophy } from 'react-icons/fa';
 import { authAPI, productAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import confetti from 'canvas-confetti';
@@ -202,7 +203,7 @@ export default function Rewards() {
               <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${levelCfg.badge} text-white text-xs font-bold uppercase tracking-widest shadow-lg`}>
                 <span>{levelCfg.emoji}</span> {data.membershipLevel} Member
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-dark-600">
+              <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-dark-600 mb-6">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-tighter mb-1">Total Spent</p>
                   <p className="text-xl font-bold text-white">₹{data.totalSpent?.toLocaleString()}</p>
@@ -212,6 +213,12 @@ export default function Rewards() {
                   <p className="text-xl font-bold text-gold-400">{data.points}</p>
                 </div>
               </div>
+              <Link
+                to="/profile"
+                className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 text-xs font-bold shadow-gold"
+              >
+                <FaTrophy className="w-4 h-4 text-dark-900" /> View Leaderboard Rank 🏆
+              </Link>
             </motion.div>
 
             {/* Member Perks */}

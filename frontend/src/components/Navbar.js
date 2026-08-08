@@ -6,6 +6,7 @@ import {
   HiShoppingCart, HiMenu, HiX, HiSearch, HiLogout,
   HiChartBar, HiStar
 } from 'react-icons/hi';
+import { FaTrophy } from 'react-icons/fa';
 import UserAvatar from './UserAvatar';
 
 
@@ -117,6 +118,10 @@ export default function Navbar() {
                   <div className="absolute right-0 top-full mt-2 w-48 glass rounded-xl shadow-card
                                   opacity-0 invisible group-hover:opacity-100 group-hover:visible
                                   transition-all duration-200 p-2">
+                    <Link to="/profile" className="flex items-center gap-2 px-3 py-2 rounded-lg
+                                                   hover:bg-dark-600 text-sm text-gold-400 font-semibold">
+                      <FaTrophy className="w-4 h-4 text-gold-400" /> My Profile & Leaderboard
+                    </Link>
                     <Link to="/orders" className="flex items-center gap-2 px-3 py-2 rounded-lg
                                                   hover:bg-dark-600 text-sm text-gray-300 hover:text-white">
                       <HiShoppingCart className="w-4 h-4" /> My Orders
@@ -237,6 +242,13 @@ export default function Navbar() {
                   </div>
                 </div>
 
+                <Link
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-dark-800 text-sm text-gold-400 font-bold hover:text-gold-300 transition-all"
+                >
+                  <FaTrophy className="w-4 h-4 text-gold-400" /> Profile & Leaderboard
+                </Link>
                 <Link
                   to="/orders"
                   onClick={() => setOpen(false)}
