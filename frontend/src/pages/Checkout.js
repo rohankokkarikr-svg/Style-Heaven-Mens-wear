@@ -133,15 +133,6 @@ export default function Checkout() {
   const [popupText, setPopupText] = useState('Please wait...');
   const [upiApp, setUpiApp] = useState('phonepe');
 
-  // Card states
-  const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', name: '' });
-
-  // Netbanking states
-  const [selectedBank, setSelectedBank] = useState('sbi');
-
-  // Wallet states
-  const [selectedWallet, setSelectedWallet] = useState('paytm');
-
   const [form, setForm] = useState({
     fullName:     user?.name || '',
     phone:        '',
@@ -477,7 +468,7 @@ export default function Checkout() {
         coupon_code: isCouponApplied ? couponCode : null,
         shipping_address: fullAddress,
         phone: form.phone.replace(/\D/g, ''),
-        payment_method: paymentMethod === 'cod' ? 'cod' : `${paymentMethod}_${paymentMethod === 'upi' ? upiApp : paymentMethod === 'card' ? 'card' : paymentMethod === 'netbanking' ? selectedBank : selectedWallet}`,
+        payment_method: paymentMethod === 'cod' ? 'cod' : `upi_${upiApp}`,
         payment_status: 'pending',
         items: items.map(i => ({
           product_id:    i.product.id,
@@ -1103,7 +1094,7 @@ export default function Checkout() {
                                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 13h-2v-2h2v2zm0-4h-2V7h2v4z" />
                                 </svg>
                               )},
-                              { id: 'any', name: 'Pay by any UPI App', color: '#D4AF37', desc: 'BHIM, Cred, or net banking apps', icon: (
+                              { id: 'any', name: 'Pay by any UPI App', color: '#D4AF37', desc: 'BHIM, Cred, or other UPI apps', icon: (
                                 <svg viewBox="0 0 24 24" className="w-5 h-5 text-gold-400" fill="currentColor">
                                   <path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z" />
                                 </svg>
@@ -1131,172 +1122,6 @@ export default function Checkout() {
                           </div>
                         )}
                       </div>
-
-                      {/* Card Option */}
-                      <div className={`border rounded-xl transition-all ${
-                        paymentMethod === 'card' ? 'border-gold-500 bg-gold-500/10' : 'border-dark-600'
-                      }`}>
-                        <button type="button" onClick={() => setPaymentMethod('card')}
-                          className="flex items-center justify-between w-full p-4 text-left border-b border-dashed border-dark-600">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-dark-900 flex items-center justify-center text-gray-400">
-                              <svg viewBox="0 0 24 24" className="w-5 h-5 text-gold-400" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="2" y="5" width="20" height="14" rx="2" />
-                                <line x1="2" y1="10" x2="22" y2="10" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-white">Debit / Credit Card</p>
-                              <p className="text-gray-400 text-xs mt-0.5">Visa, Mastercard, RuPay, Maestro</p>
-                            </div>
-                          </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            paymentMethod === 'card' ? 'border-gold-500' : 'border-dark-500'
-                          }`}>
-                            {paymentMethod === 'card' && <div className="w-2.5 h-2.5 rounded-full bg-gold-500" />}
-                          </div>
-                        </button>
-
-                        {/* Card input forms */}
-                        {paymentMethod === 'card' && (
-                          <div className="p-4 bg-dark-900/50 rounded-b-xl border-t border-dark-600 space-y-3 animate-fade-in">
-                            <div>
-                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Card Number</label>
-                              <input type="text" maxLength="19" placeholder="XXXX XXXX XXXX XXXX"
-                                className="w-full bg-dark-900 border border-dark-500 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-650 focus:outline-none focus:border-gold-500"
-                                value={cardForm.number} onChange={e => {
-                                  const val = e.target.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
-                                  setCardForm(c => ({ ...c, number: val }));
-                                }} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Expiry Date</label>
-                                <input type="text" maxLength="5" placeholder="MM/YY"
-                                  className="w-full bg-dark-900 border border-dark-500 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-650 focus:outline-none focus:border-gold-500"
-                                  value={cardForm.expiry} onChange={e => {
-                                    const val = e.target.value.replace(/\D/g, '').replace(/(.{2})/, '$1/').trim();
-                                    setCardForm(c => ({ ...c, expiry: val }));
-                                  }} />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">CVV</label>
-                                <input type="password" maxLength="3" placeholder="***"
-                                  className="w-full bg-dark-900 border border-dark-500 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-650 focus:outline-none focus:border-gold-500"
-                                  value={cardForm.cvv} onChange={e => setCardForm(c => ({ ...c, cvv: e.target.value.replace(/\D/g, '') }))} />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cardholder Name</label>
-                              <input type="text" placeholder="e.g. Rohan Kumar"
-                                className="w-full bg-dark-900 border border-dark-500 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-650 focus:outline-none focus:border-gold-500"
-                                value={cardForm.name} onChange={e => setCardForm(c => ({ ...c, name: e.target.value }))} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Net Banking Option */}
-                      <div className={`border rounded-xl transition-all ${
-                        paymentMethod === 'netbanking' ? 'border-gold-500 bg-gold-500/10' : 'border-dark-600'
-                      }`}>
-                        <button type="button" onClick={() => setPaymentMethod('netbanking')}
-                          className="flex items-center justify-between w-full p-4 text-left border-b border-dashed border-dark-600">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-dark-900 flex items-center justify-center text-gray-400">
-                              <svg viewBox="0 0 24 24" className="w-5 h-5 text-gold-400" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M3 21h18M3 10h18M3 7l9-4 9 4M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-white">Net Banking</p>
-                              <p className="text-gray-400 text-xs mt-0.5">Pay via direct bank account transfer</p>
-                            </div>
-                          </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            paymentMethod === 'netbanking' ? 'border-gold-500' : 'border-dark-500'
-                          }`}>
-                            {paymentMethod === 'netbanking' && <div className="w-2.5 h-2.5 rounded-full bg-gold-500" />}
-                          </div>
-                        </button>
-
-                        {/* Netbanking selects */}
-                        {paymentMethod === 'netbanking' && (
-                          <div className="p-4 bg-dark-900/50 rounded-b-xl border-t border-dark-600 space-y-3 animate-fade-in">
-                            <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">Popular Banks</p>
-                            <div className="grid grid-cols-2 gap-2">
-                              {[
-                                { id: 'sbi', name: 'State Bank of India' },
-                                { id: 'hdfc', name: 'HDFC Bank' },
-                                { id: 'icici', name: 'ICICI Bank' },
-                                { id: 'axis', name: 'Axis Bank' }
-                              ].map(bank => (
-                                <button type="button" key={bank.id} onClick={() => setSelectedBank(bank.id)}
-                                  className={`p-2.5 text-center text-xs font-semibold rounded-lg border-2 transition-all ${
-                                    selectedBank === bank.id ? 'border-gold-500 text-gold-400 bg-dark-900 shadow-md' : 'border-dark-500 bg-dark-800 hover:border-gold-500/50 text-gray-300'
-                                  }`}>
-                                  {bank.name}
-                                </button>
-                              ))}
-                            </div>
-                            <div className="pt-2">
-                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Select Other Bank</label>
-                              <select className="w-full bg-dark-900 border border-dark-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500"
-                                value={selectedBank} onChange={e => setSelectedBank(e.target.value)}>
-                                <option value="kotak">Kotak Mahindra Bank</option>
-                                <option value="pnb">Punjab National Bank</option>
-                                <option value="bob">Bank of Baroda</option>
-                                <option value="yes">Yes Bank</option>
-                                <option value="indusind">IndusInd Bank</option>
-                              </select>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Wallets Option */}
-                      <div className={`border rounded-xl transition-all ${
-                        paymentMethod === 'wallet' ? 'border-gold-500 bg-gold-500/10' : 'border-dark-600'
-                      }`}>
-                        <button type="button" onClick={() => setPaymentMethod('wallet')}
-                          className="flex items-center justify-between w-full p-4 text-left border-b border-dashed border-dark-600">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-dark-900 flex items-center justify-center text-gray-400">
-                              <svg viewBox="0 0 24 24" className="w-5 h-5 text-gold-400" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 12V7H5a2 2 0 010-4h14v4M3 10h18M5 7v13a2 2 0 002 2h12a2 2 0 002-2v-5" />
-                                <circle cx="16" cy="14" r="1" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-white">Mobile Wallets</p>
-                              <p className="text-gray-400 text-xs mt-0.5">Paytm Wallet, Amazon Pay, PhonePe Wallet</p>
-                            </div>
-                          </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            paymentMethod === 'wallet' ? 'border-gold-500' : 'border-dark-500'
-                          }`}>
-                            {paymentMethod === 'wallet' && <div className="w-2.5 h-2.5 rounded-full bg-gold-500" />}
-                          </div>
-                        </button>
-
-                        {/* Wallet subselects */}
-                        {paymentMethod === 'wallet' && (
-                          <div className="p-4 bg-dark-900/50 rounded-b-xl border-t border-dark-600 grid grid-cols-3 gap-2 animate-fade-in">
-                            {[
-                              { id: 'paytm', name: 'Paytm' },
-                              { id: 'phonepe', name: 'PhonePe' },
-                              { id: 'amazonpay', name: 'Amazon Pay' }
-                            ].map(w => (
-                              <button type="button" key={w.id} onClick={() => setSelectedWallet(w.id)}
-                                  className={`p-2 text-center text-xs font-semibold rounded-lg border-2 transition-all ${
-                                    selectedWallet === w.id ? 'border-gold-500 text-gold-400 bg-dark-900 shadow-md' : 'border-dark-500 bg-dark-800 hover:border-gold-500/50 text-gray-300'
-                                  }`}>
-                                {w.name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
                     </div>
 
                     <div className="mt-4 px-4 py-3 bg-gold-500/5 border border-gold-500/10 rounded-xl flex items-start gap-2.5">
@@ -1304,7 +1129,7 @@ export default function Checkout() {
                       <p className="text-xs text-gray-450 leading-relaxed">
                         {paymentMethod === 'cod'
                           ? `You will pay ₹${finalTotal.toLocaleString()} in cash when your order is delivered.`
-                          : `Pay ₹${finalTotal.toLocaleString()} securely online. You will be redirected to the gateway to complete the transaction.`}
+                          : `Pay ₹${finalTotal.toLocaleString()} securely online via UPI. You will be redirected to the gateway to complete the transaction.`}
                       </p>
                     </div>
                   </div>
