@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import {
   HiLockClosed, HiShieldCheck, HiChevronLeft, HiClock
 } from 'react-icons/hi';
+import phonepeQr from '../assets/phonepe_qr.png';
 
 export default function PaymentGateway() {
   const location = useLocation();
@@ -119,7 +120,7 @@ export default function PaymentGateway() {
               <div className="text-center space-y-3">
                 <div className="bg-black p-4 rounded-2xl border border-dark-600 inline-block shadow-2xl relative group">
                   <img
-                    src="/phonepe_qr.png"
+                    src={phonepeQr}
                     alt="PhonePe QR Code - ROHAN RAVIKUMAR KOKKARI"
                     className="w-64 h-auto mx-auto rounded-lg shadow-md"
                   />
