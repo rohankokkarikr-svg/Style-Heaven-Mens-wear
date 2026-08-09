@@ -1,7 +1,7 @@
 const supabase = require('../config/supabase');
 const path = require('path');
 const fs = require('fs');
-const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification, sendOrderEditWhatsappNotification } = require('../utils/whatsapp');
+const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification, sendOrderEditWhatsappNotification, sendPaymentVerifiedWhatsappNotification } = require('../utils/whatsapp');
 
 const getSiteSettings = () => {
   const settingsFile = path.join(__dirname, '../data/site_settings.json');
@@ -290,6 +290,33 @@ exports.updateOrderStatus = async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Send WhatsApp cancellation notification if status changed to cancelled
+    if (status === 'cancelled') {
+      try {
+        const settings = getSiteSettings();
+        if (settings.orderNotifications) {
+          const { data: fullOrder } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              items:order_items (
+                quantity, price_at_time, size,
+                product:products (id, name, image_url, category)
+              )
+            `)
+            .eq('id', id)
+            .single();
+
+          if (fullOrder) {
+            await sendOrderCancelWhatsappNotification(settings.whatsappNumber, fullOrder, req.user?.name || 'Customer');
+          }
+        }
+      } catch (wsErr) {
+        console.error('Failed to trigger WhatsApp cancellation notification:', wsErr.message);
+      }
+    }
+
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update order status' });
@@ -633,6 +660,37 @@ exports.verifyPayment = async (req, res) => {
     }
 
     if (updateError) throw updateError;
+
+    // Send WhatsApp Notification to Admin
+    try {
+      const settings = getSiteSettings();
+      if (settings.orderNotifications) {
+        const { data: fullOrder } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            items:order_items (
+              quantity, price_at_time, size,
+              product:products (id, name, image_url, category)
+            )
+          `)
+          .eq('id', id)
+          .single();
+
+        if (fullOrder) {
+          const adminWhatsapp = settings.whatsappNumber;
+          const customerName = req.user?.name || 'Customer';
+          if (isApprove) {
+            await sendPaymentVerifiedWhatsappNotification(adminWhatsapp, fullOrder, customerName);
+          } else {
+            await sendOrderCancelWhatsappNotification(adminWhatsapp, fullOrder, customerName);
+          }
+        }
+      }
+    } catch (wsErr) {
+      console.error('Failed to trigger WhatsApp verification notification:', wsErr.message);
+    }
+
     res.json(updatedOrder);
   } catch (err) {
     console.error('Verify payment error:', err);

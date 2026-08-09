@@ -239,3 +239,79 @@ ${itemsText || 'No items listed'}
     return { success: false, error: err.message };
   }
 };
+
+/**
+ * Sends a WhatsApp notification to the admin when an order payment is verified & approved.
+ */
+exports.sendPaymentVerifiedWhatsappNotification = async (adminPhone, order, customerName) => {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
+
+  const itemsText = (order.items || [])
+    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
+    .join('\n');
+
+  const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+
+  let refNo = order.transaction_id;
+  if (!refNo && order.shipping_address) {
+    const match = order.shipping_address.match(/Ref\.?\s*No\.?:\s*([A-Za-z0-9_]+)/i);
+    if (match) refNo = match[1];
+  }
+
+  const messageBody = `✅ *Payment Verified & Approved on Style Heaven!*
+----------------------------------------
+📦 *Order ID:* #${order.id?.substring(0, 8)}
+👤 *Customer Name:* ${customerName}
+📞 *Phone Number:* +91 ${order.phone}
+🔑 *Verified Ref. No / UTR:* ${refNo || 'N/A'}
+💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
+💵 *Paid Amount:* ₹${order.total_price?.toLocaleString()}
+
+🛒 *Items to Process (${itemsCount} items):*
+${itemsText || 'No items listed'}
+========================================
+🎉 *Order Status:* CONFIRMED & IN PROCESSING
+----------------------------------------`;
+
+  console.log('\n--- [WHATSAPP OUTGOING PAYMENT VERIFIED MESSAGE] ---');
+  console.log(messageBody);
+  console.log('------------------------------------\n');
+
+  if (!sid || !token || !fromNumber) {
+    console.warn('⚠️ Twilio credentials missing in .env. Outgoing payment verified WhatsApp notification logged above.');
+    return { success: false, reason: 'Credentials missing' };
+  }
+
+  try {
+    let cleanPhone = adminPhone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('+')) {
+      if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+        cleanPhone = '+' + cleanPhone;
+      } else if (cleanPhone.length === 10) {
+        cleanPhone = '+91' + cleanPhone;
+      } else {
+        cleanPhone = '+' + cleanPhone;
+      }
+    }
+
+    let cleanFrom = fromNumber.replace(/\D/g, '');
+    if (!cleanFrom.startsWith('+')) {
+      cleanFrom = '+' + cleanFrom;
+    }
+
+    const client = twilio(sid, token);
+    const result = await client.messages.create({
+      from: `whatsapp:${cleanFrom}`,
+      to: `whatsapp:${cleanPhone}`,
+      body: messageBody
+    });
+
+    console.log(`✅ WhatsApp payment verified notification sent successfully! Message SID: ${result.sid}`);
+    return { success: true, sid: result.sid };
+  } catch (err) {
+    console.error('❌ Failed to send WhatsApp payment verified notification via Twilio:', err.message);
+    return { success: false, error: err.message };
+  }
+};
