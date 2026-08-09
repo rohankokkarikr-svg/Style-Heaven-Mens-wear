@@ -213,12 +213,18 @@ exports.createOrder = async (req, res) => {
         const orderForNotify = fullOrder || { ...order, items: orderItems };
         if (!orderForNotify.payment_method) orderForNotify.payment_method = payment_method || 'cod';
 
-        const adminWhatsapp = settings.whatsappNumber;
-        const customerName = req.user?.name || 'Customer';
-        const wsRes = await sendOrderWhatsappNotification(adminWhatsapp, orderForNotify, customerName);
-        if (wsRes) {
-          whatsappLink = wsRes.directLink;
-          whatsappMessage = wsRes.messageText;
+        const isUpi = getEffectivePaymentMethod(orderForNotify).includes('UPI');
+
+        if (!isUpi) {
+          const adminWhatsapp = settings.whatsappNumber;
+          const customerName = req.user?.name || 'Customer';
+          const wsRes = await sendOrderWhatsappNotification(adminWhatsapp, orderForNotify, customerName);
+          if (wsRes) {
+            whatsappLink = wsRes.directLink;
+            whatsappMessage = wsRes.messageText;
+          }
+        } else {
+          console.log('Online UPI order created: Skipping initial notification. 1 consolidated message will be sent when user submits Ref. No.');
         }
       } else {
         console.log('Skipping WhatsApp order notification: orderNotifications is disabled in settings.');
@@ -605,6 +611,8 @@ exports.payOrder = async (req, res) => {
     if (updateError) throw updateError;
 
     // Trigger WhatsApp notification to Admin to alert about submitted UPI Ref No.
+    let whatsappLink = null;
+    let whatsappMessage = null;
     try {
       const settings = getSiteSettings();
       if (settings.orderNotifications) {
@@ -621,13 +629,17 @@ exports.payOrder = async (req, res) => {
           .single();
         const notifyOrder = fullOrder || updatedOrder || order;
         if (!notifyOrder.payment_method) notifyOrder.payment_method = order.payment_method || 'upi';
-        await sendRefNoSubmittedWhatsappNotification(settings.whatsappNumber, notifyOrder, req.user?.name || 'Customer');
+        const wsRes = await sendRefNoSubmittedWhatsappNotification(settings.whatsappNumber, notifyOrder, req.user?.name || 'Customer');
+        if (wsRes) {
+          whatsappLink = wsRes.directLink;
+          whatsappMessage = wsRes.messageText;
+        }
       }
     } catch (wsErr) {
       console.error('WhatsApp notify error:', wsErr.message);
     }
 
-    res.json(updatedOrder);
+    res.json({ ...updatedOrder, whatsappLink, whatsappMessage });
   } catch (error) {
     console.error('Pay order error:', error);
     res.status(500).json({ error: 'Failed to update payment status' });

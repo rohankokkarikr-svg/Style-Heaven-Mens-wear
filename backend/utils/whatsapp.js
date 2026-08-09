@@ -157,6 +157,7 @@ exports.sendRefNoSubmittedWhatsappNotification = async (adminPhone, order, custo
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}
 📞 *Phone Number:* +91 ${order.phone}
+📍 *Shipping Address:* ${order.shipping_address || 'N/A'}
 🔑 *Submitted Ref. No / UTR:* ${refNo}
 💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
 💵 *Total Amount:* ₹${order.total_price?.toLocaleString()}
@@ -167,7 +168,14 @@ ${itemsText || 'No items listed'}
 ⌛ *Status:* Pending Admin Payment Verification
 ----------------------------------------`;
 
-  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+  const twilioRes = await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+  const directLink = getWhatsappDirectLink(adminPhone, messageBody);
+
+  return {
+    ...twilioRes,
+    messageText: messageBody,
+    directLink
+  };
 };
 
 /**
