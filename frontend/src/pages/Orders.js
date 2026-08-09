@@ -37,9 +37,22 @@ export default function Orders() {
     if (!confirmCancel) return;
 
     try {
-      await orderAPI.cancelOrder(orderId);
+      const targetOrder = orders.find(o => o.id === orderId);
+      const res = await orderAPI.cancelOrder(orderId);
       toast.success('Order cancelled successfully! 🚫');
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+      
+      const adminPhone = '917349083982';
+      let waLink = res.data?.whatsappLink;
+      if (!waLink) {
+        const msg = `🚨 *Order Cancelled on Style Heaven!*\n----------------------------------------\n📦 *Order ID:* #${orderId?.substring(0, 8)}\n📞 *Phone:* +91 ${targetOrder?.phone || ''}\n💰 *Total Amount:* ₹${targetOrder?.total_price?.toLocaleString()}\n----------------------------------------\n❌ *Status:* CANCELLED`;
+        waLink = `https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`;
+      }
+      try {
+        window.open(waLink, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        console.warn('Auto open WhatsApp popup blocked:', e);
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to cancel order');
     }
@@ -89,6 +102,13 @@ export default function Orders() {
       return 'Cash on Delivery (COD)';
     }
     return pm.replace('_', ' ');
+  };
+
+  const buildWhatsappLink = (order) => {
+    const adminPhone = '917349083982';
+    const itemsText = (order.items || []).map(i => `• ${i.product?.name || 'Item'} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${((i.price_at_time || 0) * (i.quantity || 1)).toLocaleString()}`).join('\n');
+    const msg = `🔔 *Order Details from Style Heaven!*\n----------------------------------------\n📦 *Order ID:* #${order.id?.substring(0, 8)}\n📞 *Phone:* +91 ${order.phone || ''}\n📍 *Address:* ${order.shipping_address || ''}\n\n🛒 *Items:*\n${itemsText || 'No items'}\n\n💰 *Payment Method:* ${getEffectivePaymentMethod(order)}\n💵 *Total Amount:* ₹${order.total_price?.toLocaleString()}\n----------------------------------------\n✅ *Status:* ${order.status || 'Pending'}`;
+    return `https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`;
   };
 
   if (loading) {
@@ -196,27 +216,40 @@ export default function Orders() {
               )}
             </div>
 
-            {isCancelable(order) && (
-              <div className="mt-6 pt-4 border-t border-dark-600 flex items-center justify-between flex-wrap gap-3">
-                <span className="text-[11px] text-gray-400 italic font-medium flex items-center gap-1">
-                  ⏱️ {getRemainingTimeText(order.created_at)}
-                </span>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <button
-                    onClick={() => setEditingOrder(order)}
-                    className="px-4 py-2 text-xs font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500/60 bg-gold-500/5 hover:bg-gold-500/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <HiPencilAlt className="w-3.5 h-3.5" /> Edit Order
-                  </button>
-                  <button
-                    onClick={() => handleCancelOrder(order.id)}
-                    className="px-4 py-2 text-xs font-semibold text-red-400 hover:text-red-500 border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    🚫 Cancel Order
-                  </button>
-                </div>
+            <div className="mt-6 pt-4 border-t border-dark-600 flex items-center justify-between flex-wrap gap-3">
+              <span className="text-[11px] text-gray-400 italic font-medium flex items-center gap-1">
+                {isCancelable(order) ? `⏱️ ${getRemainingTimeText(order.created_at)}` : ''}
+              </span>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <a
+                  href={buildWhatsappLink(order)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 text-xs font-semibold text-green-400 hover:text-green-300 border border-green-500/30 hover:border-green-500/60 bg-green-500/5 hover:bg-green-500/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 no-underline"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.143 4.174 4.29-1.125z" />
+                  </svg>
+                  Send to Admin WhatsApp
+                </a>
+                {isCancelable(order) && (
+                  <>
+                    <button
+                      onClick={() => setEditingOrder(order)}
+                      className="px-4 py-2 text-xs font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500/60 bg-gold-500/5 hover:bg-gold-500/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <HiPencilAlt className="w-3.5 h-3.5" /> Edit Order
+                    </button>
+                    <button
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="px-4 py-2 text-xs font-semibold text-red-400 hover:text-red-500 border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      🚫 Cancel Order
+                    </button>
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
         ))}
       </div>

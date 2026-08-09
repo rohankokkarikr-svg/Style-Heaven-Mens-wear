@@ -131,6 +131,7 @@ export default function Checkout() {
 
   const [showLoadingPopup, setShowLoadingPopup] = useState(false);
   const [popupText, setPopupText] = useState('Please wait...');
+  const [codOrderSuccess, setCodOrderSuccess] = useState(null);
 
   const [form, setForm] = useState({
     fullName:     user?.name || '',
@@ -483,7 +484,26 @@ export default function Checkout() {
       if (paymentMethod === 'cod') {
         toast.success('Order placed successfully! 🎉');
         clearCart();
-        navigate('/orders');
+        
+        const defaultAdminPhone = '917349083982';
+        let waLink = createdOrder.whatsappLink;
+        if (!waLink) {
+          const itemsText = items.map(i => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${(i.product.price * i.quantity).toLocaleString()}`).join('\n');
+          const msg = `🔔 *New COD Order Placed on Style Heaven!*\n----------------------------------------\n📦 *Order ID:* #${createdOrder.id?.substring(0, 8)}\n👤 *Customer Name:* ${form.fullName}\n📞 *Phone:* +91 ${form.phone}\n📍 *Address:* ${fullAddress}\n\n🛒 *Items (${items.reduce((s,i)=>s+i.quantity,0)} items):*\n${itemsText}\n\n💰 *Payment Method:* COD (Cash on Delivery)\n💵 *Total Amount:* ₹${finalTotal.toLocaleString()}\n----------------------------------------\n✅ *Status:* CONFIRMED (COD)`;
+          waLink = `https://wa.me/${defaultAdminPhone}?text=${encodeURIComponent(msg)}`;
+        }
+
+        setCodOrderSuccess({
+          orderId: createdOrder.id,
+          total: finalTotal,
+          whatsappLink: waLink
+        });
+
+        try {
+          window.open(waLink, '_blank', 'noopener,noreferrer');
+        } catch (e) {
+          console.warn('Auto open WhatsApp popup blocked by browser:', e);
+        }
       } else {
         // Show simulated loading popup
         setShowLoadingPopup(true);
@@ -1172,6 +1192,70 @@ export default function Checkout() {
                 />
               </div>
               <p className="text-[10px] text-gray-500">Do not refresh or go back. Transacting securely.</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* COD Order Success Modal with WhatsApp Action */}
+      <AnimatePresence>
+        {codOrderSuccess && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-dark-800 border border-gold-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl shadow-gold/10 text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-full flex items-center justify-center mx-auto text-green-400">
+                <HiCheckCircle className="w-10 h-10" />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-serif font-bold text-white">Order Placed Successfully!</h2>
+                <p className="text-xs text-gold-400 font-semibold uppercase tracking-wider bg-gold-500/10 border border-gold-500/20 py-1 px-3 rounded-full inline-block">
+                  Cash on Delivery (COD)
+                </p>
+                <p className="text-xs text-gray-400 pt-1">
+                  Order ID: <span className="text-white font-mono font-bold">#{codOrderSuccess.orderId?.substring(0, 8)}</span> • Total: <span className="text-gold-400 font-bold">₹{codOrderSuccess.total?.toLocaleString()}</span>
+                </p>
+              </div>
+
+              <div className="bg-dark-900 border border-dark-600 rounded-2xl p-4 text-left space-y-3">
+                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>📱 Send Details to Admin via WhatsApp</span>
+                </p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Click the button below to send your order details directly to the Style Heaven Admin WhatsApp for instant order processing!
+                </p>
+
+                <a
+                  href={codOrderSuccess.whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-4 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-green-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer no-underline"
+                >
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.143 4.174 4.29-1.125z" />
+                  </svg>
+                  Send Order to Admin WhatsApp 🚀
+                </a>
+              </div>
+
+              <button
+                onClick={() => {
+                  setCodOrderSuccess(null);
+                  navigate('/orders');
+                }}
+                className="w-full py-3 bg-dark-700 hover:bg-dark-600 text-white font-semibold text-xs rounded-xl transition-all border border-dark-500 cursor-pointer"
+              >
+                Go to My Orders Page
+              </button>
             </motion.div>
           </motion.div>
         )}

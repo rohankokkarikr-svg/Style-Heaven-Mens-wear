@@ -391,6 +391,7 @@ exports.cancelOrder = async (req, res) => {
         .eq('user_id', user_id);
     }
 
+    let whatsappLink = null;
     // 7. Send cancellation WhatsApp notification to the Admin (only if orderNotifications is enabled)
     try {
       const settings = getSiteSettings();
@@ -411,7 +412,10 @@ exports.cancelOrder = async (req, res) => {
         const notifyOrder = fullOrder || updatedOrder || order;
         const adminWhatsapp = settings.whatsappNumber;
         const customerName = notifyOrder?.user?.name || req.user?.name || 'Customer';
-        await sendOrderCancelWhatsappNotification(adminWhatsapp, notifyOrder, customerName);
+        const wsRes = await sendOrderCancelWhatsappNotification(adminWhatsapp, notifyOrder, customerName);
+        if (wsRes) {
+          whatsappLink = wsRes.directLink;
+        }
       } else {
         console.log('Skipping WhatsApp cancellation notification: orderNotifications is disabled in settings.');
       }
@@ -419,7 +423,7 @@ exports.cancelOrder = async (req, res) => {
       console.error('Failed to trigger WhatsApp cancellation notification:', wsErr.message);
     }
 
-    res.json(updatedOrder);
+    res.json({ ...updatedOrder, whatsappLink });
   } catch (error) {
     console.error('Cancel order error:', error);
     res.status(500).json({ error: 'Failed to cancel order' });

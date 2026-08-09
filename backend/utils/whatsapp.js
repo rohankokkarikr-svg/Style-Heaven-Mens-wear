@@ -222,7 +222,14 @@ ${itemsText || 'No items listed'}
 ❌ *Order Status:* CANCELLED
 ----------------------------------------`;
 
-  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+  const res = await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+  const directLink = getWhatsappDirectLink(adminPhone, messageBody);
+
+  return {
+    ...res,
+    messageText: messageBody,
+    directLink
+  };
 };
 
 /**
