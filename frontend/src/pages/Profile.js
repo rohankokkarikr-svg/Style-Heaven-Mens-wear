@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  HiSparkles, HiStar, HiShoppingBag,
-  HiSearch, HiChevronRight
+  HiSparkles, HiSearch, HiChevronRight
 } from 'react-icons/hi';
 import { FaTrophy } from 'react-icons/fa';
 import { authAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
 import toast from 'react-hot-toast';
@@ -22,7 +20,6 @@ const LEVEL_COLORS = {
 const getLevelCfg = (name) => LEVEL_COLORS[name] || LEVEL_COLORS.Bronze;
 
 export default function Profile() {
-  const { user } = useAuth();
   const [rewardsData, setRewardsData] = useState(null);
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -73,7 +70,6 @@ export default function Profile() {
     u.name?.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  const levelCfg = getLevelCfg(rewardsData?.membershipLevel || 'Bronze');
   const userRankNum = currentUserRank?.rank || 'N/A';
 
   return (
@@ -85,76 +81,7 @@ export default function Profile() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
 
-          {/* ── Profile Header Card ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card p-6 sm:p-8 relative overflow-hidden bg-dark-800/80 backdrop-blur-md border border-dark-600 rounded-2xl mb-10"
-          >
-            <div className={`absolute top-0 left-0 right-0 h-1.5 ${levelCfg.badge}`} />
 
-            <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
-              
-              {/* Left: User Avatar & Main Details */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
-                <div className="relative">
-                  <div className={`absolute -inset-1 rounded-full ${levelCfg.badge} opacity-40 blur-sm`} />
-                  <UserAvatar name={user?.name} size={88} ring className="relative z-10 shadow-2xl" />
-                  <span className="absolute -bottom-2 -right-1 bg-dark-900 text-gold-400 p-1.5 rounded-full border border-gold-500/40 text-xs shadow-lg">
-                    {levelCfg.emoji}
-                  </span>
-                </div>
-
-                <div>
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-                    <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white">{user?.name}</h1>
-                    <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${levelCfg.badge} text-white shadow-md`}>
-                      {rewardsData?.membershipLevel || 'Bronze'} Member
-                    </span>
-                  </div>
-                  <p className="text-gray-400 text-sm mb-3">
-                    {user?.email ? `+91 ${user.email}` : ''}
-                  </p>
-
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                    <Link
-                      to="/orders"
-                      className="btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 rounded-lg text-gray-300 hover:text-white"
-                    >
-                      <HiShoppingBag className="w-4 h-4 text-gold-400" />
-                      My Orders
-                    </Link>
-                    <Link
-                      to="/rewards"
-                      className="btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 rounded-lg text-gold-400 hover:text-gold-300 border-gold-500/30"
-                    >
-                      <HiStar className="w-4 h-4 text-gold-400" />
-                      My Rewards
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Quick Stats */}
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 w-full md:w-auto text-center border-t md:border-t-0 md:border-l border-dark-600 pt-4 md:pt-0 md:pl-8">
-                <div className="bg-dark-900/60 p-3 sm:p-4 rounded-xl border border-dark-600/80">
-                  <p className="text-[10px] sm:text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Total Spent</p>
-                  <p className="text-lg sm:text-xl font-bold text-gold-400">₹{(currentUserRank?.totalSpent !== undefined ? currentUserRank.totalSpent : (rewardsData?.totalSpent || 0)).toLocaleString()}</p>
-                </div>
-
-                <div className="bg-dark-900/60 p-3 sm:p-4 rounded-xl border border-dark-600/80">
-                  <p className="text-[10px] sm:text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Orders</p>
-                  <p className="text-lg sm:text-xl font-bold text-white">{currentUserRank?.totalOrders !== undefined ? currentUserRank.totalOrders : (rewardsData?.totalItemsOrdered || 0)}</p>
-                </div>
-
-                <div className="bg-dark-900/60 p-3 sm:p-4 rounded-xl border border-gold-500/30 bg-gold-500/5">
-                  <p className="text-[10px] sm:text-xs text-gold-400 uppercase font-semibold tracking-wider mb-1">Global Rank</p>
-                  <p className="text-lg sm:text-xl font-bold gold-text">#{userRankNum}</p>
-                </div>
-              </div>
-
-            </div>
-          </motion.div>
 
 
           {/* ── Personal Leaderboard Rank Banner ── */}

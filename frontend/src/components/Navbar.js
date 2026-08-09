@@ -120,7 +120,7 @@ export default function Navbar() {
                                   transition-all duration-200 p-2">
                     <Link to="/profile" className="flex items-center gap-2 px-3 py-2 rounded-lg
                                                    hover:bg-dark-600 text-sm text-gold-400 font-semibold">
-                      <FaTrophy className="w-4 h-4 text-gold-400" /> My Profile & Leaderboard
+                      <FaTrophy className="w-4 h-4 text-gold-400" /> Leaderboard
                     </Link>
                     <Link to="/orders" className="flex items-center gap-2 px-3 py-2 rounded-lg
                                                   hover:bg-dark-600 text-sm text-gray-300 hover:text-white">
@@ -247,7 +247,7 @@ export default function Navbar() {
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-dark-800 text-sm text-gold-400 font-bold hover:text-gold-300 transition-all"
                 >
-                  <FaTrophy className="w-4 h-4 text-gold-400" /> Profile & Leaderboard
+                  <FaTrophy className="w-4 h-4 text-gold-400" /> Leaderboard
                 </Link>
                 <Link
                   to="/orders"
