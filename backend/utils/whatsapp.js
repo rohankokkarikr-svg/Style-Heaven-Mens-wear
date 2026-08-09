@@ -1,4 +1,4 @@
-const twilio = require('twilio');
+const axios = require('axios');
 
 const getEffectivePaymentMethod = (order) => {
   let pm = order.payment_method || '';
@@ -38,47 +38,37 @@ const formatPhone = (phoneStr) => {
 };
 
 const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
+  const apiKey = process.env.CALLMEBOT_API_KEY;
 
-  console.log('\n--- [WHATSAPP OUTGOING MESSAGE] ---');
+  console.log('\n--- [WHATSAPP OUTGOING MESSAGE (CallMeBot)] ---');
   console.log(messageBody);
-  console.log('------------------------------------\n');
+  console.log('------------------------------------------------\n');
 
-  if (!sid || !token || !fromNumber) {
-    console.warn('⚠️ Twilio credentials missing in .env. Outgoing WhatsApp notification logged above.');
-    return { success: false, reason: 'Credentials missing' };
+  if (!apiKey || apiKey === 'your_callmebot_api_key' || apiKey.trim() === '') {
+    console.warn('⚠️ CALLMEBOT_API_KEY missing in .env!');
+    console.warn("👉 To get your free CallMeBot API key, send 'I allow callmebot to send me messages' to +34 644 51 95 23 on WhatsApp.");
+    return { success: false, reason: 'CallMeBot API key missing' };
   }
 
-  let cleanFrom = fromNumber.replace(/\D/g, '');
-  if (!cleanFrom.startsWith('+')) {
-    cleanFrom = '+' + cleanFrom;
-  }
-
-  const client = twilio(sid, token);
   const results = [];
   const uniquePhones = Array.from(new Set(recipientPhones.map(formatPhone).filter(Boolean)));
 
   for (const phone of uniquePhones) {
+    const cleanPhone = phone.replace(/\s+/g, '');
     try {
-      const res = await client.messages.create({
-        from: `whatsapp:${cleanFrom}`,
-        to: `whatsapp:${phone}`,
-        body: messageBody
-      });
-      console.log(`✅ WhatsApp message queued via Twilio to ${phone}! SID: ${res.sid}`);
-      results.push({ phone, success: true, sid: res.sid });
-    } catch (err) {
-      if (err.code === 63016 || (err.message && err.message.includes('63016'))) {
-        console.warn(`⚠️ Twilio Error 63016: Recipient ${phone} has not joined the Twilio WhatsApp Sandbox!`);
-        console.warn(`👉 To receive automated Twilio WhatsApp notifications, open WhatsApp on ${phone} and send 'join <sandbox-keyword>' to ${cleanFrom}.`);
-      } else if (err.code === 63038 || (err.message && err.message.includes('63038')) || (err.message && err.message.includes('daily messages limit'))) {
-        console.warn(`⚠️ Twilio Error 63038: Account ${sid} exceeded the 50 daily messages limit! Upgrade Twilio account to remove trial limit.`);
+      const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(cleanPhone)}&text=${encodeURIComponent(messageBody)}&apikey=${encodeURIComponent(apiKey.trim())}`;
+      const response = await axios.get(url, { timeout: 10000 });
+      
+      if (typeof response.data === 'string' && response.data.includes('APIKey is invalid')) {
+        console.error(`❌ CallMeBot API key invalid for ${phone}`);
+        results.push({ phone, success: false, error: 'Invalid APIKey' });
       } else {
-        console.error(`❌ Failed to send WhatsApp message to ${phone}:`, err.message);
+        console.log(`✅ WhatsApp message sent via CallMeBot to ${phone}!`);
+        results.push({ phone, success: true });
       }
-      results.push({ phone, success: false, error: err.message, code: err.code });
+    } catch (err) {
+      console.error(`❌ CallMeBot failed for ${phone}:`, err.message);
+      results.push({ phone, success: false, error: err.message });
     }
   }
 
