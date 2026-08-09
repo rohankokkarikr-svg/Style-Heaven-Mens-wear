@@ -153,3 +153,74 @@ ${itemsText || 'No items listed'}
     return { success: false, error: err.message };
   }
 };
+
+/**
+ * Sends a WhatsApp notification to the admin when an order is updated/edited.
+ */
+exports.sendOrderEditWhatsappNotification = async (adminPhone, order, customerName) => {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
+
+  // Format the items list
+  const itemsText = (order.items || [])
+    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
+    .join('\n');
+
+  const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+
+  // Build the message body
+  const messageBody = `✏️ *Order Updated/Edited on Style Heaven!*
+----------------------------------------
+📦 *Order ID:* #${order.id?.substring(0, 8)}
+👤 *Customer Name:* ${customerName}
+📞 *Updated Phone Number:* +91 ${order.phone}
+📍 *Updated Shipping Address:* ${order.shipping_address}
+💰 *Payment Method:* ${String(order.payment_method || 'COD').toUpperCase()}
+
+🛒 *Updated Items & Sizes (${itemsCount} items):*
+${itemsText || 'No items listed'}
+========================================
+💵 *Total Amount:* ₹${order.total_price?.toLocaleString()}
+----------------------------------------`;
+
+  console.log('\n--- [WHATSAPP OUTGOING ORDER EDIT MESSAGE] ---');
+  console.log(messageBody);
+  console.log('------------------------------------\n');
+
+  if (!sid || !token || !fromNumber) {
+    console.warn('⚠️ Twilio credentials missing in .env. Outgoing edit WhatsApp notification logged above.');
+    return { success: false, reason: 'Credentials missing' };
+  }
+
+  try {
+    let cleanPhone = adminPhone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('+')) {
+      if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+        cleanPhone = '+' + cleanPhone;
+      } else if (cleanPhone.length === 10) {
+        cleanPhone = '+91' + cleanPhone;
+      } else {
+        cleanPhone = '+' + cleanPhone;
+      }
+    }
+
+    let cleanFrom = fromNumber.replace(/\D/g, '');
+    if (!cleanFrom.startsWith('+')) {
+      cleanFrom = '+' + cleanFrom;
+    }
+
+    const client = twilio(sid, token);
+    const result = await client.messages.create({
+      from: `whatsapp:${cleanFrom}`,
+      to: `whatsapp:${cleanPhone}`,
+      body: messageBody
+    });
+
+    console.log(`✅ WhatsApp order edit notification sent successfully! Message SID: ${result.sid}`);
+    return { success: true, sid: result.sid };
+  } catch (err) {
+    console.error('❌ Failed to send WhatsApp order edit notification via Twilio:', err.message);
+    return { success: false, error: err.message };
+  }
+};

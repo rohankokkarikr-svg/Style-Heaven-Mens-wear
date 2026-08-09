@@ -1,7 +1,7 @@
 const supabase = require('../config/supabase');
 const path = require('path');
 const fs = require('fs');
-const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification } = require('../utils/whatsapp');
+const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification, sendOrderEditWhatsappNotification } = require('../utils/whatsapp');
 
 const getSiteSettings = () => {
   const settingsFile = path.join(__dirname, '../data/site_settings.json');
@@ -423,14 +423,42 @@ exports.updateOrderDetails = async (req, res) => {
     if (phone) updateData.phone = phone;
     if (payment_method) updateData.payment_method = payment_method;
 
-    let { data: updatedOrder, error: updateError } = await supabase
+    let updatedOrder = null;
+    let updateError = null;
+
+    const resPrimary = await supabase
       .from('orders')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
-    if (updateError) throw updateError;
+    updatedOrder = resPrimary.data;
+    updateError = resPrimary.error;
+
+    // Fallback if payment_method column is missing in Supabase orders table
+    if (updateError && (updateError.code === 'PGRST204' || (updateError.message && (updateError.message.includes('column') || updateError.message.includes('does not exist'))))) {
+      console.warn('Warning: payment_method column missing in orders table. Falling back to shipping_address & phone update.');
+      const fallbackData = {
+        phone: phone || order.phone,
+        shipping_address: payment_method ? `${shipping_address || order.shipping_address} [Payment Method: ${payment_method}]` : (shipping_address || order.shipping_address)
+      };
+
+      const resFallback = await supabase
+        .from('orders')
+        .update(fallbackData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      updatedOrder = resFallback.data;
+      updateError = resFallback.error;
+    }
+
+    if (updateError) {
+      console.error('Database order update error:', updateError);
+      throw updateError;
+    }
 
     // 6. Update order items sizes if provided ({ itemId: newSize })
     if (item_sizes && typeof item_sizes === 'object') {
@@ -458,7 +486,21 @@ exports.updateOrderDetails = async (req, res) => {
       .eq('id', id)
       .single();
 
-    res.json(fullOrder || updatedOrder);
+    const finalOrder = fullOrder || updatedOrder;
+
+    // 8. Send WhatsApp notification to Admin (only if orderNotifications is enabled)
+    try {
+      const settings = getSiteSettings();
+      if (settings.orderNotifications) {
+        const adminWhatsapp = settings.whatsappNumber;
+        const customerName = req.user?.name || 'Customer';
+        await sendOrderEditWhatsappNotification(adminWhatsapp, finalOrder, customerName);
+      }
+    } catch (wsErr) {
+      console.error('Failed to trigger WhatsApp order edit notification:', wsErr.message);
+    }
+
+    res.json(finalOrder);
   } catch (error) {
     console.error('Update order error:', error);
     res.status(500).json({ error: 'Failed to update order details' });

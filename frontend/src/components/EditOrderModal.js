@@ -191,8 +191,6 @@ export default function EditOrderModal({ isOpen, onClose, order, onOrderUpdated,
               >
                 <option value="cod">Cash on Delivery (COD)</option>
                 <option value="upi">UPI / GPay / PhonePe</option>
-                <option value="card">Credit / Debit Card</option>
-                <option value="netbanking">Net Banking</option>
               </select>
             </div>
 
