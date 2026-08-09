@@ -1,4 +1,5 @@
 const twilio = require('twilio');
+const axios = require('axios');
 
 const getEffectivePaymentMethod = (order) => {
   let pm = order.payment_method || '';
@@ -37,17 +38,75 @@ const formatPhone = (phoneStr) => {
   return '+' + digits;
 };
 
-const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
+/**
+ * Sends WhatsApp message using official Meta WhatsApp Cloud API (1,000 Free Conversations/Month)
+ */
+const sendWhatsappViaMeta = async (recipientPhones, messageBody) => {
+  const token = process.env.META_WHATSAPP_TOKEN;
+  const phoneId = process.env.META_WHATSAPP_PHONE_ID;
 
+  if (!token || !phoneId || token === 'your_meta_access_token' || token.trim() === '') {
+    return null; // Fallback to Twilio if Meta credentials are not configured
+  }
+
+  console.log('Sending WhatsApp notification via Meta WhatsApp Cloud API...');
+  const results = [];
+  const uniquePhones = Array.from(new Set(recipientPhones.map(formatPhone).filter(Boolean)));
+
+  for (const phone of uniquePhones) {
+    const cleanPhone = phone.replace(/\+/g, '');
+    try {
+      const response = await axios.post(
+        `https://graph.facebook.com/v18.0/${phoneId}/messages`,
+        {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: cleanPhone,
+          type: 'text',
+          text: { preview_url: false, body: messageBody }
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      const msgId = response.data?.messages?.[0]?.id;
+      console.log(`✅ Meta WhatsApp message delivered to ${phone}! Message ID: ${msgId}`);
+      results.push({ phone, success: true, id: msgId });
+    } catch (err) {
+      const errDetail = err.response?.data?.error?.message || err.message;
+      console.error(`❌ Failed to send Meta WhatsApp message to ${phone}:`, errDetail);
+      results.push({ phone, success: false, error: errDetail });
+    }
+  }
+
+  return { success: results.some(r => r.success), results, provider: 'meta' };
+};
+
+const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
   console.log('\n--- [WHATSAPP OUTGOING MESSAGE] ---');
   console.log(messageBody);
   console.log('------------------------------------\n');
 
+  // Try Meta WhatsApp Cloud API first if configured
+  try {
+    const metaRes = await sendWhatsappViaMeta(recipientPhones, messageBody);
+    if (metaRes !== null) {
+      return metaRes;
+    }
+  } catch (metaErr) {
+    console.warn('Meta WhatsApp Cloud API error, falling back to Twilio:', metaErr.message);
+  }
+
+  // Fallback to Twilio
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
+
   if (!sid || !token || !fromNumber) {
-    console.warn('⚠️ Twilio credentials missing in .env. Outgoing WhatsApp notification logged above.');
+    console.warn('⚠️ Twilio & Meta credentials missing in .env. Outgoing WhatsApp notification logged above.');
     return { success: false, reason: 'Credentials missing' };
   }
 
@@ -83,7 +142,7 @@ const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
     }
   }
 
-  return { success: results.some(r => r.success), results };
+  return { success: results.some(r => r.success), results, provider: 'twilio' };
 };
 
 const getWhatsappDirectLink = (phoneStr, text) => {
