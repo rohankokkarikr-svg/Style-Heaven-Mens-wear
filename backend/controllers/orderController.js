@@ -104,7 +104,7 @@ exports.createOrder = async (req, res) => {
       const fallbackOrderData = {
         user_id,
         total_price,
-        shipping_address,
+        shipping_address: payment_method && payment_method !== 'cod' ? `${shipping_address} [Method: ${payment_method}]` : shipping_address,
         phone,
         status: 'pending',
         discount_amount: discount_amount || 0,
@@ -141,6 +141,10 @@ exports.createOrder = async (req, res) => {
     }
 
     if (orderError) throw orderError;
+
+    if (order && !order.payment_method) {
+      order.payment_method = payment_method || 'cod';
+    }
 
     // 2. Create order items
     const orderItems = items.map(item => ({

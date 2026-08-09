@@ -1,4 +1,19 @@
-const twilio = require('twilio');
+const getEffectivePaymentMethod = (order) => {
+  let pm = order.payment_method || '';
+  if (!pm && order.shipping_address) {
+    const match = order.shipping_address.match(/\[Method:\s*([^\]]+)\]/i);
+    if (match) pm = match[1];
+  }
+  if (!pm) return 'COD (Cash on Delivery)';
+  const pmLower = pm.toLowerCase();
+  if (pmLower.includes('upi') || pmLower.includes('phonepe') || pmLower.includes('online')) {
+    return 'UPI / PhonePe QR';
+  }
+  if (pmLower.includes('cod')) {
+    return 'COD (Cash on Delivery)';
+  }
+  return pm.toUpperCase();
+};
 
 /**
  * Sends a WhatsApp notification to the admin with full order details.
@@ -36,7 +51,7 @@ exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) 
 🛒 *Items Ordered (${itemsCount} items):*
 ${itemsText || 'No items listed'}
 
-💰 *Payment Method:* ${String(order.payment_method || 'COD').toUpperCase()}
+💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
 💵 *Subtotal:* ₹${subtotal.toLocaleString()}
 🚚 *Shipping Fee:* ₹${Math.max(0, shipping).toLocaleString()}
 🏷️ *Discount:* -₹${discount.toLocaleString()} ${order.coupon_code ? `(${order.coupon_code})` : ''}
@@ -176,7 +191,7 @@ exports.sendOrderEditWhatsappNotification = async (adminPhone, order, customerNa
 👤 *Customer Name:* ${customerName}
 📞 *Updated Phone Number:* +91 ${order.phone}
 📍 *Updated Shipping Address:* ${order.shipping_address}
-💰 *Payment Method:* ${String(order.payment_method || 'COD').toUpperCase()}
+💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
 
 🛒 *Updated Items & Sizes (${itemsCount} items):*
 ${itemsText || 'No items listed'}

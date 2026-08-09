@@ -26,6 +26,23 @@ export default function AdminOrders() {
     return null;
   };
 
+  const getEffectivePaymentMethod = (o) => {
+    let pm = o.payment_method || '';
+    if (!pm && o.shipping_address) {
+      const match = o.shipping_address.match(/\[Method:\s*([^\]]+)\]/i);
+      if (match) pm = match[1];
+    }
+    if (!pm) return 'COD (Cash on Delivery)';
+    const pmLower = pm.toLowerCase();
+    if (pmLower.includes('upi') || pmLower.includes('phonepe') || pmLower.includes('online')) {
+      return 'UPI / PhonePe QR';
+    }
+    if (pmLower.includes('cod')) {
+      return 'COD (Cash on Delivery)';
+    }
+    return pm.replace('_', ' ');
+  };
+
   const fetchOrders = async () => {
     setLoading(true);
     try {
@@ -150,7 +167,7 @@ export default function AdminOrders() {
                       <td className="p-4 font-black text-white text-sm">₹{o.total_price.toLocaleString()}</td>
                       <td className="p-4">
                         <p className="text-xs font-bold text-gray-300 capitalize">
-                          {o.payment_method ? o.payment_method.replace('_', ' ') : 'COD'}
+                          {getEffectivePaymentMethod(o)}
                         </p>
                         <p className={`text-[10px] font-black capitalize ${
                           o.payment_status?.toLowerCase() === 'paid' 

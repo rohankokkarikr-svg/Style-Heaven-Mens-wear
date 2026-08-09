@@ -73,6 +73,23 @@ export default function Orders() {
     return status;
   };
 
+  const getEffectivePaymentMethod = (order) => {
+    let pm = order.payment_method || '';
+    if (!pm && order.shipping_address) {
+      const match = order.shipping_address.match(/\[Method:\s*([^\]]+)\]/i);
+      if (match) pm = match[1];
+    }
+    if (!pm) return 'Cash on Delivery (COD)';
+    const pmLower = pm.toLowerCase();
+    if (pmLower.includes('upi') || pmLower.includes('phonepe') || pmLower.includes('online')) {
+      return 'UPI / PhonePe QR';
+    }
+    if (pmLower.includes('cod')) {
+      return 'Cash on Delivery (COD)';
+    }
+    return pm.replace('_', ' ');
+  };
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -158,7 +175,7 @@ export default function Orders() {
                 <div>
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-0.5">Payment Method</span>
                   <span className="font-bold text-gray-300 capitalize">
-                    {order.payment_method ? order.payment_method.replace('_', ' ') : 'Cash on Delivery'}
+                    {getEffectivePaymentMethod(order)}
                   </span>
                 </div>
                 <div>
