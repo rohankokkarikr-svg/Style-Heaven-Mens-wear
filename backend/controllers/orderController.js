@@ -104,7 +104,7 @@ exports.createOrder = async (req, res) => {
       const fallbackOrderData = {
         user_id,
         total_price,
-        shipping_address: payment_method && payment_method !== 'cod' ? `${shipping_address} [Method: ${payment_method}]` : shipping_address,
+        shipping_address: `${shipping_address} [Method: ${payment_method || 'cod'}]`,
         phone,
         status: 'pending',
         discount_amount: discount_amount || 0,
@@ -193,6 +193,8 @@ exports.createOrder = async (req, res) => {
     }
 
     // 4. Send WhatsApp Notification to the Admin (only if orderNotifications is enabled)
+    let whatsappLink = null;
+    let whatsappMessage = null;
     try {
       const settings = getSiteSettings();
       if (settings.orderNotifications) {
@@ -208,10 +210,15 @@ exports.createOrder = async (req, res) => {
           .eq('id', order.id)
           .single();
 
-        if (fullOrder) {
-          const adminWhatsapp = settings.whatsappNumber;
-          const customerName = req.user?.name || 'Customer';
-          await sendOrderWhatsappNotification(adminWhatsapp, fullOrder, customerName);
+        const orderForNotify = fullOrder || { ...order, items: orderItems };
+        if (!orderForNotify.payment_method) orderForNotify.payment_method = payment_method || 'cod';
+
+        const adminWhatsapp = settings.whatsappNumber;
+        const customerName = req.user?.name || 'Customer';
+        const wsRes = await sendOrderWhatsappNotification(adminWhatsapp, orderForNotify, customerName);
+        if (wsRes) {
+          whatsappLink = wsRes.directLink;
+          whatsappMessage = wsRes.messageText;
         }
       } else {
         console.log('Skipping WhatsApp order notification: orderNotifications is disabled in settings.');
@@ -220,7 +227,7 @@ exports.createOrder = async (req, res) => {
       console.error('Failed to trigger WhatsApp notification:', wsErr.message);
     }
 
-    res.status(201).json(order);
+    res.status(201).json({ ...order, whatsappLink, whatsappMessage });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create order' });

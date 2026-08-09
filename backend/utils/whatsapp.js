@@ -78,10 +78,14 @@ const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
   return { success: results.some(r => r.success), results };
 };
 
-/**
- * Sends a WhatsApp notification to the Admin and Customer when a new order is placed (COD or UPI).
- */
-exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) => {
+const getWhatsappDirectLink = (phoneStr, text) => {
+  const formatted = formatPhone(phoneStr);
+  if (!formatted) return null;
+  const cleanNumber = formatted.replace(/\+/g, '');
+  return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;
+};
+
+const buildOrderWhatsappText = (order, customerName) => {
   const itemsText = (order.items || [])
     .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
     .join('\n');
@@ -89,10 +93,10 @@ exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) 
   const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
   const subtotal = (order.items || []).reduce((s, i) => s + (i.price_at_time * i.quantity), 0);
   const discount = order.discount_amount || 0;
-  const shipping = order.total_price - subtotal + discount;
+  const shipping = (order.total_price || 0) - subtotal + discount;
   const isUpi = getEffectivePaymentMethod(order).includes('UPI');
 
-  const messageBody = `🔔 *New Order Placed on Style Heaven!*
+  return `🔔 *New Order Placed on Style Heaven!*
 ----------------------------------------
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}
@@ -107,11 +111,29 @@ ${itemsText || 'No items listed'}
 🚚 *Shipping Fee:* ₹${Math.max(0, shipping).toLocaleString()}
 🏷️ *Discount:* -₹${discount.toLocaleString()} ${order.coupon_code ? `(${order.coupon_code})` : ''}
 ========================================
-💵 *Total Amount to Pay:* ₹${order.total_price?.toLocaleString()}
+💵 *Total Amount to Pay:* ₹${(order.total_price || 0).toLocaleString()}
 ----------------------------------------
 ${isUpi ? '⏳ *Payment Status:* Awaiting UPI Ref. No. Submission' : '✅ *Order Status:* CONFIRMED (COD)'}`;
+};
 
-  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+exports.getEffectivePaymentMethod = getEffectivePaymentMethod;
+exports.formatPhone = formatPhone;
+exports.getWhatsappDirectLink = getWhatsappDirectLink;
+exports.buildOrderWhatsappText = buildOrderWhatsappText;
+
+/**
+ * Sends a WhatsApp notification to the Admin and Customer when a new order is placed (COD or UPI).
+ */
+exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) => {
+  const messageBody = buildOrderWhatsappText(order, customerName);
+  const twilioRes = await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+  const directLink = getWhatsappDirectLink(adminPhone, messageBody);
+
+  return {
+    ...twilioRes,
+    messageText: messageBody,
+    directLink
+  };
 };
 
 /**
