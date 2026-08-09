@@ -313,6 +313,7 @@ exports.updateOrderStatus = async (req, res) => {
             .from('orders')
             .select(`
               *,
+              user:users (id, name, email),
               items:order_items (
                 quantity, price_at_time, size,
                 product:products (id, name, image_url, category)
@@ -321,9 +322,9 @@ exports.updateOrderStatus = async (req, res) => {
             .eq('id', id)
             .single();
 
-          if (fullOrder) {
-            await sendOrderCancelWhatsappNotification(settings.whatsappNumber, fullOrder, req.user?.name || 'Customer');
-          }
+          const notifyOrder = fullOrder || data;
+          const customerName = notifyOrder?.user?.name || req.user?.name || 'Customer';
+          await sendOrderCancelWhatsappNotification(settings.whatsappNumber, notifyOrder, customerName);
         }
       } catch (wsErr) {
         console.error('Failed to trigger WhatsApp cancellation notification:', wsErr.message);
@@ -357,8 +358,8 @@ exports.cancelOrder = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to cancel this order' });
     }
 
-    // 3. Status check: only pending orders can be cancelled
-    if (order.status !== 'pending') {
+    // 3. Status check: pending or payment_verification_pending orders can be cancelled
+    if (order.status !== 'pending' && order.status !== 'payment_verification_pending') {
       return res.status(400).json({ error: `Cannot cancel an order that is already ${order.status}` });
     }
 
@@ -398,6 +399,7 @@ exports.cancelOrder = async (req, res) => {
           .from('orders')
           .select(`
             *,
+            user:users (id, name, email),
             items:order_items (
               quantity, price_at_time, size,
               product:products (id, name, image_url, category)
@@ -406,11 +408,10 @@ exports.cancelOrder = async (req, res) => {
           .eq('id', id)
           .single();
 
-        if (fullOrder) {
-          const adminWhatsapp = settings.whatsappNumber;
-          const customerName = req.user?.name || 'Customer';
-          await sendOrderCancelWhatsappNotification(adminWhatsapp, fullOrder, customerName);
-        }
+        const notifyOrder = fullOrder || updatedOrder || order;
+        const adminWhatsapp = settings.whatsappNumber;
+        const customerName = notifyOrder?.user?.name || req.user?.name || 'Customer';
+        await sendOrderCancelWhatsappNotification(adminWhatsapp, notifyOrder, customerName);
       } else {
         console.log('Skipping WhatsApp cancellation notification: orderNotifications is disabled in settings.');
       }
