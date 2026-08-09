@@ -131,7 +131,6 @@ export default function Checkout() {
 
   const [showLoadingPopup, setShowLoadingPopup] = useState(false);
   const [popupText, setPopupText] = useState('Please wait...');
-  const [upiApp, setUpiApp] = useState('phonepe');
 
   const [form, setForm] = useState({
     fullName:     user?.name || '',
@@ -468,7 +467,7 @@ export default function Checkout() {
         coupon_code: isCouponApplied ? couponCode : null,
         shipping_address: fullAddress,
         phone: form.phone.replace(/\D/g, ''),
-        payment_method: paymentMethod === 'cod' ? 'cod' : `upi_${upiApp}`,
+        payment_method: paymentMethod === 'cod' ? 'cod' : 'upi_phonepe',
         payment_status: 'pending',
         items: items.map(i => ({
           product_id:    i.product.id,
@@ -491,15 +490,11 @@ export default function Checkout() {
         setPopupText("Setting up secure payment gateway handshake...");
         
         setTimeout(() => {
-          setPopupText("Contacting NPCI servers to resolve VPA...");
+          setPopupText("Opening PhonePe QR Payment Gateway...");
           setTimeout(() => {
-            setPopupText("UPI application is opening. Please complete payment...");
-            setTimeout(() => {
-              setShowLoadingPopup(false);
-              const methodKey = paymentMethod === 'upi' ? upiApp : paymentMethod;
-              navigate(`/payment-gateway?orderId=${createdOrder.id}&method=${methodKey}`);
-            }, 1000);
-          }, 1200);
+            setShowLoadingPopup(false);
+            navigate(`/payment-gateway?orderId=${createdOrder.id}&method=phonepe`);
+          }, 1000);
         }, 1200);
       }
     } catch (err) {
@@ -1056,7 +1051,7 @@ export default function Checkout() {
                         paymentMethod === 'upi' ? 'border-gold-500 bg-gold-500/10' : 'border-dark-600'
                       }`}>
                         <button type="button" onClick={() => setPaymentMethod('upi')}
-                          className="flex items-center justify-between w-full p-4 text-left border-b border-dashed border-dark-600">
+                          className="flex items-center justify-between w-full p-4 text-left cursor-pointer">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-dark-900 flex items-center justify-center text-gray-400">
                               <svg viewBox="0 0 24 24" className="w-6 h-6 text-gold-400" fill="currentColor">
@@ -1064,8 +1059,8 @@ export default function Checkout() {
                               </svg>
                             </div>
                             <div>
-                              <p className="font-bold text-sm text-white">UPI / Mobile Pay</p>
-                              <p className="text-gray-400 text-xs mt-0.5">Google Pay, PhonePe, Paytm, or BHIM</p>
+                              <p className="font-bold text-sm text-white">UPI / PhonePe QR Payment</p>
+                              <p className="text-gray-400 text-xs mt-0.5">Scan PhonePe QR Code & Enter 12-digit Ref. No.</p>
                             </div>
                           </div>
                           <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -1074,53 +1069,6 @@ export default function Checkout() {
                             {paymentMethod === 'upi' && <div className="w-2.5 h-2.5 rounded-full bg-gold-500" />}
                           </div>
                         </button>
-
-                        {/* UPI Sub-Apps */}
-                        {paymentMethod === 'upi' && (
-                          <div className="p-4 bg-dark-900/50 rounded-b-xl border-t border-dark-600 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
-                            {[
-                              { id: 'phonepe', name: 'PhonePe', color: '#8f55df', desc: 'Pay using PhonePe App', icon: (
-                                <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#8f55df]" fill="currentColor">
-                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14h-2v-2h2v2zm0-4h-2V7h2v5zm4 4h-2v-5h2v5zm0-7h-2V7h2v2z" />
-                                </svg>
-                              )},
-                              { id: 'gpay', name: 'Google Pay', color: '#4a8df8', desc: 'Pay using Google Pay App', icon: (
-                                <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#4a8df8]" fill="currentColor">
-                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-                                </svg>
-                              )},
-                              { id: 'paytm', name: 'Paytm UPI', color: '#33cbf5', desc: 'Pay using Paytm App', icon: (
-                                <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#33cbf5]" fill="currentColor">
-                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 13h-2v-2h2v2zm0-4h-2V7h2v4z" />
-                                </svg>
-                              )},
-                              { id: 'any', name: 'Pay by any UPI App', color: '#D4AF37', desc: 'BHIM, Cred, or other UPI apps', icon: (
-                                <svg viewBox="0 0 24 24" className="w-5 h-5 text-gold-400" fill="currentColor">
-                                  <path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z" />
-                                </svg>
-                              )}
-                            ].map((app) => (
-                              <label key={app.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                                upiApp === app.id ? 'border-gold-500 bg-dark-900 shadow-md' : 'border-dark-600 bg-dark-800 hover:border-gold-500/50'
-                              }`}>
-                                <input type="radio" name="upi-app" value={app.id} checked={upiApp === app.id}
-                                  onChange={() => setUpiApp(app.id)} className="sr-only" />
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-dark-900 shrink-0">
-                                  {app.icon}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-bold text-xs text-white">{app.name}</p>
-                                  <p className="text-[10px] text-gray-400 truncate">{app.desc}</p>
-                                </div>
-                                <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center shrink-0 ${
-                                  upiApp === app.id ? 'border-gold-500 text-gold-400' : 'border-dark-500'
-                                }`}>
-                                  {upiApp === app.id && <div className="w-2 h-2 rounded-full bg-gold-500" />}
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </div>
 
