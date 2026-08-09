@@ -20,7 +20,7 @@ const SpinWheelPopup = () => {
     { label: '₹100 OFF', color: '#1a1a1a', textColor: '#D4AF37' },
     { label: 'Free Delivery', color: '#D4AF37', textColor: '#1a1a1a' },
     { label: '20% OFF', color: '#1a1a1a', textColor: '#D4AF37' },
-    { label: 'Better Luck', color: '#D4AF37', textColor: '#1a1a1a' },
+    { label: 'Better Luck Next Time', color: '#D4AF37', textColor: '#1a1a1a' },
   ];
 
   useEffect(() => {
@@ -105,10 +105,13 @@ const SpinWheelPopup = () => {
       setIsSpinning(true);
       
       // Animation logic
-      let currentAngle = 0;
       const spinDuration = 3000;
       const startTime = Date.now();
-      const totalRotation = 10 * Math.PI + (rewards.findIndex(r => r.label === wonReward || (wonReward === 'Better Luck Next Time' && r.label === 'Better Luck')) * (2 * Math.PI / rewards.length));
+      const winningIndex = rewards.findIndex(r => r.label === wonReward);
+      const safeIndex = winningIndex >= 0 ? winningIndex : 0;
+      const sliceAngle = (2 * Math.PI) / rewards.length;
+      // Target rotation angle so winning segment safeIndex stops exactly under the top arrow pointer (270° / 1.5π rad)
+      const totalRotation = 10 * Math.PI + (1.5 * Math.PI) - ((safeIndex + 0.5) * sliceAngle);
 
       const animate = () => {
         const elapsed = Date.now() - startTime;
