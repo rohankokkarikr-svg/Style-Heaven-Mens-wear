@@ -417,10 +417,16 @@ exports.updateOrderDetails = async (req, res) => {
       return res.status(400).json({ error: 'Orders can only be edited within 12 hours of placement' });
     }
 
-    // 5. Build update payload
+    // 5. Phone validation: must contain exactly 10 digits
+    const cleanPhone = (phone || '').replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({ error: 'Phone number must contain exactly 10 digits' });
+    }
+
+    // 6. Build update payload
     const updateData = {};
     if (shipping_address) updateData.shipping_address = shipping_address;
-    if (phone) updateData.phone = phone;
+    updateData.phone = cleanPhone;
     if (payment_method) updateData.payment_method = payment_method;
 
     let updatedOrder = null;

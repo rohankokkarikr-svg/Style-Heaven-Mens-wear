@@ -42,15 +42,16 @@ export default function EditOrderModal({ isOpen, onClose, order, onOrderUpdated,
     if (!shippingAddress.trim()) {
       return toast.error('Please enter a valid shipping address');
     }
-    if (!phone.trim()) {
-      return toast.error('Please enter a valid phone number');
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      return toast.error('Phone number must contain exactly 10 digits');
     }
 
     setSubmitting(true);
     try {
       const payload = {
         shipping_address: shippingAddress.trim(),
-        phone: phone.trim(),
+        phone: cleanPhone,
         payment_method: paymentMethod,
         item_sizes: itemSizes
       };
@@ -170,13 +171,17 @@ export default function EditOrderModal({ isOpen, onClose, order, onOrderUpdated,
                 Contact Phone Number <span className="text-red-400">*</span>
               </label>
               <input
-                type="text"
+                type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 required
-                placeholder="10-digit mobile number"
-                className="input-field w-full text-sm bg-dark-900 border-dark-600 focus:border-gold-500"
+                maxLength={10}
+                minLength={10}
+                pattern="\d{10}"
+                placeholder="10-digit mobile number (e.g. 9876543210)"
+                className="input-field w-full text-sm bg-dark-900 border-dark-600 focus:border-gold-500 font-mono tracking-wider"
               />
+              <p className="text-[11px] text-gray-500">Must contain exactly 10 digits.</p>
             </div>
 
             {/* 4. Payment Method */}
