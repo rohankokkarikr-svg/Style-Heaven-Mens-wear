@@ -67,11 +67,16 @@ const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
         to: `whatsapp:${phone}`,
         body: messageBody
       });
-      console.log(`✅ WhatsApp message sent to ${phone}! SID: ${res.sid}`);
+      console.log(`✅ WhatsApp message queued via Twilio to ${phone}! SID: ${res.sid}`);
       results.push({ phone, success: true, sid: res.sid });
     } catch (err) {
-      console.error(`❌ Failed to send WhatsApp message to ${phone}:`, err.message);
-      results.push({ phone, success: false, error: err.message });
+      if (err.code === 63016 || (err.message && err.message.includes('63016'))) {
+        console.warn(`⚠️ Twilio Error 63016: Recipient ${phone} has not joined the Twilio WhatsApp Sandbox!`);
+        console.warn(`👉 To receive automated Twilio WhatsApp notifications, open WhatsApp on ${phone} and send 'join <sandbox-keyword>' to ${cleanFrom}.`);
+      } else {
+        console.error(`❌ Failed to send WhatsApp message to ${phone}:`, err.message);
+      }
+      results.push({ phone, success: false, error: err.message, code: err.code });
     }
   }
 

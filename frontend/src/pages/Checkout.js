@@ -498,6 +498,13 @@ export default function Checkout() {
           total: finalTotal,
           whatsappLink: waLink
         });
+
+        // Automatically open WhatsApp in a new tab/app
+        try {
+          window.open(waLink, '_blank', 'noopener,noreferrer');
+        } catch (e) {
+          console.warn('Auto open WhatsApp popup blocked by browser:', e);
+        }
       } else {
         // Show simulated loading popup
         setShowLoadingPopup(true);
