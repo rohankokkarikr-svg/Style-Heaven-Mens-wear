@@ -29,6 +29,7 @@ export default function Profile() {
   const [searchFilter, setSearchFilter] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -37,16 +38,24 @@ export default function Profile() {
           authAPI.getLeaderboard().catch(() => ({ data: null }))
         ]);
         
-        if (rewardsRes.data) setRewardsData(rewardsRes.data);
-        if (leaderboardRes.data) setLeaderboardData(leaderboardRes.data);
+        if (isMounted) {
+          if (rewardsRes?.data) setRewardsData(rewardsRes.data);
+          if (leaderboardRes?.data) {
+            setLeaderboardData(leaderboardRes.data);
+          } else {
+            const retryRes = await authAPI.getLeaderboard().catch(() => ({ data: null }));
+            if (isMounted && retryRes?.data) setLeaderboardData(retryRes.data);
+          }
+        }
       } catch (err) {
         toast.error('Failed to load profile data');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchData();
+    return () => { isMounted = false; };
   }, []);
 
   if (loading) {
@@ -130,12 +139,12 @@ export default function Profile() {
               <div className="grid grid-cols-3 gap-3 sm:gap-4 w-full md:w-auto text-center border-t md:border-t-0 md:border-l border-dark-600 pt-4 md:pt-0 md:pl-8">
                 <div className="bg-dark-900/60 p-3 sm:p-4 rounded-xl border border-dark-600/80">
                   <p className="text-[10px] sm:text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Total Spent</p>
-                  <p className="text-lg sm:text-xl font-bold text-gold-400">₹{(currentUserRank?.totalSpent || rewardsData?.totalSpent || 0).toLocaleString()}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gold-400">₹{(currentUserRank?.totalSpent !== undefined ? currentUserRank.totalSpent : (rewardsData?.totalSpent || 0)).toLocaleString()}</p>
                 </div>
 
                 <div className="bg-dark-900/60 p-3 sm:p-4 rounded-xl border border-dark-600/80">
                   <p className="text-[10px] sm:text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Orders</p>
-                  <p className="text-lg sm:text-xl font-bold text-white">{currentUserRank?.totalOrders || 0}</p>
+                  <p className="text-lg sm:text-xl font-bold text-white">{currentUserRank?.totalOrders !== undefined ? currentUserRank.totalOrders : (rewardsData?.totalItemsOrdered || 0)}</p>
                 </div>
 
                 <div className="bg-dark-900/60 p-3 sm:p-4 rounded-xl border border-gold-500/30 bg-gold-500/5">

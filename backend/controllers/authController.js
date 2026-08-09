@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { safeQuery } = require('../config/supabase');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -237,33 +238,40 @@ exports.getRewards = async (req, res) => {
 
 exports.getLeaderboard = async (req, res) => {
   try {
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id, name, email, created_at');
+    const [usersRes, ordersRes] = await Promise.all([
+      safeQuery(() =>
+        supabase
+          .from('users')
+          .select('id, name, email, created_at')
+      ),
+      safeQuery(() =>
+        supabase
+          .from('orders')
+          .select('user_id, total_price, status')
+          .in('status', ['delivered', 'Delivered', 'DELIVERED'])
+      )
+    ]);
 
-    if (usersError) throw usersError;
+    if (usersRes.error) throw usersRes.error;
+    if (ordersRes.error) throw ordersRes.error;
 
-    const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select('user_id, total_price, status')
-      .eq('status', 'delivered');
-
-    if (ordersError) throw ordersError;
+    const users = usersRes.data || [];
+    const orders = ordersRes.data || [];
 
     const userSpendMap = {};
     const userOrdersCountMap = {};
 
-    if (orders) {
-      orders.forEach(o => {
-        const price = Number(o.total_price) || 0;
-        userSpendMap[o.user_id] = (userSpendMap[o.user_id] || 0) + price;
-        userOrdersCountMap[o.user_id] = (userOrdersCountMap[o.user_id] || 0) + 1;
-      });
-    }
+    orders.forEach(o => {
+      const price = Number(o.total_price) || 0;
+      const uid = String(o.user_id);
+      userSpendMap[uid] = (userSpendMap[uid] || 0) + price;
+      userOrdersCountMap[uid] = (userOrdersCountMap[uid] || 0) + 1;
+    });
 
-    const leaderboard = (users || []).map(u => {
-      const totalSpent = Math.round(userSpendMap[u.id] || 0);
-      const totalOrders = userOrdersCountMap[u.id] || 0;
+    const leaderboard = users.map(u => {
+      const uIdStr = String(u.id);
+      const totalSpent = Math.round(userSpendMap[uIdStr] || 0);
+      const totalOrders = userOrdersCountMap[uIdStr] || 0;
 
       let level = 'Bronze';
       if (totalSpent > 50000)      level = 'Elite';
@@ -283,14 +291,14 @@ exports.getLeaderboard = async (req, res) => {
 
     leaderboard.sort((a, b) => b.totalSpent - a.totalSpent || b.totalOrders - a.totalOrders);
 
-    const currentUserId = req.user?.id;
+    const currentUserId = req.user?.id ? String(req.user.id) : null;
     const rankedLeaderboard = leaderboard.map((item, index) => ({
       ...item,
       rank: index + 1,
-      isCurrentUser: currentUserId ? item.id === currentUserId : false
+      isCurrentUser: currentUserId ? String(item.id) === currentUserId : false
     }));
 
-    const currentUserItem = rankedLeaderboard.find(item => item.id === currentUserId);
+    const currentUserItem = rankedLeaderboard.find(item => String(item.id) === currentUserId);
 
     let nextRankAmountNeeded = 0;
     if (currentUserItem && currentUserItem.rank > 1) {
