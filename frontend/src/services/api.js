@@ -77,13 +77,14 @@ export const productAPI = {
 
 // ─── Orders ──────────────────────────────────────
 export const orderAPI = {
-  create:         (data)     => api.post('/orders', data),
-  getMyOrders:    ()         => api.get('/orders/my'),
-  getAll:         (params)   => api.get('/orders', { params }),
-  getById:        (id)       => api.get(`/orders/${id}`),
-  updateStatus:   (id, data) => api.put(`/orders/${id}/status`, data),
-  cancelOrder:    (id)       => api.put(`/orders/${id}/cancel`),
-  pay:            (id, data) => api.put(`/orders/${id}/pay`, data),
+  create:             (data)     => api.post('/orders', data),
+  getMyOrders:        ()         => api.get('/orders/my'),
+  getAll:             (params)   => api.get('/orders', { params }),
+  getById:            (id)       => api.get(`/orders/${id}`),
+  updateStatus:       (id, data) => api.put(`/orders/${id}/status`, data),
+  updateOrderDetails: (id, data) => api.put(`/orders/${id}/edit`, data),
+  cancelOrder:        (id)       => api.put(`/orders/${id}/cancel`),
+  pay:                (id, data) => api.put(`/orders/${id}/pay`, data),
 };
 
 // ─── Sales / Barcode ─────────────────────────────

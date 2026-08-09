@@ -4,11 +4,13 @@ import { orderAPI } from '../services/api';
 import { HiShoppingBag, HiPencilAlt } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
+import EditOrderModal from '../components/EditOrderModal';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reviewProduct, setReviewProduct] = useState(null);
+  const [editingOrder, setEditingOrder] = useState(null);
 
   const isCancelable = (order) => {
     if (order.status?.toLowerCase() !== 'pending') return false;
@@ -171,16 +173,24 @@ export default function Orders() {
             </div>
 
             {isCancelable(order) && (
-              <div className="mt-6 pt-4 border-t border-dark-600 flex items-center justify-between flex-wrap gap-2">
-                <span className="text-[11px] text-gray-500 italic">
+              <div className="mt-6 pt-4 border-t border-dark-600 flex items-center justify-between flex-wrap gap-3">
+                <span className="text-[11px] text-gray-400 italic font-medium flex items-center gap-1">
                   ⏱️ {getRemainingTimeText(order.created_at)}
                 </span>
-                <button
-                  onClick={() => handleCancelOrder(order.id)}
-                  className="px-4 py-2 text-xs font-semibold text-red-400 hover:text-red-500 border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
-                >
-                  🚫 Cancel Order
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => setEditingOrder(order)}
+                    className="px-4 py-2 text-xs font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500/60 bg-gold-500/5 hover:bg-gold-500/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <HiPencilAlt className="w-3.5 h-3.5" /> Edit Order
+                  </button>
+                  <button
+                    onClick={() => handleCancelOrder(order.id)}
+                    className="px-4 py-2 text-xs font-semibold text-red-400 hover:text-red-500 border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    🚫 Cancel Order
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -191,6 +201,16 @@ export default function Orders() {
         isOpen={!!reviewProduct} 
         onClose={() => setReviewProduct(null)} 
         product={reviewProduct} 
+      />
+
+      <EditOrderModal
+        isOpen={!!editingOrder}
+        onClose={() => setEditingOrder(null)}
+        order={editingOrder}
+        remainingTimeText={editingOrder ? getRemainingTimeText(editingOrder.created_at) : ''}
+        onOrderUpdated={(updated) => {
+          setOrders(prev => prev.map(o => o.id === updated.id ? { ...o, ...updated } : o));
+        }}
       />
     </div>
   );

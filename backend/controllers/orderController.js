@@ -381,6 +381,90 @@ exports.cancelOrder = async (req, res) => {
   }
 };
 
+exports.updateOrderDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const { shipping_address, phone, payment_method, item_sizes } = req.body;
+
+    // 1. Fetch order
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // 2. Security Check: ensure it belongs to the logged-in user
+    if (order.user_id !== user_id) {
+      return res.status(403).json({ error: 'Unauthorized to edit this order' });
+    }
+
+    // 3. Status check: only pending orders can be edited
+    if (order.status !== 'pending') {
+      return res.status(400).json({ error: `Cannot edit an order that is already ${order.status}` });
+    }
+
+    // 4. Timing Check: 12 hours limit (same as cancellation window)
+    const createdTime = new Date(order.created_at);
+    const diffMs = Date.now() - createdTime.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (diffHours > 12) {
+      return res.status(400).json({ error: 'Orders can only be edited within 12 hours of placement' });
+    }
+
+    // 5. Build update payload
+    const updateData = {};
+    if (shipping_address) updateData.shipping_address = shipping_address;
+    if (phone) updateData.phone = phone;
+    if (payment_method) updateData.payment_method = payment_method;
+
+    let { data: updatedOrder, error: updateError } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // 6. Update order items sizes if provided ({ itemId: newSize })
+    if (item_sizes && typeof item_sizes === 'object') {
+      for (const [itemId, newSize] of Object.entries(item_sizes)) {
+        if (newSize) {
+          await supabase
+            .from('order_items')
+            .update({ size: newSize })
+            .eq('id', itemId)
+            .eq('order_id', id);
+        }
+      }
+    }
+
+    // 7. Fetch full updated order with items
+    const { data: fullOrder } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        items:order_items (
+          id, quantity, price_at_time, size,
+          product:products (id, name, image_url, category, sizes)
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    res.json(fullOrder || updatedOrder);
+  } catch (error) {
+    console.error('Update order error:', error);
+    res.status(500).json({ error: 'Failed to update order details' });
+  }
+};
+
 exports.payOrder = async (req, res) => {
   try {
     const { id } = req.params;
