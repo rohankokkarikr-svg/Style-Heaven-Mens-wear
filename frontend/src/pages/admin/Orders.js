@@ -12,12 +12,35 @@ export default function AdminOrders() {
     fetchOrders();
   }, [filter]);
 
+  const extractRefNo = (o) => {
+    if (o.transaction_id && o.transaction_id.trim() && !o.transaction_id.startsWith('TXN_')) {
+      return o.transaction_id.trim();
+    }
+    if (o.shipping_address) {
+      const match = o.shipping_address.match(/Ref\.?\s*No\.?:\s*([A-Za-z0-9_]+)/i);
+      if (match) return match[1];
+      const txnMatch = o.shipping_address.match(/TXN:?\s*([A-Za-z0-9_]+)/i);
+      if (txnMatch) return txnMatch[1];
+    }
+    if (o.transaction_id) return o.transaction_id;
+    return null;
+  };
+
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const params = filter !== 'all' ? { status: filter } : {};
+      const params = (filter !== 'all' && filter !== 'payment_verification_pending') ? { status: filter } : {};
       const { data } = await orderAPI.getAll(params);
-      setOrders(data);
+      let list = data || [];
+      if (filter === 'payment_verification_pending') {
+        list = list.filter(o => 
+          o.payment_status === 'pending_verification' || 
+          o.status === 'payment_verification_pending' || 
+          (o.shipping_address && o.shipping_address.includes('Status: Pending Verification')) ||
+          (o.shipping_address && o.shipping_address.includes('Ref. No:'))
+        );
+      }
+      setOrders(list);
     } catch (err) {
       toast.error('Failed to load orders');
     } finally {
@@ -63,7 +86,7 @@ export default function AdminOrders() {
   };
 
   const renderStatusText = (status) => {
-    if (status === 'payment_verification_pending') return '⏱️ Payment Pending Verification';
+    if (status === 'payment_verification_pending') return '⏱️ Pending Verification';
     return status;
   };
 
@@ -110,7 +133,12 @@ export default function AdminOrders() {
                 <tr><td colSpan="7" className="p-8 text-center text-gray-400">No orders found.</td></tr>
               ) : (
                 orders.map((o) => {
-                  const isPendingVerif = o.payment_status === 'pending_verification' || o.status === 'payment_verification_pending';
+                  const refNo = extractRefNo(o);
+                  const isPendingVerif = o.payment_status === 'pending_verification' || 
+                    o.status === 'payment_verification_pending' || 
+                    (o.shipping_address && o.shipping_address.includes('Status: Pending Verification')) ||
+                    (o.shipping_address && o.shipping_address.includes('Ref. No:'));
+
                   return (
                     <tr key={o.id} className="hover:bg-dark-900/30 transition-colors">
                       <td className="p-4 font-mono text-xs text-gray-400">#{o.id.substring(0,8)}</td>
@@ -128,17 +156,19 @@ export default function AdminOrders() {
                           o.payment_status?.toLowerCase() === 'paid' 
                             ? 'text-green-400' 
                             : isPendingVerif 
-                              ? 'text-amber-400 font-bold' 
+                              ? 'text-amber-400 font-bold animate-pulse' 
                               : 'text-amber-500'
                         }`}>
                           {isPendingVerif ? '⏱️ Ref Submitted (Pending Admin Verification)' : (o.payment_status || 'Pending')}
                         </p>
-                        {o.transaction_id && (
+                        {refNo ? (
                           <div className="mt-1">
-                            <span className="text-[9px] font-mono text-gold-300 font-bold bg-gold-500/10 px-2 py-0.5 rounded border border-gold-500/30 inline-block">
-                              Ref. No: {o.transaction_id}
+                            <span className="text-xs font-mono text-gold-300 font-extrabold bg-gold-500/15 px-2.5 py-1 rounded-md border border-gold-500/40 inline-block shadow-sm">
+                              🔑 UTR / Ref. No: {refNo}
                             </span>
                           </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-500 italic block mt-0.5">No Ref. No.</span>
                         )}
                       </td>
                       <td className="p-4">
