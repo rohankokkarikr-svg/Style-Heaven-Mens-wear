@@ -73,6 +73,9 @@ const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
       if (err.code === 63016 || (err.message && err.message.includes('63016'))) {
         console.warn(`⚠️ Twilio Error 63016: Recipient ${phone} has not joined the Twilio WhatsApp Sandbox!`);
         console.warn(`👉 To receive automated Twilio WhatsApp notifications, open WhatsApp on ${phone} and send 'join <sandbox-keyword>' to ${cleanFrom}.`);
+      } else if (err.code === 63038 || (err.message && err.message.includes('63038')) || (err.message && err.message.includes('daily messages limit'))) {
+        console.warn(`⚠️ Twilio Error 63038: Account ${sid} exceeded the 50 daily messages limit!`);
+        console.warn(`👉 Upgrade Twilio account or use Meta Cloud API to remove the 50 messages/day trial limit.`);
       } else {
         console.error(`❌ Failed to send WhatsApp message to ${phone}:`, err.message);
       }
