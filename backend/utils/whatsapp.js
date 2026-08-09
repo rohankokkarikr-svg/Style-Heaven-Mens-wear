@@ -1,3 +1,5 @@
+const twilio = require('twilio');
+
 const getEffectivePaymentMethod = (order) => {
   let pm = order.payment_method || '';
   if (!pm && order.shipping_address) {
@@ -15,32 +17,81 @@ const getEffectivePaymentMethod = (order) => {
   return pm.toUpperCase();
 };
 
-/**
- * Sends a WhatsApp notification to the admin with full order details.
- * Uses Twilio WhatsApp API.
- * 
- * Required .env configuration:
- * - TWILIO_ACCOUNT_SID
- * - TWILIO_AUTH_TOKEN
- * - TWILIO_WHATSAPP_FROM (e.g. +14155238886)
- */
-exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) => {
+const extractRefNo = (order) => {
+  if (order.transaction_id && !order.transaction_id.startsWith('TXN_') && !order.transaction_id.startsWith('REF_')) {
+    return order.transaction_id;
+  }
+  if (order.shipping_address) {
+    const match = order.shipping_address.match(/Ref\.?\s*No\.?:\s*([A-Za-z0-9_]+)/i);
+    if (match) return match[1];
+  }
+  return order.transaction_id || 'N/A';
+};
+
+const formatPhone = (phoneStr) => {
+  if (!phoneStr) return null;
+  let digits = String(phoneStr).replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.length === 10) return '+91' + digits;
+  if (digits.length === 12 && digits.startsWith('91')) return '+' + digits;
+  return '+' + digits;
+};
+
+const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
 
-  // 1. Format the items list
+  console.log('\n--- [WHATSAPP OUTGOING MESSAGE] ---');
+  console.log(messageBody);
+  console.log('------------------------------------\n');
+
+  if (!sid || !token || !fromNumber) {
+    console.warn('⚠️ Twilio credentials missing in .env. Outgoing WhatsApp notification logged above.');
+    return { success: false, reason: 'Credentials missing' };
+  }
+
+  let cleanFrom = fromNumber.replace(/\D/g, '');
+  if (!cleanFrom.startsWith('+')) {
+    cleanFrom = '+' + cleanFrom;
+  }
+
+  const client = twilio(sid, token);
+  const results = [];
+  const uniquePhones = Array.from(new Set(recipientPhones.map(formatPhone).filter(Boolean)));
+
+  for (const phone of uniquePhones) {
+    try {
+      const res = await client.messages.create({
+        from: `whatsapp:${cleanFrom}`,
+        to: `whatsapp:${phone}`,
+        body: messageBody
+      });
+      console.log(`✅ WhatsApp message sent to ${phone}! SID: ${res.sid}`);
+      results.push({ phone, success: true, sid: res.sid });
+    } catch (err) {
+      console.error(`❌ Failed to send WhatsApp message to ${phone}:`, err.message);
+      results.push({ phone, success: false, error: err.message });
+    }
+  }
+
+  return { success: results.some(r => r.success), results };
+};
+
+/**
+ * Sends a WhatsApp notification to the Admin and Customer when a new order is placed (COD or UPI).
+ */
+exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) => {
   const itemsText = (order.items || [])
     .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
     .join('\n');
 
-  // Calculate pricing components
   const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
   const subtotal = (order.items || []).reduce((s, i) => s + (i.price_at_time * i.quantity), 0);
   const discount = order.discount_amount || 0;
   const shipping = order.total_price - subtotal + discount;
+  const isUpi = getEffectivePaymentMethod(order).includes('UPI');
 
-  // 2. Build the message body
   const messageBody = `🔔 *New Order Placed on Style Heaven!*
 ----------------------------------------
 📦 *Order ID:* #${order.id?.substring(0, 8)}
@@ -57,135 +108,107 @@ ${itemsText || 'No items listed'}
 🏷️ *Discount:* -₹${discount.toLocaleString()} ${order.coupon_code ? `(${order.coupon_code})` : ''}
 ========================================
 💵 *Total Amount to Pay:* ₹${order.total_price?.toLocaleString()}
-----------------------------------------`;
+----------------------------------------
+${isUpi ? '⏳ *Payment Status:* Awaiting UPI Ref. No. Submission' : '✅ *Order Status:* CONFIRMED (COD)'}`;
 
-  console.log('\n--- [WHATSAPP OUTGOING MESSAGE] ---');
-  console.log(messageBody);
-  console.log('------------------------------------\n');
-
-  if (!sid || !token || !fromNumber) {
-    console.warn('⚠️ Twilio credentials missing in .env. Outgoing WhatsApp notification logged above.');
-    return { success: false, reason: 'Credentials missing' };
-  }
-
-  try {
-    // Format recipient phone number for Twilio (needs + and country code, e.g. +917676558335)
-    let cleanPhone = adminPhone.replace(/\D/g, '');
-    if (!cleanPhone.startsWith('+')) {
-      if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
-        cleanPhone = '+' + cleanPhone;
-      } else if (cleanPhone.length === 10) {
-        cleanPhone = '+91' + cleanPhone;
-      } else {
-        cleanPhone = '+' + cleanPhone;
-      }
-    }
-
-    // Format Twilio "from" number
-    let cleanFrom = fromNumber.replace(/\D/g, '');
-    if (!cleanFrom.startsWith('+')) {
-      cleanFrom = '+' + cleanFrom;
-    }
-
-    const client = twilio(sid, token);
-    const result = await client.messages.create({
-      from: `whatsapp:${cleanFrom}`,
-      to: `whatsapp:${cleanPhone}`,
-      body: messageBody
-    });
-
-    console.log(`✅ WhatsApp notification sent successfully! Message SID: ${result.sid}`);
-    return { success: true, sid: result.sid };
-  } catch (err) {
-    console.error('❌ Failed to send WhatsApp notification via Twilio:', err.message);
-    return { success: false, error: err.message };
-  }
+  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
 };
 
 /**
- * Sends a WhatsApp notification to the admin when an order is cancelled.
+ * Sends a WhatsApp notification to Admin & Customer when UPI Ref. No. / UTR is submitted.
+ */
+exports.sendRefNoSubmittedWhatsappNotification = async (adminPhone, order, customerName) => {
+  const itemsText = (order.items || [])
+    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
+    .join('\n');
+
+  const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+  const refNo = extractRefNo(order);
+
+  const messageBody = `⏱️ *UPI Payment Ref. No. Submitted!*
+----------------------------------------
+📦 *Order ID:* #${order.id?.substring(0, 8)}
+👤 *Customer Name:* ${customerName}
+📞 *Phone Number:* +91 ${order.phone}
+🔑 *Submitted Ref. No / UTR:* ${refNo}
+💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
+💵 *Total Amount:* ₹${order.total_price?.toLocaleString()}
+
+🛒 *Items in Order (${itemsCount} items):*
+${itemsText || 'No items listed'}
+========================================
+⌛ *Status:* Pending Admin Payment Verification
+----------------------------------------`;
+
+  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+};
+
+/**
+ * Sends a WhatsApp notification to Admin & Customer when an order payment is verified & approved.
+ */
+exports.sendPaymentVerifiedWhatsappNotification = async (adminPhone, order, customerName) => {
+  const itemsText = (order.items || [])
+    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
+    .join('\n');
+
+  const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+  const refNo = extractRefNo(order);
+
+  const messageBody = `✅ *Payment Verified & Approved!*
+----------------------------------------
+📦 *Order ID:* #${order.id?.substring(0, 8)}
+👤 *Customer Name:* ${customerName}
+📞 *Phone Number:* +91 ${order.phone}
+🔑 *Verified Ref. No / UTR:* ${refNo}
+💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
+💵 *Paid Amount:* ₹${order.total_price?.toLocaleString()}
+
+🛒 *Items to Process (${itemsCount} items):*
+${itemsText || 'No items listed'}
+========================================
+🎉 *Order Status:* PAYMENT VERIFIED & CONFIRMED
+----------------------------------------`;
+
+  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+};
+
+/**
+ * Sends a WhatsApp notification to Admin & Customer when an order is cancelled.
  */
 exports.sendOrderCancelWhatsappNotification = async (adminPhone, order, customerName) => {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
-
-  // Format the items list
   const itemsText = (order.items || [])
     .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
     .join('\n');
 
   const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
 
-  // Build the message body
   const messageBody = `🚨 *Order Cancelled on Style Heaven!*
 ----------------------------------------
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}
 📞 *Phone Number:* +91 ${order.phone}
-💰 *Total Cancelled Amount:* ₹${order.total_price?.toLocaleString()}
-🛒 *Items in Cancelled Order (${itemsCount} items):*
+💰 *Total Amount:* ₹${order.total_price?.toLocaleString()}
+
+🛒 *Items in Order (${itemsCount} items):*
 ${itemsText || 'No items listed'}
+========================================
+❌ *Order Status:* CANCELLED
 ----------------------------------------`;
 
-  console.log('\n--- [WHATSAPP OUTGOING CANCELLATION MESSAGE] ---');
-  console.log(messageBody);
-  console.log('------------------------------------\n');
-
-  if (!sid || !token || !fromNumber) {
-    console.warn('⚠️ Twilio credentials missing in .env. Outgoing cancellation WhatsApp notification logged above.');
-    return { success: false, reason: 'Credentials missing' };
-  }
-
-  try {
-    let cleanPhone = adminPhone.replace(/\D/g, '');
-    if (!cleanPhone.startsWith('+')) {
-      if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
-        cleanPhone = '+' + cleanPhone;
-      } else if (cleanPhone.length === 10) {
-        cleanPhone = '+91' + cleanPhone;
-      } else {
-        cleanPhone = '+' + cleanPhone;
-      }
-    }
-
-    let cleanFrom = fromNumber.replace(/\D/g, '');
-    if (!cleanFrom.startsWith('+')) {
-      cleanFrom = '+' + cleanFrom;
-    }
-
-    const client = twilio(sid, token);
-    const result = await client.messages.create({
-      from: `whatsapp:${cleanFrom}`,
-      to: `whatsapp:${cleanPhone}`,
-      body: messageBody
-    });
-
-    console.log(`✅ WhatsApp cancellation notification sent successfully! Message SID: ${result.sid}`);
-    return { success: true, sid: result.sid };
-  } catch (err) {
-    console.error('❌ Failed to send WhatsApp cancellation notification via Twilio:', err.message);
-    return { success: false, error: err.message };
-  }
+  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
 };
 
 /**
- * Sends a WhatsApp notification to the admin when an order is updated/edited.
+ * Sends a WhatsApp notification to Admin & Customer when an order is updated/edited.
  */
 exports.sendOrderEditWhatsappNotification = async (adminPhone, order, customerName) => {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
-
-  // Format the items list
   const itemsText = (order.items || [])
     .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
     .join('\n');
 
   const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
 
-  // Build the message body
-  const messageBody = `✏️ *Order Updated/Edited on Style Heaven!*
+  const messageBody = `✏️ *Order Details Updated!*
 ----------------------------------------
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}
@@ -199,119 +222,5 @@ ${itemsText || 'No items listed'}
 💵 *Total Amount:* ₹${order.total_price?.toLocaleString()}
 ----------------------------------------`;
 
-  console.log('\n--- [WHATSAPP OUTGOING ORDER EDIT MESSAGE] ---');
-  console.log(messageBody);
-  console.log('------------------------------------\n');
-
-  if (!sid || !token || !fromNumber) {
-    console.warn('⚠️ Twilio credentials missing in .env. Outgoing edit WhatsApp notification logged above.');
-    return { success: false, reason: 'Credentials missing' };
-  }
-
-  try {
-    let cleanPhone = adminPhone.replace(/\D/g, '');
-    if (!cleanPhone.startsWith('+')) {
-      if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
-        cleanPhone = '+' + cleanPhone;
-      } else if (cleanPhone.length === 10) {
-        cleanPhone = '+91' + cleanPhone;
-      } else {
-        cleanPhone = '+' + cleanPhone;
-      }
-    }
-
-    let cleanFrom = fromNumber.replace(/\D/g, '');
-    if (!cleanFrom.startsWith('+')) {
-      cleanFrom = '+' + cleanFrom;
-    }
-
-    const client = twilio(sid, token);
-    const result = await client.messages.create({
-      from: `whatsapp:${cleanFrom}`,
-      to: `whatsapp:${cleanPhone}`,
-      body: messageBody
-    });
-
-    console.log(`✅ WhatsApp order edit notification sent successfully! Message SID: ${result.sid}`);
-    return { success: true, sid: result.sid };
-  } catch (err) {
-    console.error('❌ Failed to send WhatsApp order edit notification via Twilio:', err.message);
-    return { success: false, error: err.message };
-  }
-};
-
-/**
- * Sends a WhatsApp notification to the admin when an order payment is verified & approved.
- */
-exports.sendPaymentVerifiedWhatsappNotification = async (adminPhone, order, customerName) => {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WHATSAPP_FROM;
-
-  const itemsText = (order.items || [])
-    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
-    .join('\n');
-
-  const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
-
-  let refNo = order.transaction_id;
-  if (!refNo && order.shipping_address) {
-    const match = order.shipping_address.match(/Ref\.?\s*No\.?:\s*([A-Za-z0-9_]+)/i);
-    if (match) refNo = match[1];
-  }
-
-  const messageBody = `✅ *Payment Verified & Approved on Style Heaven!*
-----------------------------------------
-📦 *Order ID:* #${order.id?.substring(0, 8)}
-👤 *Customer Name:* ${customerName}
-📞 *Phone Number:* +91 ${order.phone}
-🔑 *Verified Ref. No / UTR:* ${refNo || 'N/A'}
-💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
-💵 *Paid Amount:* ₹${order.total_price?.toLocaleString()}
-
-🛒 *Items to Process (${itemsCount} items):*
-${itemsText || 'No items listed'}
-========================================
-🎉 *Order Status:* CONFIRMED & IN PROCESSING
-----------------------------------------`;
-
-  console.log('\n--- [WHATSAPP OUTGOING PAYMENT VERIFIED MESSAGE] ---');
-  console.log(messageBody);
-  console.log('------------------------------------\n');
-
-  if (!sid || !token || !fromNumber) {
-    console.warn('⚠️ Twilio credentials missing in .env. Outgoing payment verified WhatsApp notification logged above.');
-    return { success: false, reason: 'Credentials missing' };
-  }
-
-  try {
-    let cleanPhone = adminPhone.replace(/\D/g, '');
-    if (!cleanPhone.startsWith('+')) {
-      if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
-        cleanPhone = '+' + cleanPhone;
-      } else if (cleanPhone.length === 10) {
-        cleanPhone = '+91' + cleanPhone;
-      } else {
-        cleanPhone = '+' + cleanPhone;
-      }
-    }
-
-    let cleanFrom = fromNumber.replace(/\D/g, '');
-    if (!cleanFrom.startsWith('+')) {
-      cleanFrom = '+' + cleanFrom;
-    }
-
-    const client = twilio(sid, token);
-    const result = await client.messages.create({
-      from: `whatsapp:${cleanFrom}`,
-      to: `whatsapp:${cleanPhone}`,
-      body: messageBody
-    });
-
-    console.log(`✅ WhatsApp payment verified notification sent successfully! Message SID: ${result.sid}`);
-    return { success: true, sid: result.sid };
-  } catch (err) {
-    console.error('❌ Failed to send WhatsApp payment verified notification via Twilio:', err.message);
-    return { success: false, error: err.message };
-  }
+  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
 };

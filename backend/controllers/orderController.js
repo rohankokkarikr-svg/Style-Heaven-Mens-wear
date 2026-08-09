@@ -1,7 +1,7 @@
 const supabase = require('../config/supabase');
 const path = require('path');
 const fs = require('fs');
-const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification, sendOrderEditWhatsappNotification, sendPaymentVerifiedWhatsappNotification } = require('../utils/whatsapp');
+const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification, sendOrderEditWhatsappNotification, sendPaymentVerifiedWhatsappNotification, sendRefNoSubmittedWhatsappNotification } = require('../utils/whatsapp');
 
 const getSiteSettings = () => {
   const settingsFile = path.join(__dirname, '../data/site_settings.json');
@@ -612,9 +612,9 @@ exports.payOrder = async (req, res) => {
           `)
           .eq('id', id)
           .single();
-        if (fullOrder) {
-          await sendOrderEditWhatsappNotification(settings.whatsappNumber, fullOrder, req.user?.name || 'Customer');
-        }
+        const notifyOrder = fullOrder || updatedOrder || order;
+        if (!notifyOrder.payment_method) notifyOrder.payment_method = order.payment_method || 'upi';
+        await sendRefNoSubmittedWhatsappNotification(settings.whatsappNumber, notifyOrder, req.user?.name || 'Customer');
       }
     } catch (wsErr) {
       console.error('WhatsApp notify error:', wsErr.message);
