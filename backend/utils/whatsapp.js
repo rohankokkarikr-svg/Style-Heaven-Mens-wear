@@ -46,7 +46,7 @@ const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
 
   if (!apiKey || apiKey === 'your_callmebot_api_key' || apiKey.trim() === '') {
     console.warn('⚠️ CALLMEBOT_API_KEY missing in .env!');
-    console.warn("👉 To get your free CallMeBot API key, send 'I allow callmebot to send me messages' to +34 644 51 95 23 on WhatsApp.");
+    console.warn("👉 To get your free CallMeBot API key, send 'I allow callmebot to send me messages' to +34 623 78 64 49 on WhatsApp.");
     return { success: false, reason: 'CallMeBot API key missing' };
   }
 
