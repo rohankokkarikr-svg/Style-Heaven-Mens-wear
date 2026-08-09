@@ -516,7 +516,8 @@ exports.updateOrderDetails = async (req, res) => {
 exports.payOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { payment_method, transaction_id } = req.body;
+    const { payment_method, transaction_id, ref_no } = req.body;
+    const ref = (transaction_id || ref_no || '').trim();
 
     // 1. Fetch order
     const { data: order, error: fetchError } = await supabase
@@ -529,12 +530,12 @@ exports.payOrder = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // 2. Update order as paid
+    // 2. Update order as pending_verification
     const updateData = {
-      payment_status: 'paid',
+      payment_status: 'pending_verification',
       payment_method: payment_method || order.payment_method || 'upi',
-      transaction_id: transaction_id || `TXN_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-      status: 'processing'
+      transaction_id: ref || `REF_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      status: 'payment_verification_pending'
     };
 
     let { data: updatedOrder, error: updateError } = await supabase
@@ -548,8 +549,8 @@ exports.payOrder = async (req, res) => {
     if (updateError && (updateError.message.includes('column') || updateError.message.includes('does not exist'))) {
       console.warn('Warning: payment_status or transaction_id column is missing. Falling back to status update.');
       const fallbackUpdate = {
-        status: 'processing',
-        shipping_address: `${order.shipping_address} [PAID via ${payment_method || 'upi'}, TXN: ${transaction_id || 'MOCK'}]`
+        status: 'payment_verification_pending',
+        shipping_address: `${order.shipping_address} [Ref. No: ${ref || 'PENDING'}, Status: Pending Verification]`
       };
       
       const fallbackResult = await supabase
@@ -564,10 +565,74 @@ exports.payOrder = async (req, res) => {
     }
 
     if (updateError) throw updateError;
+
+    // Trigger WhatsApp notification to Admin to alert about submitted UPI Ref No.
+    try {
+      const settings = getSiteSettings();
+      if (settings.orderNotifications) {
+        const { data: fullOrder } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            items:order_items (
+              quantity, price_at_time, size,
+              product:products (id, name, image_url, category)
+            )
+          `)
+          .eq('id', id)
+          .single();
+        if (fullOrder) {
+          await sendOrderEditWhatsappNotification(settings.whatsappNumber, fullOrder, req.user?.name || 'Customer');
+        }
+      }
+    } catch (wsErr) {
+      console.error('WhatsApp notify error:', wsErr.message);
+    }
+
     res.json(updatedOrder);
   } catch (error) {
     console.error('Pay order error:', error);
     res.status(500).json({ error: 'Failed to update payment status' });
+  }
+};
+
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // 'approve' or 'reject'
+
+    const isApprove = action === 'approve';
+    const updateData = {
+      payment_status: isApprove ? 'paid' : 'failed',
+      status: isApprove ? 'pending' : 'cancelled'
+    };
+
+    let { data: updatedOrder, error: updateError } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError && (updateError.message.includes('column') || updateError.message.includes('does not exist'))) {
+      const fallbackUpdate = {
+        status: isApprove ? 'pending' : 'cancelled'
+      };
+      const resFb = await supabase
+        .from('orders')
+        .update(fallbackUpdate)
+        .eq('id', id)
+        .select()
+        .single();
+      updatedOrder = resFb.data;
+      updateError = resFb.error;
+    }
+
+    if (updateError) throw updateError;
+    res.json(updatedOrder);
+  } catch (err) {
+    console.error('Verify payment error:', err);
+    res.status(500).json({ error: 'Failed to verify payment' });
   }
 };
 

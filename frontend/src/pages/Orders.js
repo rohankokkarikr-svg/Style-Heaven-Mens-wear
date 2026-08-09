@@ -63,8 +63,14 @@ export default function Orders() {
       case 'delivered': return 'text-green-400 bg-green-500/10 border-green-500/20';
       case 'shipped': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
       case 'cancelled': return 'text-red-400 bg-red-500/10 border-red-500/20';
+      case 'payment_verification_pending': return 'text-amber-400 bg-amber-500/10 border-amber-500/30 animate-pulse';
       default: return 'text-gold-400 bg-gold-500/10 border-gold-500/20'; // pending/processing
     }
+  };
+
+  const renderStatusText = (status) => {
+    if (status === 'payment_verification_pending') return '⏱️ Pending Verification';
+    return status;
   };
 
   if (loading) {
@@ -111,7 +117,7 @@ export default function Orders() {
                   )}
                 </div>
                 <span className={`badge border px-3 py-1 uppercase tracking-wider text-xs font-bold ${getStatusColor(order.status)}`}>
-                  {order.status}
+                  {renderStatusText(order.status)}
                 </span>
               </div>
             </div>

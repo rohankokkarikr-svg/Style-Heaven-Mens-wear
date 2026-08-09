@@ -85,6 +85,7 @@ export const orderAPI = {
   updateOrderDetails: (id, data) => api.put(`/orders/${id}/edit`, data),
   cancelOrder:        (id)       => api.put(`/orders/${id}/cancel`),
   pay:                (id, data) => api.put(`/orders/${id}/pay`, data),
+  verifyPayment:      (id, data) => api.put(`/orders/${id}/verify-payment`, data),
 };
 
 // ─── Sales / Barcode ─────────────────────────────

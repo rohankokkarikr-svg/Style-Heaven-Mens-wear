@@ -9,6 +9,7 @@ const {
   getAllOrders,
   updateOrderStatus,
   payOrder,
+  verifyPayment,
   getOrderById
 } = require('../controllers/orderController');
 
@@ -23,5 +24,6 @@ router.put('/:id/pay', protect, payOrder);
 // Admin routes
 router.get('/', protect, admin, getAllOrders);
 router.put('/:id/status', protect, admin, updateOrderStatus);
+router.put('/:id/verify-payment', protect, admin, verifyPayment);
 
 module.exports = router;
