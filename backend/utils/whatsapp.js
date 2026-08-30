@@ -40,16 +40,29 @@ const formatPhone = (phoneStr) => {
   return '+' + digits;
 };
 
-// Initialize Twilio client
+// Initialize Twilio client supporting both Auth Token and API Key configurations
 const getTwilioClient = () => {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_API_SECRET;
+  const apiKeySid = process.env.TWILIO_API_KEY_SID || (accountSid?.startsWith('SK') ? accountSid : null);
+  const mainAccountSid = process.env.TWILIO_MAIN_ACCOUNT_SID || (accountSid?.startsWith('AC') ? accountSid : null);
 
-  if (!accountSid || !authToken || accountSid.startsWith('your_') || authToken.startsWith('your_')) {
+  if (!authToken || authToken.startsWith('your_')) {
     return null;
   }
+
   try {
-    return twilio(accountSid, authToken);
+    // Case 1: Using API Key (SK...) with Main Account SID (AC...)
+    if (apiKeySid && apiKeySid.startsWith('SK') && mainAccountSid && mainAccountSid.startsWith('AC')) {
+      return twilio(apiKeySid, authToken, { accountSid: mainAccountSid });
+    }
+
+    // Case 2: Standard Account SID (AC...) + Auth Token
+    if (accountSid && accountSid.startsWith('AC')) {
+      return twilio(accountSid, authToken);
+    }
+
+    return null;
   } catch (err) {
     console.error('❌ Twilio initialization error:', err.message);
     return null;
