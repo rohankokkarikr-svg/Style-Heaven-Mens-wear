@@ -68,9 +68,11 @@ export const productAPI = {
   delete:      (id)     => api.delete(`/products/${id}`),
   uploadImage: (id, fd) => api.post(`/products/${id}/image`, fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
   }),
   uploadDirect: (fd) => api.post('/products/upload', fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
   }),
   generateBarcode: (id) => api.post(`/products/${id}/barcode`),
 };
