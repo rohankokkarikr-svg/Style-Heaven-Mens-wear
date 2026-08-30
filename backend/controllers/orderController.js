@@ -1,7 +1,14 @@
 const supabase = require('../config/supabase');
 const path = require('path');
 const fs = require('fs');
-const { sendOrderWhatsappNotification, sendOrderCancelWhatsappNotification, sendOrderEditWhatsappNotification, sendPaymentVerifiedWhatsappNotification, sendRefNoSubmittedWhatsappNotification } = require('../utils/whatsapp');
+const { 
+  sendOrderWhatsappNotification, 
+  sendOrderCancelWhatsappNotification, 
+  sendOrderEditWhatsappNotification, 
+  sendPaymentVerifiedWhatsappNotification, 
+  sendRefNoSubmittedWhatsappNotification,
+  getEffectivePaymentMethod
+} = require('../utils/whatsapp');
 
 const getSiteSettings = () => {
   const settingsFile = path.join(__dirname, '../data/site_settings.json');
@@ -26,19 +33,21 @@ exports.createOrder = async (req, res) => {
     const user_id = req.user.id;
 
     if (!items || items.length === 0) {
-      return res.status(400).json({ error: 'No order items' });
+      return res.status(400).json({ error: 'No order items in cart' });
     }
 
-    // 0. Validate stock for all items before creating the order
+    // 0. Validate stock and product existence for all items before creating the order
     for (const item of items) {
       const { data: prod, error: prodError } = await supabase
         .from('products')
-        .select('name, stock_quantity, is_in_stock')
+        .select('id, name, stock_quantity, is_in_stock')
         .eq('id', item.product_id)
-        .single();
+        .maybeSingle();
 
       if (prodError || !prod) {
-        return res.status(404).json({ error: `Product not found` });
+        return res.status(400).json({ 
+          error: `An item in your cart is no longer available. Please clear your cart and select from the new Kala collection.` 
+        });
       }
 
       if (prod.is_in_stock === false || (prod.stock_quantity !== undefined && prod.stock_quantity <= 0)) {
@@ -235,8 +244,8 @@ exports.createOrder = async (req, res) => {
 
     res.status(201).json({ ...order, whatsappLink, whatsappMessage });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create order' });
+    console.error('Create Order Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to create order' });
   }
 };
 
