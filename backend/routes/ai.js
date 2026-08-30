@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { analyzeProduct, generateDescription } = require('../controllers/aiController');
-const { protect } = require('../middleware/auth');
 
-router.post('/analyze-product', protect, analyzeProduct);
-router.post('/generate-description', protect, generateDescription);
+// Public AI Studio endpoints for instant generation without auth blockers
+router.post('/analyze-product', analyzeProduct);
+router.post('/generate-description', generateDescription);
 
 module.exports = router;
