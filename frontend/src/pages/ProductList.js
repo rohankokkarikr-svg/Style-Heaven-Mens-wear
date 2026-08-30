@@ -53,15 +53,15 @@ export default function ProductList() {
   };
 
   const categoryLabels = {
-    all:          'All Products',
-    'T-Shirts':   'T-Shirts',
-    'Shirts':     'Shirts',
-    'Pants':      'Pants',
-    'Jeans':      'Jeans',
-    'Jackets':    'Jackets',
-    'Suits':      'Suits',
-    'Kurtas':     'Kurtas',
-    'Accessories':'Accessories',
+    all:                'All Handcrafted Products',
+    'Sarees':           'Sarees',
+    'Kurtas':           'Kurtas',
+    'Handloom':         'Handloom',
+    'Handmade':         'Handmade',
+    "Women's Fashion":  "Women's Fashion",
+    "Men's Fashion":    "Men's Fashion",
+    'Traditional Wear': 'Traditional Wear',
+    'Accessories':      'Accessories',
   };
 
   return (
@@ -113,7 +113,7 @@ export default function ProductList() {
             <div>
               <h3 className="font-semibold text-white mb-4 uppercase text-sm tracking-wider">Categories</h3>
               <ul className="space-y-3">
-                {['all', 'T-Shirts', 'Shirts', 'Pants', 'Jeans', 'Jackets', 'Suits', 'Kurtas', 'Accessories'].map((c) => (
+                {['all', 'Sarees', 'Kurtas', 'Handloom', 'Handmade', "Women's Fashion", "Men's Fashion", 'Traditional Wear', 'Accessories'].map((c) => (
                   <li key={c}>
                     <button
                       onClick={() => handleCategoryChange(c)}

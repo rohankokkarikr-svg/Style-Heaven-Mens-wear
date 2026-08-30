@@ -7,24 +7,24 @@ import {
 import toast from 'react-hot-toast';
 
 const CATEGORIES = [
-  'T-Shirts', 'Shirts', 'Pants', 'Jeans',
-  'Jackets', 'Suits', 'Kurtas', 'Accessories',
+  'Sarees', 'Kurtas', 'Handloom', 'Handmade',
+  "Women's Fashion", "Men's Fashion", 'Traditional Wear', 'Accessories'
 ];
 
 const SIZE_PRESETS = {
-  'T-Shirts':    ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
-  'Shirts':      ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  'Pants':       ['28', '30', '32', '34', '36', '38', '40'],
-  'Jeans':       ['28', '30', '32', '34', '36', '38', '40'],
-  'Jackets':     ['S', 'M', 'L', 'XL', 'XXL'],
-  'Suits':       ['S', 'M', 'L', 'XL', 'XXL'],
-  'Kurtas':      ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
-  'Accessories': ['One Size', '6', '7', '8', '9', '10', '11', 'S/M', 'L/XL'],
+  'Sarees':           ['Standard (5.5m)', 'Standard (6.3m with Blouse)', 'Free Size'],
+  'Kurtas':           ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+  'Handloom':         ['S', 'M', 'L', 'XL', 'XXL', 'Free Size'],
+  'Handmade':         ['One Size', 'Adjustable', 'Custom', 'S', 'M', 'L'],
+  "Women's Fashion":  ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+  "Men's Fashion":    ['38', '40', '42', '44', '46', 'S', 'M', 'L', 'XL', 'XXL'],
+  'Traditional Wear': ['38', '40', '42', '44', '46', 'Free Size'],
+  'Accessories':      ['One Size', 'Adjustable Free Size', 'Set of 6 Buttons', '7', '8', '9', '10', '11'],
 };
 
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
-  category: 'T-Shirts', sizes: [], stock_quantity: 50, is_in_stock: true,
+  category: 'Sarees', sizes: [], stock_quantity: 25, is_in_stock: true,
   image_url: '',
 };
 
