@@ -18,6 +18,7 @@ export default function AIProductStudio() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [description, setDescription] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -26,14 +27,55 @@ export default function AIProductStudio() {
   const [aiResult, setAiResult] = useState(null);
   const [editedResult, setEditedResult] = useState(null);
 
-  const handleImageDrop = useCallback((e) => {
-    e.preventDefault(); setIsDragging(false);
+  const uploadFileToCloudinary = async (file) => {
+    setIsUploadingImage(true);
+    const toastId = toast.loading('Uploading image to Cloudinary ☁️...');
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { data } = await productAPI.uploadDirect(fd);
+      if (data?.imageUrl) {
+        setImageUrl(data.imageUrl);
+        toast.success('Image stored directly in Cloudinary! ☁️✨', { id: toastId });
+        return data.imageUrl;
+      } else {
+        throw new Error('No image URL returned');
+      }
+    } catch (err) {
+      console.error('Cloudinary direct upload error:', err);
+      toast.error(err.response?.data?.error || 'Cloudinary upload failed. Please try again.', { id: toastId });
+      return null;
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleImageDrop = useCallback(async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
     const file = e.dataTransfer?.files[0] || e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) { toast.error('Please upload an image file'); return; }
+    if (!file || !file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file (JPG, PNG, WEBP)');
+      return;
+    }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
     setStep(1);
+
+    // Direct Cloudinary upload immediately
+    await uploadFileToCloudinary(file);
   }, []);
+
+  const handleImageChangeInStep = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    await uploadFileToCloudinary(file);
+  };
 
   const startVoice = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -49,37 +91,60 @@ export default function AIProductStudio() {
 
   const stopVoice = () => { recognitionRef.current?.stop(); setIsListening(false); };
 
-  const uploadImageToCloudinary = async () => {
-    if (!imageFile) return '';
-    try {
-      const fd = new FormData(); fd.append('image', imageFile);
-      const { data } = await productAPI.uploadDirect(fd);
-      return data.imageUrl || '';
-    } catch { return ''; }
-  };
-
   const handleGenerate = async () => {
-    if (!imageFile && !description.trim()) { toast.error('Please upload an image or describe your product'); return; }
-    setStep(2); setIsGenerating(true);
+    if (!imageFile && !description.trim()) {
+      toast.error('Please upload an image or describe your product');
+      return;
+    }
+
+    setStep(2);
+    setIsGenerating(true);
     try {
-      let uploadedUrl = '';
-      if (imageFile) uploadedUrl = await uploadImageToCloudinary();
-      setImageUrl(uploadedUrl);
-      const { data } = await aiAPI.analyzeProduct({ image_url: uploadedUrl, description: description.trim() });
+      let currentCloudinaryUrl = imageUrl;
+      if (!currentCloudinaryUrl && imageFile) {
+        currentCloudinaryUrl = await uploadFileToCloudinary(imageFile);
+      }
+
+      const { data } = await aiAPI.analyzeProduct({
+        image_url: currentCloudinaryUrl || '',
+        description: description.trim()
+      });
       setAiResult(data);
-      setEditedResult({ ...data, price: data.suggested_price || 999, sizes: ['Free Size'], stock_quantity: 10 });
+      setEditedResult({
+        ...data,
+        price: data.suggested_price || 999,
+        sizes: ['Free Size'],
+        stock_quantity: 10
+      });
       setStep(3);
     } catch (err) {
-      toast.error('AI generation failed. Please try again.'); setStep(1);
-    } finally { setIsGenerating(false); }
+      toast.error('AI generation failed. Please try again.');
+      setStep(1);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const updateField = (field, value) => setEditedResult(prev => ({ ...prev, [field]: value }));
 
   const handlePublish = async (isDraft = false) => {
-    if (!editedResult?.product_name) { toast.error('Product name is required'); return; }
+    if (!editedResult?.product_name) {
+      toast.error('Product name is required');
+      return;
+    }
+
+    if (isUploadingImage) {
+      toast.error('Please wait for image upload to Cloudinary to finish.');
+      return;
+    }
+
     setIsPublishing(true);
     try {
+      let finalCloudinaryUrl = imageUrl;
+      if (!finalCloudinaryUrl && imageFile) {
+        finalCloudinaryUrl = await uploadFileToCloudinary(imageFile);
+      }
+
       const profile = user?.artisan_profile;
       const productData = {
         name: editedResult.product_name,
@@ -96,20 +161,31 @@ export default function AIProductStudio() {
         is_in_stock: true,
         ai_generated: true,
         ai_suggested_price: editedResult.suggested_price,
-        image_url: imageUrl || imagePreview,
+        image_url: finalCloudinaryUrl || '',
         artisan_id: profile?.id,
         is_handmade: true,
       };
       await productAPI.create(productData);
-      toast.success(isDraft ? 'Draft saved!' : 'Product published! 🎉');
+      toast.success(isDraft ? 'Draft saved!' : 'Product published to store! 🎉');
       setStep(4);
       setTimeout(() => navigate('/artisan/products'), 2000);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to publish. Please try again.');
-    } finally { setIsPublishing(false); }
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
-  const reset = () => { setStep(0); setImageFile(null); setImagePreview(''); setDescription(''); setAiResult(null); setEditedResult(null); setImageUrl(''); };
+  const reset = () => {
+    setStep(0);
+    setImageFile(null);
+    setImagePreview('');
+    setImageUrl('');
+    setIsUploadingImage(false);
+    setDescription('');
+    setAiResult(null);
+    setEditedResult(null);
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -152,12 +228,30 @@ export default function AIProductStudio() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <div className="aspect-square rounded-xl overflow-hidden bg-dark-700 border border-dark-500">
-                <img src={imagePreview} alt="Product" className="w-full h-full object-cover" />
+              <div className="aspect-square rounded-xl overflow-hidden bg-dark-700 border border-dark-500 relative group">
+                <img src={imageUrl || imagePreview} alt="Product" className="w-full h-full object-cover" />
+                {isUploadingImage ? (
+                  <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+                    <div className="w-10 h-10 border-2 border-gold-400 border-t-transparent rounded-full animate-spin mb-2" />
+                    <p className="text-sm font-semibold text-gold-400">Uploading to Cloudinary ☁️...</p>
+                  </div>
+                ) : imageUrl ? (
+                  <div className="absolute top-3 left-3 bg-dark-900/90 border border-green-500/40 text-green-400 text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span>Stored in Cloudinary ☁️</span>
+                  </div>
+                ) : null}
               </div>
-              <button onClick={() => { setStep(0); setImageFile(null); setImagePreview(''); }} className="mt-2 text-sm text-gray-400 hover:text-red-400 flex items-center gap-1">
-                <HiX className="w-4 h-4" /> Change Image
-              </button>
+              <div className="flex items-center gap-3 mt-3">
+                <label className="text-xs text-gold-400 hover:text-gold-300 flex items-center gap-1 cursor-pointer font-medium">
+                  <HiPencil className="w-4 h-4" /> Replace Image
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChangeInStep} />
+                </label>
+                <span className="text-gray-600">|</span>
+                <button onClick={() => { setStep(0); setImageFile(null); setImagePreview(''); setImageUrl(''); }} className="text-xs text-gray-400 hover:text-red-400 flex items-center gap-1">
+                  <HiX className="w-4 h-4" /> Remove
+                </button>
+              </div>
             </div>
             <div className="flex flex-col gap-4">
               <div>
@@ -180,7 +274,7 @@ export default function AIProductStudio() {
               <div className="text-xs text-gray-500 bg-dark-700 rounded-lg p-3">
                 💡 <strong>Tip:</strong> Mention material (cotton/silk), type (saree/kurta), occasion, and origin (Karnataka/Rajasthan) for better AI results.
               </div>
-              <button onClick={handleGenerate} className="btn-primary flex items-center justify-center gap-2 py-4">
+              <button onClick={handleGenerate} disabled={isUploadingImage} className="btn-primary flex items-center justify-center gap-2 py-4">
                 <HiSparkles className="w-5 h-5" /> Generate with AI ✨
               </button>
             </div>
@@ -214,9 +308,28 @@ export default function AIProductStudio() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Image Preview */}
             <div className="md:col-span-1">
-              <div className="aspect-square rounded-xl overflow-hidden bg-dark-700 border border-dark-500">
-                {imagePreview ? <img src={imagePreview} alt="Product" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-6xl">📦</div>}
+              <div className="aspect-square rounded-xl overflow-hidden bg-dark-700 border border-dark-500 relative group">
+                {imageUrl || imagePreview ? (
+                  <img src={imageUrl || imagePreview} alt="Product" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-6xl">📦</div>
+                )}
+                {isUploadingImage ? (
+                  <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+                    <div className="w-8 h-8 border-2 border-gold-400 border-t-transparent rounded-full animate-spin mb-2" />
+                    <p className="text-xs font-semibold text-gold-400">Uploading to Cloudinary ☁️...</p>
+                  </div>
+                ) : imageUrl ? (
+                  <div className="absolute top-2 left-2 bg-dark-900/90 border border-green-500/40 text-green-400 text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                    <span>Cloudinary ☁️</span>
+                  </div>
+                ) : null}
               </div>
+              <label className="mt-2 text-xs text-gold-400 hover:text-gold-300 flex items-center gap-1 cursor-pointer font-medium justify-center border border-dark-500 py-1.5 rounded-lg bg-dark-800">
+                <HiPencil className="w-3.5 h-3.5" /> Replace Photo (Cloudinary)
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChangeInStep} />
+              </label>
               {aiResult?.ai_notes && <p className="text-xs text-gray-500 mt-2 italic">{aiResult.ai_notes}</p>}
             </div>
 
