@@ -26,10 +26,11 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <div className="mb-4 flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full ring-2 ring-gold-500/80 shadow-gold bg-gradient-luxury
-                              flex items-center justify-center text-dark-900 font-bold text-lg">
-                K
-              </div>
+              <img
+                src="/images/kalastyle_logo.png"
+                alt={storeName}
+                className="h-12 w-12 object-cover rounded-full ring-2 ring-gold-500/80 shadow-gold"
+              />
               <div>
                 <span className="font-serif text-2xl font-bold gold-text">{storeName}</span>
                 <p className="text-xs text-gray-500 tracking-widest uppercase mt-0.5">Artisan Marketplace</p>

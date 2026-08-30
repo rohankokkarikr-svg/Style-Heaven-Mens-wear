@@ -33,7 +33,11 @@ export default function Login() {
       <div className="max-w-md w-full space-y-8 card p-8">
         <div>
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full ring-2 ring-gold-500/80 shadow-gold bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-2xl">K</div>
+            <img
+              src="/images/kalastyle_logo.png"
+              alt="KalaStyle AI"
+              className="h-16 w-16 object-cover rounded-full ring-2 ring-gold-500/80 shadow-gold"
+            />
           </div>
           <h2 className="text-center text-3xl font-serif font-bold text-white">
             Welcome Back

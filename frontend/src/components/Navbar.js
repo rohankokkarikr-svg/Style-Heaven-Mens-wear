@@ -60,10 +60,11 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 md:gap-3">
-              <div className="h-9 w-9 md:h-12 md:w-12 rounded-full ring-2 ring-gold-500/80 shadow-gold
-                              bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-sm">
-                K
-              </div>
+              <img
+                src="/images/kalastyle_logo.png"
+                alt="KalaStyle AI"
+                className="h-10 w-10 md:h-12 md:w-12 object-cover rounded-full ring-2 ring-gold-500/80 shadow-gold"
+              />
               <div className="flex flex-col leading-tight">
                 <span className="font-serif text-base md:text-xl font-bold gold-text whitespace-nowrap">KalaStyle AI</span>
                 <span className="text-[9px] md:text-xs text-gray-400 tracking-widest uppercase whitespace-nowrap">Artisan Marketplace</span>
@@ -196,10 +197,11 @@ export default function Navbar() {
           {/* Header of Drawer */}
           <div className="flex items-center justify-between p-4 border-b border-dark-600 bg-dark-950">
             <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full ring-2 ring-gold-500/80 bg-gradient-luxury
-                              flex items-center justify-center text-dark-900 font-bold text-sm">
-                K
-              </div>
+              <img
+                src="/images/kalastyle_logo.png"
+                alt="KalaStyle AI"
+                className="h-8 w-8 object-cover rounded-full ring-2 ring-gold-500/80"
+              />
               <div className="flex flex-col leading-tight">
                 <span className="font-serif text-sm font-bold gold-text whitespace-nowrap">KalaStyle AI</span>
                 <span className="text-[8px] text-gray-400 tracking-widest uppercase whitespace-nowrap">Artisan Marketplace</span>

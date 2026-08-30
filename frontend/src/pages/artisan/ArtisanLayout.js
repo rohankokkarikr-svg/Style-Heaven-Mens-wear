@@ -26,7 +26,11 @@ export default function ArtisanLayout() {
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-dark-600 flex justify-between items-center">
             <Link to="/" className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full ring-2 ring-gold-500/80 bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-lg">K</div>
+              <img
+                src="/images/kalastyle_logo.png"
+                alt="KalaStyle AI"
+                className="h-10 w-10 object-cover rounded-full ring-2 ring-gold-500/80 shadow-gold"
+              />
               <div className="leading-tight">
                 <div className="font-serif text-lg font-bold gold-text">KalaStyle AI</div>
                 <div className="text-xs text-gray-400 uppercase tracking-widest">Artisan Studio</div>
