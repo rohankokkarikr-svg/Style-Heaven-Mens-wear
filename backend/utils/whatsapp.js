@@ -1,5 +1,6 @@
-const axios = require('axios');
+const twilio = require('twilio');
 
+// Helper to extract effective payment method
 const getEffectivePaymentMethod = (order) => {
   let pm = order.payment_method || '';
   if (!pm && order.shipping_address) {
@@ -17,6 +18,7 @@ const getEffectivePaymentMethod = (order) => {
   return pm.toUpperCase();
 };
 
+// Helper to extract reference number from order
 const extractRefNo = (order) => {
   if (order.transaction_id && !order.transaction_id.startsWith('TXN_') && !order.transaction_id.startsWith('REF_')) {
     return order.transaction_id;
@@ -28,6 +30,7 @@ const extractRefNo = (order) => {
   return order.transaction_id || 'N/A';
 };
 
+// Helper to format phone to E.164 standard
 const formatPhone = (phoneStr) => {
   if (!phoneStr) return null;
   let digits = String(phoneStr).replace(/\D/g, '');
@@ -37,44 +40,63 @@ const formatPhone = (phoneStr) => {
   return '+' + digits;
 };
 
+// Initialize Twilio client
+const getTwilioClient = () => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+  if (!accountSid || !authToken || accountSid.startsWith('your_') || authToken.startsWith('your_')) {
+    return null;
+  }
+  try {
+    return twilio(accountSid, authToken);
+  } catch (err) {
+    console.error('❌ Twilio initialization error:', err.message);
+    return null;
+  }
+};
+
+/**
+ * Send WhatsApp message to multiple recipients using Twilio API
+ */
 const sendWhatsappToRecipients = async (recipientPhones, messageBody) => {
-  const apiKey = process.env.CALLMEBOT_API_KEY;
-
-  console.log('\n--- [WHATSAPP OUTGOING MESSAGE (CallMeBot)] ---');
+  console.log('\n--- [WHATSAPP OUTGOING MESSAGE (Twilio)] ---');
   console.log(messageBody);
-  console.log('------------------------------------------------\n');
+  console.log('--------------------------------------------\n');
 
-  if (!apiKey || apiKey === 'your_callmebot_api_key' || apiKey.trim() === '') {
-    console.warn('⚠️ CALLMEBOT_API_KEY missing in .env!');
-    console.warn("👉 To get your free CallMeBot API key, send 'I allow callmebot to send me messages' to +34 623 78 64 49 on WhatsApp.");
-    return { success: false, reason: 'CallMeBot API key missing' };
+  const client = getTwilioClient();
+  const rawFrom = process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER || '+14155238886';
+  const fromNumber = rawFrom.startsWith('whatsapp:') ? rawFrom : `whatsapp:${rawFrom.replace(/\s+/g, '')}`;
+
+  if (!client) {
+    console.warn('⚠️ Twilio credentials missing in .env! (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)');
+    console.warn('👉 Please configure TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in backend/.env');
+    return { success: false, reason: 'Twilio credentials missing' };
   }
 
   const results = [];
   const uniquePhones = Array.from(new Set(recipientPhones.map(formatPhone).filter(Boolean)));
 
   for (const phone of uniquePhones) {
-    const cleanPhone = phone.replace(/\s+/g, '');
+    const toFormatted = `whatsapp:${phone.replace(/\s+/g, '')}`;
     try {
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(cleanPhone)}&text=${encodeURIComponent(messageBody)}&apikey=${encodeURIComponent(apiKey.trim())}`;
-      const response = await axios.get(url, { timeout: 10000 });
-      
-      if (typeof response.data === 'string' && response.data.includes('APIKey is invalid')) {
-        console.error(`❌ CallMeBot API key invalid for ${phone}`);
-        results.push({ phone, success: false, error: 'Invalid APIKey' });
-      } else {
-        console.log(`✅ WhatsApp message sent via CallMeBot to ${phone}!`);
-        results.push({ phone, success: true });
-      }
+      const message = await client.messages.create({
+        from: fromNumber,
+        to: toFormatted,
+        body: messageBody
+      });
+      console.log(`✅ WhatsApp message sent via Twilio to ${toFormatted}! (SID: ${message.sid})`);
+      results.push({ phone, to: toFormatted, success: true, sid: message.sid });
     } catch (err) {
-      console.error(`❌ CallMeBot failed for ${phone}:`, err.message);
-      results.push({ phone, success: false, error: err.message });
+      console.error(`❌ Twilio WhatsApp send failed for ${toFormatted}:`, err.message);
+      results.push({ phone, to: toFormatted, success: false, error: err.message });
     }
   }
 
   return { success: results.some(r => r.success), results };
 };
 
+// Generate direct wa.me fallback link
 const getWhatsappDirectLink = (phoneStr, text) => {
   const formatted = formatPhone(phoneStr);
   if (!formatted) return null;
@@ -82,6 +104,7 @@ const getWhatsappDirectLink = (phoneStr, text) => {
   return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;
 };
 
+// Formats the order confirmation message
 const buildOrderWhatsappText = (order, customerName) => {
   const itemsText = (order.items || [])
     .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
@@ -119,7 +142,7 @@ exports.getWhatsappDirectLink = getWhatsappDirectLink;
 exports.buildOrderWhatsappText = buildOrderWhatsappText;
 
 /**
- * Sends a WhatsApp notification to the Admin and Customer when a new order is placed (COD or UPI).
+ * Sends a WhatsApp notification to Admin & Customer when a new order is placed (COD or UPI).
  */
 exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) => {
   const messageBody = buildOrderWhatsappText(order, customerName);
