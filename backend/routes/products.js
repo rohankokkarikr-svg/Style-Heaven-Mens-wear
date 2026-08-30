@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, admin } = require('../middleware/auth');
+const { protect, admin, artisan } = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
 const {
   getProducts,
@@ -18,11 +18,11 @@ router.get('/', getProducts);
 router.get('/featured', getFeaturedProducts);
 router.get('/:id', getProductById);
 
-// Admin routes
-router.post('/upload', protect, admin, upload.single('image'), uploadDirect);
-router.post('/', protect, admin, createProduct);
+// Admin + Artisan routes
+router.post('/upload', protect, artisan, upload.single('image'), uploadDirect);
+router.post('/', protect, artisan, createProduct);
 router.put('/:id', protect, admin, updateProduct);
-router.delete('/:id', protect, admin, deleteProduct);
-router.post('/:id/image', protect, admin, upload.single('image'), uploadProductImage);
+router.delete('/:id', protect, artisan, deleteProduct);
+router.post('/:id/image', protect, artisan, upload.single('image'), uploadProductImage);
 
 module.exports = router;

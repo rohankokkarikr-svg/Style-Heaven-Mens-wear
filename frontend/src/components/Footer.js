@@ -9,13 +9,13 @@ export default function Footer() {
   const { settings } = useSettings();
 
   const {
-    storeName       = 'Style Heaven',
-    supportEmail    = 'support@styleheaven.com',
+    storeName       = 'KalaStyle AI',
+    supportEmail    = 'support@kalastyle.ai',
     supportPhone    = '+91 7676558335',
-    storeAddress    = "Style heaven men's Wear, L. E, T College Road, near Wali Complex, Gokak, Karnataka 591307",
-    instagramUrl    = 'https://www.instagram.com/style_heaven_mens_wear?igsh=MXVueXV5ejc1bXVvNQ==',
+    storeAddress    = 'KalaStyle AI, Supporting Artisans Across India',
+    instagramUrl    = 'https://www.instagram.com',
     whatsappNumber  = '917676558335',
-    footerTagline   = "Redefining men's fashion with premium quality fabrics, timeless designs, and unmatched elegance.",
+    footerTagline   = 'Empowering Indian artisans to sell handloom, handmade, and traditional fashion online — From Artisan to Online Store in One Click.',
   } = settings;
 
   return (
@@ -26,14 +26,13 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <div className="mb-4 flex items-center gap-3">
-              <img
-                src="https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336535/style-heaven-assets/logo.png"
-                alt={storeName}
-                className="h-12 w-12 object-contain rounded-full ring-2 ring-gold-500/80 shadow-gold"
-              />
+              <div className="h-12 w-12 rounded-full ring-2 ring-gold-500/80 shadow-gold bg-gradient-luxury
+                              flex items-center justify-center text-dark-900 font-bold text-lg">
+                K
+              </div>
               <div>
                 <span className="font-serif text-2xl font-bold gold-text">{storeName}</span>
-                <p className="text-xs text-gray-500 tracking-widest uppercase mt-0.5">Mens Wear</p>
+                <p className="text-xs text-gray-500 tracking-widest uppercase mt-0.5">Artisan Marketplace</p>
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-6 max-w-xs">
@@ -57,11 +56,13 @@ export default function Footer() {
             <h4 className="font-semibold text-white mb-4">Quick Links</h4>
             <ul className="space-y-2">
               {[
-                { label: 'Home',      href: '/' },
-                { label: 'Shop',      href: '/products' },
-                { label: 'My Orders', href: '/orders' },
-                { label: 'Cart',      href: '/cart' },
-                { label: 'Login',     href: '/login' },
+                { label: 'Home',            href: '/' },
+                { label: 'Shop All',        href: '/products' },
+                { label: 'Sarees',          href: '/products?category=Sarees' },
+                { label: 'Handloom',        href: '/products?category=Handloom' },
+                { label: 'My Orders',       href: '/orders' },
+                { label: 'Cart',            href: '/cart' },
+                { label: 'Login',           href: '/login' },
               ].map((l) => (
                 <li key={l.label}>
                   <Link to={l.href} className="text-gray-400 hover:text-gold-400 text-sm transition-colors">
@@ -101,10 +102,10 @@ export default function Footer() {
 
         <div className="border-t border-dark-600 mt-12 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">
-            &copy; {year} {storeName} Mens Wear. All rights reserved.
+            &copy; {year} {storeName}. All rights reserved.
           </p>
           <p className="text-gray-600 text-xs">
-            Designed with ♥ for premium fashion
+            Designed with ♥ for Indian Artisans 🇮🇳
           </p>
         </div>
       </div>

@@ -14,50 +14,38 @@ const invalidateCache = () => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { category, search } = req.query;
+    const { category, search, material, is_handmade, artisan_id } = req.query;
     
     // Check cache for basic requests (no search/filter)
-    const isBasicRequest = (!category || category === 'all') && !search;
+    const isBasicRequest = (!category || category === 'all') && !search && !material && !is_handmade && !artisan_id;
     if (isBasicRequest && productCache.all.data && (Date.now() - productCache.all.timestamp < CACHE_TTL)) {
       return res.json(productCache.all.data);
     }
 
     const { data, error } = await safeQuery(async () => {
-      let query = supabase.from('products').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('products').select('*, artisan_profiles(id, store_name, location, specialization, verification_status)').order('created_at', { ascending: false });
 
       if (category && category !== 'all') {
         query = query.eq('category', category);
       }
-      
       if (search) {
         query = query.ilike('name', `%${search}%`);
+      }
+      if (material) {
+        query = query.ilike('material', `%${material}%`);
+      }
+      if (is_handmade === 'true') {
+        query = query.eq('is_handmade', true);
+      }
+      if (artisan_id) {
+        query = query.eq('artisan_id', artisan_id);
       }
       return await query;
     });
 
     if (error) throw error;
     
-    // Filter out the customized T-shirt unless includeCustom is true
     let filteredData = data || [];
-    if (req.query.includeCustom !== 'true') {
-      filteredData = filteredData.filter(p => p.name !== 'Style Heaven Customized T-Shirt');
-    }
-
-    // If search looks like a barcode
-    if (search && filteredData.length === 0 && !search.includes(' ')) {
-      const { data: barcodeData } = await safeQuery(() => 
-        supabase.from('products').select('*').eq('barcode', search)
-      );
-      if (barcodeData && barcodeData.length > 0) {
-        let filteredBarcodeData = barcodeData;
-        if (req.query.includeCustom !== 'true') {
-          filteredBarcodeData = barcodeData.filter(p => p.name !== 'Style Heaven Customized T-Shirt');
-        }
-        if (filteredBarcodeData.length > 0) {
-          return res.json(filteredBarcodeData);
-        }
-      }
-    }
 
     if (isBasicRequest) {
       productCache.all = { data: filteredData, timestamp: Date.now() };
@@ -76,14 +64,14 @@ exports.getFeaturedProducts = async (req, res) => {
     const { data, error } = await safeQuery(() => 
       supabase
         .from('products')
-        .select('*')
+        .select('*, artisan_profiles(id, store_name, location, specialization)')
         .order('created_at', { ascending: false })
         .limit(9)
     );
 
     if (error) throw error;
     
-    let filteredData = (data || []).filter(p => p.name !== 'Style Heaven Customized T-Shirt').slice(0, 8);
+    const filteredData = (data || []).slice(0, 8);
     
     productCache.featured = { data: filteredData, timestamp: Date.now() };
     
@@ -115,15 +103,26 @@ exports.getProductById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   try {
-    const { name, description, price, original_price, category, sizes, stock_quantity = 0, is_in_stock = true, image_url, barcode } = req.body;
+    const {
+      name, description, price, original_price, category, subcategory, sizes,
+      stock_quantity = 0, is_in_stock = true, image_url, barcode,
+      artisan_id, is_handmade, material, style, ai_generated, ai_suggested_price, tags
+    } = req.body;
 
     const { data, error } = await supabase
       .from('products')
       .insert([{
-        name, description, price, original_price, category, sizes,
+        name, description, price, original_price, category, subcategory, sizes,
         stock_quantity, is_in_stock,
         barcode: barcode ? barcode.trim() : null,
         ...(image_url ? { image_url } : {}),
+        ...(artisan_id ? { artisan_id } : {}),
+        ...(is_handmade !== undefined ? { is_handmade } : {}),
+        ...(material ? { material } : {}),
+        ...(style ? { style } : {}),
+        ...(ai_generated !== undefined ? { ai_generated } : {}),
+        ...(ai_suggested_price ? { ai_suggested_price } : {}),
+        ...(tags ? { tags } : {}),
       }])
       .select()
       .single();
@@ -131,9 +130,6 @@ exports.createProduct = async (req, res) => {
     if (error) {
       if (error.code === '23505') {
         return res.status(400).json({ error: 'Barcode already exists. Please use a unique barcode.' });
-      }
-      if (error.code === 'PGRST204') {
-        return res.status(400).json({ error: 'Database column missing. Please run the SQL to add stock columns.' });
       }
       throw error;
     }
@@ -148,14 +144,19 @@ exports.createProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
-    const { name, description, price, original_price, category, sizes, stock_quantity, is_in_stock, image_url, barcode } = req.body;
+    const {
+      name, description, price, original_price, category, subcategory, sizes,
+      stock_quantity, is_in_stock, image_url, barcode,
+      artisan_id, is_handmade, material, style, ai_generated, ai_suggested_price, tags
+    } = req.body;
 
     const { data, error } = await supabase
       .from('products')
       .update({ 
-        name, description, price, original_price, category, sizes, 
+        name, description, price, original_price, category, subcategory, sizes, 
         stock_quantity, is_in_stock, image_url,
-        barcode: barcode ? barcode.trim() : null 
+        barcode: barcode ? barcode.trim() : null,
+        artisan_id, is_handmade, material, style, ai_generated, ai_suggested_price, tags
       })
       .eq('id', req.params.id)
       .select()
@@ -164,9 +165,6 @@ exports.updateProduct = async (req, res) => {
     if (error) {
       if (error.code === '23505') {
         return res.status(400).json({ error: 'Barcode already exists. Please use a unique barcode.' });
-      }
-      if (error.code === 'PGRST204') {
-        return res.status(400).json({ error: 'Database column missing. Please run the SQL to add stock columns.' });
       }
       throw error;
     }

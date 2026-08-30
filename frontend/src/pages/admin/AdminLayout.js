@@ -23,6 +23,7 @@ export default function AdminLayout() {
     { name: 'Dashboard',      path: '/admin',                icon: HiChartPie },
     { name: 'Products',       path: '/admin/products',       icon: HiCollection },
     { name: 'Orders',         path: '/admin/orders',         icon: HiShoppingBag },
+    { name: 'Artisans',       path: '/admin/artisans',       icon: HiStar },
     { name: 'Reviews',        path: '/admin/reviews',        icon: HiStar },
     { name: 'Hero Banners',   path: '/admin/hero-settings',  icon: HiPhotograph },
     { name: 'Discount Banner',path: '/admin/discount-banner',icon: HiTag },

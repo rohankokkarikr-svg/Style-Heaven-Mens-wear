@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { productAPI, reviewAPI } from '../services/api';
@@ -230,8 +230,36 @@ export default function ProductDetail() {
           </div>
 
           <p className="text-gray-300 mb-8 leading-relaxed">
-            {product.description || 'Premium quality garment crafted with attention to detail. Perfect for any occasion. Elevate your wardrobe with Style Heaven.'}
+            {product.description || 'Handcrafted quality garment crafted with attention to detail. Perfect for any occasion. Elevate your wardrobe with KalaStyle AI.'}
           </p>
+
+          {/* Artisan / Craftsmanship Card */}
+          {(product.artisan_profiles || product.is_handmade || product.material) && (
+            <div className="mb-8 p-4 rounded-xl bg-gold-500/10 border border-gold-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎨</span>
+                  <span className="font-semibold text-white">
+                    {product.artisan_profiles?.store_name ? `Crafted by ${product.artisan_profiles.store_name}` : 'Handcrafted Product'}
+                  </span>
+                  {product.is_handmade && (
+                    <span className="text-[10px] bg-purple-600/80 text-white px-2 py-0.5 rounded font-bold uppercase">100% Handmade</span>
+                  )}
+                </div>
+                {product.artisan_profiles?.location && (
+                  <p className="text-xs text-gray-400 mt-1">📍 {product.artisan_profiles.location} {product.artisan_profiles.specialization ? `· ${product.artisan_profiles.specialization}` : ''}</p>
+                )}
+                {product.material && (
+                  <p className="text-xs text-gold-400 mt-1">Material: <strong>{product.material}</strong> {product.style ? `· Style: ${product.style}` : ''}</p>
+                )}
+              </div>
+              {product.artisan_profiles?.id && (
+                <Link to={`/artisans/${product.artisan_profiles.id}`} className="btn-outline text-xs px-3 py-2 shrink-0">
+                  Visit Artisan Store →
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* Size Selector */}
           {product.sizes?.length > 0 && (

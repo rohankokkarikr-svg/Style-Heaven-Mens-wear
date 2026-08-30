@@ -11,13 +11,16 @@ const generateToken = (id) => {
 
 exports.register = async (req, res) => {
   try {
-    const { name, phone, password } = req.body;
+    const { name, phone, password, role = 'user', store_name, artisan_type } = req.body;
 
     if (!name || !phone || !password) {
       return res.status(400).json({ error: 'Please provide all fields' });
     }
 
-    // Check if user exists (we store phone number in the email column)
+    const validRoles = ['user', 'artisan'];
+    const userRole = validRoles.includes(role) ? role : 'user';
+
+    // Check if user exists (phone stored in email column)
     const { data: existingUser } = await supabase
       .from('users')
       .select('*')
@@ -32,22 +35,36 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Store the phone in the email column under the hood
+    // Create user
     const { data: user, error } = await supabase
       .from('users')
-      .insert([{ name, email: phone, password: hashedPassword, role: 'user' }])
+      .insert([{ name, email: phone, password: hashedPassword, role: userRole }])
       .select()
       .single();
 
     if (error) throw error;
 
+    // If artisan, also create artisan_profiles row
+    let artisanProfile = null;
+    if (userRole === 'artisan') {
+      const { data: profile, error: profileError } = await supabase
+        .from('artisan_profiles')
+        .insert([{
+          user_id: user.id,
+          store_name: store_name || name,
+          artisan_type: artisan_type || 'General',
+          verification_status: 'pending'
+        }])
+        .select()
+        .single();
+      if (!profileError) artisanProfile = profile;
+    }
+
     const token = generateToken(user.id);
-    
-    // Remove password from response
     delete user.password;
 
     res.status(201).json({
-      user,
+      user: { ...user, artisan_profile: artisanProfile },
       token
     });
   } catch (error) {
@@ -82,12 +99,22 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // If artisan, fetch artisan profile
+    let artisanProfile = null;
+    if (user.role === 'artisan') {
+      const { data: profile } = await supabase
+        .from('artisan_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      artisanProfile = profile || null;
+    }
+
     const token = generateToken(user.id);
-    
     delete user.password;
 
     res.json({
-      user,
+      user: { ...user, artisan_profile: artisanProfile },
       token
     });
   } catch (error) {

@@ -27,12 +27,12 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
-  const signup = async (name, phone, password) => {
-    const { data } = await authAPI.signup({ name, phone, password });
+  const signup = async (name, phone, password, role = 'user', store_name, artisan_type) => {
+    const { data } = await authAPI.signup({ name, phone, password, role, store_name, artisan_type });
     localStorage.setItem('sh_token', data.token);
     localStorage.setItem('sh_user', JSON.stringify(data.user));
     setUser(data.user);
-    toast.success('Account created! Welcome to Style Heaven ✨');
+    toast.success('Account created! Welcome to KalaStyle AI ✨');
     return data.user;
   };
 
@@ -44,10 +44,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAdmin = user?.role === 'admin';
+  const isArtisan = user?.role === 'artisan';
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, isAdmin, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, isAdmin, isArtisan, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

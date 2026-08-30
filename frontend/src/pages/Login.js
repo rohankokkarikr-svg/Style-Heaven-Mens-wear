@@ -33,17 +33,13 @@ export default function Login() {
       <div className="max-w-md w-full space-y-8 card p-8">
         <div>
           <div className="flex justify-center mb-4">
-            <img
-              src="https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336535/style-heaven-assets/logo.png"
-              alt="Style Heaven"
-              className="h-16 w-16 object-contain rounded-full ring-2 ring-gold-500/80 shadow-gold"
-            />
+            <div className="h-16 w-16 rounded-full ring-2 ring-gold-500/80 shadow-gold bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-2xl">K</div>
           </div>
           <h2 className="text-center text-3xl font-serif font-bold text-white">
             Welcome Back
           </h2>
           <p className="mt-2 text-center text-sm text-gray-400">
-            Sign in to your <span className="gold-text font-medium">Style Heaven</span> account
+            Sign in to your <span className="gold-text font-medium">KalaStyle AI</span> account
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

@@ -61,6 +61,13 @@ export default function ProductCard({ product }) {
             </span>
           )}
 
+          {/* Artisan Handmade Badge */}
+          {(product.is_handmade || product.artisan_id || product.artisan_profiles) && (
+            <span className="absolute top-2 right-2 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-purple-600/90 text-white rounded shadow-lg z-10 flex items-center gap-1">
+              🎨 Handmade
+            </span>
+          )}
+
           {/* Out of Stock overlay badge */}
           {(product.is_in_stock === false || (product.stock_quantity !== undefined && product.stock_quantity <= 0)) && (
             <span className="absolute top-2 left-2 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-red-600 text-white rounded shadow-lg z-10">
@@ -96,6 +103,12 @@ export default function ProductCard({ product }) {
         <div className="p-4">
           <h3 className="font-semibold text-gray-100 group-hover:text-gold-400
                          transition-colors truncate">{name}</h3>
+
+          {product.artisan_profiles?.store_name && (
+            <p className="text-[11px] text-gold-400 font-medium mt-0.5 flex items-center gap-1 truncate">
+              <span>🎨</span> {product.artisan_profiles.store_name}
+            </p>
+          )}
 
           {/* Rating */}
           <div className="flex items-center gap-1 mt-1">

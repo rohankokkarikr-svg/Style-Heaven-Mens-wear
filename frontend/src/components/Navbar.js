@@ -4,14 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import {
   HiShoppingCart, HiMenu, HiX, HiSearch, HiLogout,
-  HiChartBar, HiStar
+  HiChartBar, HiStar, HiSparkles
 } from 'react-icons/hi';
-import { FaTrophy } from 'react-icons/fa';
+import { FaTrophy, FaPaintBrush } from 'react-icons/fa';
 import UserAvatar from './UserAvatar';
 
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isArtisan } = useAuth();
   const { totalItems } = useCart();
   const navigate  = useNavigate();
   const location  = useLocation();
@@ -36,16 +36,15 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { label: 'Home',         href: '/' },
-    { label: 'All',          href: '/products' },
-    { label: 'T-Shirts',     href: '/products?category=T-Shirts' },
-    { label: 'Shirts',       href: '/products?category=Shirts' },
-    { label: 'Pants',        href: '/products?category=Pants' },
-    { label: 'Jeans',        href: '/products?category=Jeans' },
-    { label: 'Jackets',      href: '/products?category=Jackets' },
-    { label: 'Suits',        href: '/products?category=Suits' },
-    { label: 'Kurtas',       href: '/products?category=Kurtas' },
-    { label: 'Accessories',  href: '/products?category=Accessories' },
+    { label: 'Home',        href: '/' },
+    { label: 'All',         href: '/products' },
+    { label: 'Sarees',      href: '/products?category=Sarees' },
+    { label: 'Kurtas',      href: '/products?category=Kurtas' },
+    { label: 'Handloom',    href: '/products?category=Handloom' },
+    { label: 'Handmade',    href: '/products?category=Handmade' },
+    { label: 'Women',       href: '/products?category=Women%27s+Fashion' },
+    { label: 'Men',         href: '/products?category=Men%27s+Fashion' },
+    { label: 'Accessories', href: '/products?category=Accessories' },
   ];
 
   const isActive = (href) => location.pathname === href.split('?')[0];
@@ -61,14 +60,13 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 md:gap-3">
-              <img
-                src="https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336535/style-heaven-assets/logo.png"
-                alt="Style Heaven"
-                className="h-9 w-9 md:h-12 md:w-12 object-contain rounded-full ring-2 ring-gold-500/80 shadow-gold"
-              />
+              <div className="h-9 w-9 md:h-12 md:w-12 rounded-full ring-2 ring-gold-500/80 shadow-gold
+                              bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-sm">
+                K
+              </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-serif text-base md:text-xl font-bold gold-text whitespace-nowrap">Style Heaven</span>
-                <span className="text-[9px] md:text-xs text-gray-400 tracking-widest uppercase whitespace-nowrap">Mens Wear</span>
+                <span className="font-serif text-base md:text-xl font-bold gold-text whitespace-nowrap">KalaStyle AI</span>
+                <span className="text-[9px] md:text-xs text-gray-400 tracking-widest uppercase whitespace-nowrap">Artisan Marketplace</span>
               </div>
             </Link>
 
@@ -130,7 +128,12 @@ export default function Navbar() {
                                                    hover:bg-dark-600 text-sm text-gold-400 hover:text-gold-300">
                       <HiStar className="w-4 h-4" /> My Rewards
                     </Link>
-
+                    {isArtisan && (
+                      <Link to="/artisan" className="flex items-center gap-2 px-3 py-2 rounded-lg
+                                                    hover:bg-dark-600 text-sm text-gold-400 font-semibold border-t border-dark-500 mt-1 pt-2">
+                        <span className="text-base">🎨</span> Artisan Studio
+                      </Link>
+                    )}
                     {isAdmin && (
                       <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg
                                                     hover:bg-dark-600 text-sm text-gold-400">
@@ -168,7 +171,7 @@ export default function Navbar() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for shirts, trousers, accessories…"
+                placeholder="Search sarees, kurtas, handloom, accessories…"
                 className="input-field flex-1"
               />
               <button type="submit" className="btn-primary px-5 py-3">Search</button>
@@ -193,14 +196,13 @@ export default function Navbar() {
           {/* Header of Drawer */}
           <div className="flex items-center justify-between p-4 border-b border-dark-600 bg-dark-950">
             <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
-              <img
-                src="https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336535/style-heaven-assets/logo.png"
-                alt="Style Heaven"
-                className="h-8 w-8 object-contain rounded-full ring-2 ring-gold-500/80"
-              />
+              <div className="h-8 w-8 rounded-full ring-2 ring-gold-500/80 bg-gradient-luxury
+                              flex items-center justify-center text-dark-900 font-bold text-sm">
+                K
+              </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-serif text-sm font-bold gold-text whitespace-nowrap">Style Heaven</span>
-                <span className="text-[8px] text-gray-400 tracking-widest uppercase whitespace-nowrap">Mens Wear</span>
+                <span className="font-serif text-sm font-bold gold-text whitespace-nowrap">KalaStyle AI</span>
+                <span className="text-[8px] text-gray-400 tracking-widest uppercase whitespace-nowrap">Artisan Marketplace</span>
               </div>
             </Link>
             <button
@@ -238,7 +240,7 @@ export default function Navbar() {
                   <UserAvatar name={user.name} size={36} ring />
                   <div className="min-w-0 flex-1">
                     <p className="text-white font-bold text-sm truncate">{user.name}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">{isAdmin ? 'Admin' : 'Member'}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">{isAdmin ? 'Admin' : isArtisan ? 'Artisan' : 'Member'}</p>
                   </div>
                 </div>
 
@@ -263,6 +265,16 @@ export default function Navbar() {
                 >
                   <HiStar className="w-4 h-4 text-gold-500" /> My Rewards
                 </Link>
+
+                {isArtisan && (
+                  <Link
+                    to="/artisan"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-dark-800 text-sm text-gold-400 font-bold transition-all border-t border-dark-600 mt-1 pt-2"
+                  >
+                    <span className="text-base">🎨</span> Artisan Studio
+                  </Link>
+                )}
 
                 {isAdmin && (
                   <Link

@@ -18,6 +18,15 @@ export function AdminRoute({ children }) {
   return children;
 }
 
+/** Only allows artisan-role (and admin) users */
+export function ArtisanRoute({ children }) {
+  const { isAuthenticated, isArtisan, isAdmin, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!isAuthenticated)           return <NavRedirect to="/login"  replace />;
+  if (!isArtisan && !isAdmin)     return <NavRedirect to="/"       replace />;
+  return children;
+}
+
 function PageLoader() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-900">

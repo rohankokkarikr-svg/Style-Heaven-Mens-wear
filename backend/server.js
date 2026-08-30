@@ -46,6 +46,8 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/artisans', require('./routes/artisans'));
+app.use('/api/ai', require('./routes/ai'));
 
 // Health check — also checks if Supabase is reachable
 app.get('/health', async (req, res) => {
@@ -105,10 +107,11 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`
-  🚀 Style Heaven Backend is running!
+  🚀 KalaStyle AI Backend is running!
   📡 Port: ${PORT}
   🌍 Host: 0.0.0.0 (Localhost)
   🛠️  Node: ${process.version}
+  🎨 KalaStyle AI — From Artisan to Online Store in One Click.
   `);
 
   // Startup connectivity check

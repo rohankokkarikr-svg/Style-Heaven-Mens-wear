@@ -40,4 +40,12 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin };
+const artisan = (req, res, next) => {
+  if (req.user && (req.user.role === 'artisan' || req.user.role === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Not authorized as an artisan' });
+  }
+};
+
+module.exports = { protect, admin, artisan };

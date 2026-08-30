@@ -12,7 +12,7 @@ import { SettingsProvider } from './context/SettingsContext';
 
 // Components
 import Navbar from './components/Navbar';
-import { PrivateRoute, AdminRoute } from './components/ProtectedRoute';
+import { PrivateRoute, AdminRoute, ArtisanRoute } from './components/ProtectedRoute';
 import SpinWheelPopup from './components/SpinWheelPopup';
 
 // Public Pages
@@ -27,7 +27,16 @@ import Orders from './pages/Orders';
 import Rewards from './pages/Rewards';
 import Profile from './pages/Profile';
 import PaymentGateway from './pages/PaymentGateway';
+import ArtisanStore from './pages/ArtisanStore';
 
+// Artisan Pages
+import ArtisanLayout from './pages/artisan/ArtisanLayout';
+import ArtisanDashboard from './pages/artisan/ArtisanDashboard';
+import ArtisanProducts from './pages/artisan/ArtisanProducts';
+import AIProductStudio from './pages/artisan/AIProductStudio';
+import ArtisanOrders from './pages/artisan/ArtisanOrders';
+import ArtisanEarnings from './pages/artisan/ArtisanEarnings';
+import ArtisanProfile from './pages/artisan/ArtisanProfile';
 
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout';
@@ -38,6 +47,7 @@ import DiscountBanner from './pages/admin/DiscountBanner';
 import HeroSettings from './pages/admin/HeroSettings';
 import AdminReviews from './pages/admin/Reviews';
 import Settings from './pages/admin/Settings';
+import AdminArtisans from './pages/admin/Artisans';
 
 function MaintenanceGuard({ children }) {
   const { settings } = useSettings();
@@ -73,15 +83,26 @@ function App() {
           />
           
           <Routes>
-            {/* Admin Routes (No public Navbar/Footer) */}
+            {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<Dashboard />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="orders" element={<AdminOrders />} />
+              <Route path="artisans" element={<AdminArtisans />} />
               <Route path="hero-settings" element={<HeroSettings />} />
               <Route path="discount-banner" element={<DiscountBanner />} />
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="settings" element={<Settings />} />
+            </Route>
+
+            {/* Artisan Routes */}
+            <Route path="/artisan" element={<ArtisanRoute><ArtisanLayout /></ArtisanRoute>}>
+              <Route index element={<ArtisanDashboard />} />
+              <Route path="products" element={<ArtisanProducts />} />
+              <Route path="ai-studio" element={<AIProductStudio />} />
+              <Route path="orders" element={<ArtisanOrders />} />
+              <Route path="earnings" element={<ArtisanEarnings />} />
+              <Route path="profile" element={<ArtisanProfile />} />
             </Route>
 
             {/* Payment Gateway (No Navbar/Footer) */}
@@ -101,6 +122,7 @@ function App() {
                     <Route path="/products" element={<ProductList />} />
                     <Route path="/products/:id" element={<ProductDetail />} />
                     <Route path="/cart" element={<Cart />} />
+                    <Route path="/artisans/:id" element={<ArtisanStore />} />
                     
                     {/* Protected User Routes */}
                     <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />

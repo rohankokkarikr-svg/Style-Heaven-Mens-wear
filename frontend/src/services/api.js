@@ -122,4 +122,21 @@ export const settingsAPI = {
   update: (data)   => api.put('/settings', data),
 };
 
+// ─── Artisans ────────────────────────────────────
+export const artisanAPI = {
+  getAll:       ()       => api.get('/artisans'),
+  getById:      (id)     => api.get(`/artisans/${id}`),
+  getMyProfile: ()       => api.get('/artisans/me'),
+  getMyStats:   ()       => api.get('/artisans/me/stats'),
+  updateProfile:(data)   => api.put('/artisans/me', data),
+  verify:       (id, d)  => api.patch(`/artisans/${id}/verify`, d),
+  getAllAdmin:   ()       => api.get('/artisans/admin/all'),
+};
+
+// ─── AI ──────────────────────────────────────────
+export const aiAPI = {
+  analyzeProduct:      (data) => api.post('/ai/analyze-product', data),
+  generateDescription: (data) => api.post('/ai/generate-description', data),
+};
+
 export default api;
