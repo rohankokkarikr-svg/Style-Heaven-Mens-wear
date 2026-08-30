@@ -1,12 +1,12 @@
 -- ============================================================
--- KALASTYLE AI — Supabase Database Schema
--- Run this in your NEW Supabase project SQL Editor
+-- KALASTYLE AI â€” Supabase Database Schema (Idempotent Migration)
+-- Run this in your Supabase project's SQL Editor
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -14,9 +14,10 @@ CREATE TABLE users (
   role VARCHAR(50) DEFAULT 'user',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user';
 
--- 2. Artisan Profiles (NEW)
-CREATE TABLE artisan_profiles (
+-- 2. Artisan Profiles Table (NEW)
+CREATE TABLE IF NOT EXISTS artisan_profiles (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
   store_name VARCHAR(255) NOT NULL,
@@ -31,8 +32,8 @@ CREATE TABLE artisan_profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Products Table (extended)
-CREATE TABLE products (
+-- 3. Products Table
+CREATE TABLE IF NOT EXISTS products (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -54,9 +55,17 @@ CREATE TABLE products (
   tags TEXT[],
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE products ADD COLUMN IF NOT EXISTS artisan_id UUID REFERENCES artisan_profiles(id) ON DELETE SET NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS subcategory VARCHAR(100);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_handmade BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS material VARCHAR(255);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS style VARCHAR(255);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_generated BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_suggested_price DECIMAL(10, 2);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS tags TEXT[];
 
 -- 4. Orders Table
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   total_price DECIMAL(10, 2) NOT NULL,
@@ -72,8 +81,8 @@ CREATE TABLE orders (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 5. Order Items
-CREATE TABLE order_items (
+-- 5. Order Items Table
+CREATE TABLE IF NOT EXISTS order_items (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
@@ -83,7 +92,7 @@ CREATE TABLE order_items (
 );
 
 -- 6. Sales Table
-CREATE TABLE sales (
+CREATE TABLE IF NOT EXISTS sales (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
   quantity INTEGER NOT NULL DEFAULT 1,
@@ -91,8 +100,8 @@ CREATE TABLE sales (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 7. Reviews
-CREATE TABLE reviews (
+-- 7. Reviews Table
+CREATE TABLE IF NOT EXISTS reviews (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   product_name VARCHAR(255) NOT NULL,
@@ -104,8 +113,8 @@ CREATE TABLE reviews (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 8. Coupons
-CREATE TABLE coupons (
+-- 8. Coupons Table
+CREATE TABLE IF NOT EXISTS coupons (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   code VARCHAR(100) UNIQUE NOT NULL,
   discount_type VARCHAR(50) NOT NULL,
@@ -116,17 +125,17 @@ CREATE TABLE coupons (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 9. User Spins
-CREATE TABLE user_spins (
+-- 9. User Spins Table
+CREATE TABLE IF NOT EXISTS user_spins (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
   last_spin_date TIMESTAMP WITH TIME ZONE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Indexes
-CREATE INDEX idx_products_category ON products(category);
-CREATE INDEX idx_products_artisan_id ON products(artisan_id);
-CREATE INDEX idx_orders_user_id ON orders(user_id);
-CREATE INDEX idx_artisan_profiles_user_id ON artisan_profiles(user_id);
-CREATE INDEX idx_artisan_profiles_verification ON artisan_profiles(verification_status);
+-- Indexes (SAFE)
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_artisan_id ON products(artisan_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_artisan_profiles_user_id ON artisan_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_artisan_profiles_verification ON artisan_profiles(verification_status);
