@@ -18,8 +18,10 @@ router.get('/', getProducts);
 router.get('/featured', getFeaturedProducts);
 router.get('/:id', getProductById);
 
+// Product upload routes (Public so onboarding artisans can upload QR code & profile photo before login)
+router.post('/upload', upload.single('image'), uploadDirect);
+
 // Admin + Artisan routes
-router.post('/upload', protect, artisan, upload.single('image'), uploadDirect);
 router.post('/', protect, artisan, createProduct);
 router.put('/:id', protect, admin, updateProduct);
 router.delete('/:id', protect, artisan, deleteProduct);

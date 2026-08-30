@@ -11,12 +11,15 @@ cloudinary.config({
 const storage = CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'style-heaven-products',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 800, height: 1000, crop: 'limit' }]
+    folder: 'kalastyle-artisan-marketplace',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'jfif', 'gif', 'svg', 'bmp', 'tiff'],
+    transformation: [{ width: 1200, height: 1200, crop: 'limit', quality: 'auto' }]
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB max file size
+});
 
 module.exports = { cloudinary, upload };
