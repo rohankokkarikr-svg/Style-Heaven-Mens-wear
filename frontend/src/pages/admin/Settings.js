@@ -5,10 +5,10 @@ import { settingsAPI } from '../../services/api';
 import { useSettings } from '../../context/SettingsContext';
 
 const DEFAULT_SETTINGS = {
-  storeName: 'Style Heaven',
-  supportEmail: 'support@styleheaven.com',
+  storeName: 'KalaStyle AI',
+  supportEmail: 'support@kalastyle.ai',
   supportPhone: '+91 7676558335',
-  storeAddress: "Style heaven men's Wear, L. E, T College Road, near Wali Complex, Gokak, Karnataka 591307",
+  storeAddress: 'KalaStyle AI, Supporting Artisans & Handloom Crafts Across India',
   currency: 'INR (₹)',
   taxRate: '18',
   maintenanceMode: false,

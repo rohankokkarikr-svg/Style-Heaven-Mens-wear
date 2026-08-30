@@ -111,7 +111,7 @@ export default function AdminOrders() {
     if (!o.phone) return null;
     let digits = String(o.phone).replace(/\D/g, '');
     if (digits.length === 10) digits = '91' + digits;
-    const msg = `Hello ${o.users?.name || 'Customer'}, regarding your Style Heaven Order #${o.id?.substring(0, 8)} (Total: ₹${o.total_price?.toLocaleString()})...`;
+    const msg = `Hello ${o.users?.name || 'Customer'}, regarding your KalaStyle AI Order #${o.id?.substring(0, 8)} (Total: ₹${o.total_price?.toLocaleString()})...`;
     return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
   };
 

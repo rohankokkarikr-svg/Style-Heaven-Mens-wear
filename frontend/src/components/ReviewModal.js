@@ -23,7 +23,7 @@ export default function ReviewModal({ isOpen, onClose, product, onReviewSubmitte
     try {
       const newReviewData = {
         customer_name: user.name || 'Verified Customer',
-        product_name: product?.name || 'Style Heaven Product',
+        product_name: product?.name || 'KalaStyle AI Product',
         rating,
         review_text: reviewText,
         image_url: ''

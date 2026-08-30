@@ -165,7 +165,7 @@ const SpinWheelPopup = () => {
         {!reward ? (
           <>
             <h2 className="text-3xl font-bold text-white mb-2 font-serif">Spin & Win!</h2>
-            <p className="text-gray-400 mb-8">Try your luck and win exclusive discount coupons for Style Heaven.</p>
+            <p className="text-gray-400 mb-8">Try your luck and win exclusive discount coupons for KalaStyle AI.</p>
             
             <div className="relative inline-block mb-8">
               {/* Arrow Indicator */}

@@ -93,7 +93,7 @@ const buildOrderWhatsappText = (order, customerName) => {
   const shipping = (order.total_price || 0) - subtotal + discount;
   const isUpi = getEffectivePaymentMethod(order).includes('UPI');
 
-  return `🔔 *New Order Placed on Style Heaven!*
+  return `🔔 *New Order Placed on KalaStyle AI!*
 ----------------------------------------
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}
@@ -209,7 +209,7 @@ exports.sendOrderCancelWhatsappNotification = async (adminPhone, order, customer
 
   const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
 
-  const messageBody = `🚨 *Order Cancelled on Style Heaven!*
+  const messageBody = `🚨 *Order Cancelled on KalaStyle AI!*
 ----------------------------------------
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}

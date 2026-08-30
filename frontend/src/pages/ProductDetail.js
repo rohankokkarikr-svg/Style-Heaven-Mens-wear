@@ -436,7 +436,7 @@ export default function ProductDetail() {
             {/* Style Heaven Trust Card */}
             <div className="border border-gold-500/20 bg-dark-800 rounded-2xl p-6 shadow-gold shadow-gold/5 space-y-5">
               <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2 border-b border-dark-600 pb-3">
-                <span className="text-gold-400">★</span> Style Heaven Assured
+                <span className="text-gold-400">★</span> KalaStyle AI Assured
               </h3>
               
               <div className="space-y-4">

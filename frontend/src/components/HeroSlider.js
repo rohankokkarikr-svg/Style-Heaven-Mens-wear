@@ -333,7 +333,7 @@ export default function HeroSlider() {
       {/* ── Glassmorphism Brand Watermark (bottom-left) ── */}
       <div className="absolute bottom-8 left-6 sm:left-10 z-20 hidden sm:block">
         <div className="backdrop-blur-sm bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
-          <p className="text-[10px] text-gray-400 uppercase tracking-[0.3em] font-medium">Style Heaven</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-[0.3em] font-medium">KalaStyle AI</p>
         </div>
       </div>
     </section>

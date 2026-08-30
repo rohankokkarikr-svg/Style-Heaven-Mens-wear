@@ -210,7 +210,7 @@ export default function AITryOnModal({ product, isOpen, onClose }) {
     if (navigator.share && resultImage) {
       try {
         await navigator.share({
-          title: `Style Heaven AI - ${product.name}`,
+          title: `KalaStyle AI - ${product.name}`,
           text: `Check out how I look in ${product.name}!`,
           url: window.location.href
         });

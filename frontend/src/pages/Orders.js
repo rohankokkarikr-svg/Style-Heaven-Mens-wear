@@ -45,7 +45,7 @@ export default function Orders() {
       const adminPhone = '917349083982';
       let waLink = res.data?.whatsappLink;
       if (!waLink) {
-        const msg = `🚨 *Order Cancelled on Style Heaven!*\n----------------------------------------\n📦 *Order ID:* #${orderId?.substring(0, 8)}\n📞 *Phone:* +91 ${targetOrder?.phone || ''}\n💰 *Total Amount:* ₹${targetOrder?.total_price?.toLocaleString()}\n----------------------------------------\n❌ *Status:* CANCELLED`;
+        const msg = `🚨 *Order Cancelled on KalaStyle AI!*\n----------------------------------------\n📦 *Order ID:* #${orderId?.substring(0, 8)}\n📞 *Phone:* +91 ${targetOrder?.phone || ''}\n💰 *Total Amount:* ₹${targetOrder?.total_price?.toLocaleString()}\n----------------------------------------\n❌ *Status:* CANCELLED`;
         waLink = `https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`;
       }
       try {
@@ -107,7 +107,7 @@ export default function Orders() {
   const buildWhatsappLink = (order) => {
     const adminPhone = '917349083982';
     const itemsText = (order.items || []).map(i => `• ${i.product?.name || 'Item'} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${((i.price_at_time || 0) * (i.quantity || 1)).toLocaleString()}`).join('\n');
-    const msg = `🔔 *Order Details from Style Heaven!*\n----------------------------------------\n📦 *Order ID:* #${order.id?.substring(0, 8)}\n📞 *Phone:* +91 ${order.phone || ''}\n📍 *Address:* ${order.shipping_address || ''}\n\n🛒 *Items:*\n${itemsText || 'No items'}\n\n💰 *Payment Method:* ${getEffectivePaymentMethod(order)}\n💵 *Total Amount:* ₹${order.total_price?.toLocaleString()}\n----------------------------------------\n✅ *Status:* ${order.status || 'Pending'}`;
+    const msg = `🔔 *Order Details from KalaStyle AI!*\n----------------------------------------\n📦 *Order ID:* #${order.id?.substring(0, 8)}\n📞 *Phone:* +91 ${order.phone || ''}\n📍 *Address:* ${order.shipping_address || ''}\n\n🛒 *Items:*\n${itemsText || 'No items'}\n\n💰 *Payment Method:* ${getEffectivePaymentMethod(order)}\n💵 *Total Amount:* ₹${order.total_price?.toLocaleString()}\n----------------------------------------\n✅ *Status:* ${order.status || 'Pending'}`;
     return `https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`;
   };
 
@@ -176,7 +176,7 @@ export default function Orders() {
                       Size: {item.size} • Qty: {item.quantity}
                     </p>
                     <button
-                      onClick={() => setReviewProduct(item.product || { name: item.product?.name || 'Style Heaven Product' })}
+                      onClick={() => setReviewProduct(item.product || { name: item.product?.name || 'KalaStyle AI Product' })}
                       className="mt-2 inline-flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300 font-semibold border border-gold-500/30 hover:border-gold-500/60 px-2.5 py-1.5 rounded-md bg-gold-500/5 hover:bg-gold-500/10 transition-all cursor-pointer"
                     >
                       <HiPencilAlt className="w-3.5 h-3.5" />

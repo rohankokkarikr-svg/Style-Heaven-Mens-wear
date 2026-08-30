@@ -426,7 +426,7 @@ export default function Checkout() {
     if (codeUpper.startsWith('FREESHIRT')) {
       const hasCustomTshirt = items.some(item => item.product.name === 'Style Heaven Customized T-Shirt');
       if (!hasCustomTshirt) {
-        setCouponError("This coupon is only valid for the Style Heaven Customized T-Shirt. Add it to your cart first.");
+        setCouponError("This coupon is only valid for the KalaStyle AI Exclusive Gift. Add it to your cart first.");
         setIsCouponApplied(false);
         return;
       }
@@ -489,7 +489,7 @@ export default function Checkout() {
         let waLink = createdOrder.whatsappLink;
         if (!waLink) {
           const itemsText = items.map(i => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${(i.product.price * i.quantity).toLocaleString()}`).join('\n');
-          const msg = `🔔 *New COD Order Placed on Style Heaven!*\n----------------------------------------\n📦 *Order ID:* #${createdOrder.id?.substring(0, 8)}\n👤 *Customer Name:* ${form.fullName}\n📞 *Phone:* +91 ${form.phone}\n📍 *Address:* ${fullAddress}\n\n🛒 *Items (${items.reduce((s,i)=>s+i.quantity,0)} items):*\n${itemsText}\n\n💰 *Payment Method:* COD (Cash on Delivery)\n💵 *Total Amount:* ₹${finalTotal.toLocaleString()}\n----------------------------------------\n✅ *Status:* CONFIRMED (COD)`;
+          const msg = `🔔 *New COD Order Placed on KalaStyle AI!*\n----------------------------------------\n📦 *Order ID:* #${createdOrder.id?.substring(0, 8)}\n👤 *Customer Name:* ${form.fullName}\n📞 *Phone:* +91 ${form.phone}\n📍 *Address:* ${fullAddress}\n\n🛒 *Items (${items.reduce((s,i)=>s+i.quantity,0)} items):*\n${itemsText}\n\n💰 *Payment Method:* COD (Cash on Delivery)\n💵 *Total Amount:* ₹${finalTotal.toLocaleString()}\n----------------------------------------\n✅ *Status:* CONFIRMED (COD)`;
           waLink = `https://wa.me/${defaultAdminPhone}?text=${encodeURIComponent(msg)}`;
         }
 
@@ -610,7 +610,7 @@ export default function Checkout() {
             <span className="text-xs font-bold text-gold-400 uppercase tracking-widest">Secure Checkout</span>
           </div>
           <h1 className="text-4xl font-serif font-bold text-white">Complete Your Order</h1>
-          <p className="text-gray-400 mt-1 text-sm">Style Heaven · Premium Menswear</p>
+          <p className="text-gray-400 mt-1 text-sm">KalaStyle AI · Artisan Marketplace</p>
         </div>
 
         {/* Step Progress */}
@@ -1126,7 +1126,7 @@ export default function Checkout() {
                   </div>
 
                   <div className="bg-dark-800/50 border border-dark-600 rounded-xl p-4 text-xs text-gray-400 leading-relaxed">
-                    <p>By placing this order, you confirm that the delivery details above are correct, and you agree to Style Heaven's return & refund policy. Orders with incorrect addresses will not be eligible for re-delivery at no charge.</p>
+                    <p>By placing this order, you confirm that the delivery details above are correct, and you agree to KalaStyle AI's return & refund policy. Orders with incorrect addresses will not be eligible for re-delivery at no charge.</p>
                   </div>
 
                   <div className="flex gap-4">
@@ -1231,7 +1231,7 @@ export default function Checkout() {
                   <span>📱 Send Details to Admin via WhatsApp</span>
                 </p>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Click the button below to send your order details directly to the Style Heaven Admin WhatsApp for instant order processing!
+                  Click the button below to send your order details directly to the KalaStyle AI Admin WhatsApp for instant order processing!
                 </p>
 
                 <a

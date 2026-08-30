@@ -103,7 +103,7 @@ export default function Profile() {
                   <p className="text-sm text-gray-300">
                     {userRankNum === 1 ? (
                       <span className="text-gold-300 font-medium flex items-center gap-1">
-                        <HiSparkles className="w-4 h-4 text-gold-400" /> You are #1 Top Buyer on Style Heaven! Keep shining!
+                        <HiSparkles className="w-4 h-4 text-gold-400" /> You are #1 Top Buyer on KalaStyle AI! Keep shining!
                       </span>
                     ) : currentUserRank?.nextRankAmountNeeded > 0 ? (
                       <span>
@@ -133,7 +133,7 @@ export default function Profile() {
               <span className="text-gold-400 text-xs font-bold uppercase tracking-widest">Global Rankings</span>
             </div>
             <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-3">
-              Style Heaven <span className="gold-text">Leaderboard</span>
+              KalaStyle AI <span className="gold-text">Leaderboard</span>
             </h2>
             <p className="text-gray-400 text-sm md:text-base">
               Real-time rankings of our top spenders across all dress categories. The more you shop, the higher your rank!

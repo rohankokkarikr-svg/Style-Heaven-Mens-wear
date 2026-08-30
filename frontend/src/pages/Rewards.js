@@ -172,7 +172,7 @@ export default function Rewards() {
               <span className="text-gold-400 text-xs font-bold uppercase tracking-widest">Loyalty Program</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-white mb-4">
-              Style Heaven <span className="text-gold-400">Rewards</span>
+              KalaStyle AI <span className="text-gold-400">Rewards</span>
             </h1>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
               5 exclusive tiers. Every level earns you a <span className="text-gold-400 font-semibold">FREE T-Shirt</span> of your choice, plus premium perks.
@@ -464,7 +464,7 @@ export default function Rewards() {
                   <h2 className="text-3xl font-serif font-bold text-white mb-1">🎉 Congratulations!</h2>
                   <p className="text-gold-400 font-bold tracking-widest uppercase text-xs mb-3">Custom T-Shirt Unlocked</p>
                   <p className="text-gray-400 text-sm">
-                    You've had <span className="text-white font-bold">{data.totalItemsOrdered || threshold}+ items delivered</span> from Style Heaven. Claim your exclusive customized T-shirt below — it's on us!
+                    You've had <span className="text-white font-bold">{data.totalItemsOrdered || threshold}+ items delivered</span> from KalaStyle AI. Claim your exclusive customized gift below — it's on us!
                   </p>
                 </div>
 

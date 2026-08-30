@@ -49,14 +49,10 @@ export default function AdminLayout() {
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-dark-600 flex justify-between items-center">
             <Link to="/" className="flex items-center gap-3">
-              <img
-                src="https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336535/style-heaven-assets/logo.png"
-                alt="Style Heaven"
-                className="h-10 w-10 object-contain rounded-full ring-2 ring-gold-500/80 shadow-gold"
-              />
-              <div className="leading-tight">
-                <div className="font-serif text-xl font-bold gold-text">Style Heaven</div>
-                <div className="text-xs text-gray-400 uppercase tracking-widest">Admin</div>
+              <div className="h-10 w-10 rounded-full ring-2 ring-gold-500/80 bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-lg">K</div>
+              <div>
+                <div className="font-serif text-xl font-bold gold-text">KalaStyle AI</div>
+                <div className="text-xs text-gray-400 uppercase tracking-widest">Admin Control</div>
               </div>
             </Link>
             <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-400">

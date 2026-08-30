@@ -37,7 +37,7 @@ export default function Maintenance() {
           </h1>
           <div className="h-0.5 w-24 bg-gradient-luxury mx-auto rounded-full" />
           <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto leading-relaxed">
-            {settings?.storeName || 'Style Heaven'} is currently undergoing scheduled maintenance. 
+            {settings?.storeName || 'KalaStyle AI'} is currently undergoing scheduled maintenance. 
             We are polishing our services to bring you a more premium menswear shopping experience. 
             Please check back shortly.
           </p>
@@ -95,7 +95,7 @@ export default function Maintenance() {
 
         {/* Footer */}
         <p className="text-gray-600 text-xs font-medium uppercase tracking-wider">
-          © {new Date().getFullYear()} {settings?.storeName || 'Style Heaven'} · Premium Menswear
+          © {new Date().getFullYear()} {settings?.storeName || 'KalaStyle AI'} · Artisan Marketplace
         </p>
       </motion.div>
     </div>
