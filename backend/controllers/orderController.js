@@ -738,9 +738,10 @@ exports.getOrderById = async (req, res) => {
       .from('orders')
       .select(`
         *,
+        users (name, email),
         items:order_items (
           quantity, price_at_time, size,
-          product:products (id, name, image_url, category)
+          product:products (id, name, image_url, category, artisan_id)
         )
       `)
       .eq('id', id)
@@ -754,6 +755,35 @@ exports.getOrderById = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized access to this order' });
     }
 
+    // Populate artisan profiles for items in this order
+    const { parseArtisanUpi } = require('./authController');
+    let primaryArtisan = null;
+
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        if (item.product?.artisan_id) {
+          try {
+            const { data: artProfile } = await supabase
+              .from('artisan_profiles')
+              .select('*')
+              .eq('id', item.product.artisan_id)
+              .maybeSingle();
+            
+            if (artProfile) {
+              const parsedArt = parseArtisanUpi(artProfile);
+              item.product.artisan = parsedArt;
+              if (!primaryArtisan) {
+                primaryArtisan = parsedArt;
+              }
+            }
+          } catch (e) {
+            console.error('Error fetching artisan for product:', e.message);
+          }
+        }
+      }
+    }
+
+    order.primary_artisan = primaryArtisan;
     res.json(order);
   } catch (err) {
     console.error('Get order by id error:', err);

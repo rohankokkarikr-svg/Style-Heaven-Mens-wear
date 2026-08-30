@@ -27,8 +27,8 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
-  const signup = async (name, phone, password, role = 'user', store_name, artisan_type) => {
-    const { data } = await authAPI.signup({ name, phone, password, role, store_name, artisan_type });
+  const signup = async (name, phone, password, role = 'user', store_name, artisan_type, upi_id, upi_qr_code) => {
+    const { data } = await authAPI.signup({ name, phone, password, role, store_name, artisan_type, upi_id, upi_qr_code });
     localStorage.setItem('sh_token', data.token);
     localStorage.setItem('sh_user', JSON.stringify(data.user));
     setUser(data.user);

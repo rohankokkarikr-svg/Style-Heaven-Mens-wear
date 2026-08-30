@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { orderAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
-  HiLockClosed, HiShieldCheck, HiChevronLeft, HiClock
+  HiLockClosed, HiShieldCheck, HiChevronLeft, HiClock, HiClipboardCopy, HiCheck, HiSparkles
 } from 'react-icons/hi';
 import phonepeQr from '../assets/phonepe_qr.png';
 
@@ -20,6 +20,7 @@ export default function PaymentGateway() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [waLink, setWaLink] = useState(null);
+  const [copiedUpi, setCopiedUpi] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -88,16 +89,32 @@ export default function PaymentGateway() {
     }
   };
 
+  const handleCopyUpi = (upiString) => {
+    navigator.clipboard.writeText(upiString);
+    setCopiedUpi(true);
+    toast.success('Artisan UPI ID copied to clipboard! 📋');
+    setTimeout(() => setCopiedUpi(false), 2500);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-900 flex flex-col items-center justify-center font-sans">
         <div className="w-12 h-12 border-4 border-dark-600 border-t-gold-500 rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-gray-400">Loading UPI payment details...</p>
+        <p className="text-sm font-medium text-gray-400">Loading artisan payment details...</p>
       </div>
     );
   }
 
-  const merchantName = 'ROHAN RAVIKUMAR KOKKARI';
+  // Determine Artisan Payment Profile
+  const primaryArtisan = order?.primary_artisan || order?.items?.[0]?.product?.artisan || null;
+  const payeeName = primaryArtisan?.store_name || 'KalaStyle AI Artisan Marketplace';
+  const artisanUpiId = primaryArtisan?.upi_id || '7349083982@upi';
+  const customQrImage = primaryArtisan?.upi_qr_code;
+
+  // Generate standard UPI payment link (opens PhonePe, GPay, Paytm on mobile)
+  const upiIntentUrl = `upi://pay?pa=${encodeURIComponent(artisanUpiId)}&pn=${encodeURIComponent(payeeName)}&am=${order?.total_price || 0}&cu=INR&tn=${encodeURIComponent('Order #' + (orderId?.substring(0, 8) || ''))}`;
+  const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiIntentUrl)}`;
+  const displayQr = customQrImage || dynamicQrCode || phonepeQr;
 
   return (
     <div className="min-h-screen bg-dark-900 py-8 px-4 flex items-center justify-center font-sans">
@@ -109,21 +126,38 @@ export default function PaymentGateway() {
             <HiChevronLeft className="w-4 h-4" /> My Orders
           </button>
           <div className="flex items-center gap-1.5 text-xs text-gray-400 font-bold uppercase tracking-wider">
-            <HiLockClosed className="w-4 h-4 text-gold-500" /> PhonePe / UPI Payment
+            <HiLockClosed className="w-4 h-4 text-gold-500" /> Artisan UPI Gateway
           </div>
         </div>
 
-        {/* Transaction Summary Header */}
-        <div className="p-5 bg-dark-900/50 border-b border-dark-600 flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-xs text-gray-400 uppercase tracking-wide">Payee Name</h1>
-            <p className="text-sm font-bold text-white tracking-wide">{merchantName}</p>
-            <p className="text-[11px] text-gray-500 mt-0.5 font-mono">Order ID: #{orderId?.substring(0, 8)}</p>
+        {/* Artisan Payee Summary Header */}
+        <div className="p-5 bg-dark-900/70 border-b border-dark-600 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {primaryArtisan?.profile_image ? (
+              <img src={primaryArtisan.profile_image} alt={payeeName} className="w-11 h-11 rounded-full object-cover border border-gold-500/40" />
+            ) : (
+              <div className="w-11 h-11 rounded-full bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-xl">🧑‍🎨</div>
+            )}
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-bold text-sm text-white tracking-wide">{payeeName}</h1>
+                <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full font-bold">Artisan</span>
+              </div>
+              <p className="text-[11px] text-gold-400/90 font-mono mt-0.5">Order ID: #{orderId?.substring(0, 8)}</p>
+            </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase font-bold text-gray-500">Amount Payable</p>
+            <p className="text-[10px] uppercase font-bold text-gray-400">Total Payable</p>
             <p className="text-2xl font-black text-gold-400">₹{order?.total_price?.toLocaleString()}</p>
           </div>
+        </div>
+
+        {/* Direct Artisan Badge Banner */}
+        <div className="px-5 py-2.5 bg-gold-500/10 border-b border-gold-500/20 flex items-center justify-between text-xs text-gold-300">
+          <span className="flex items-center gap-1.5 font-medium">
+            <HiSparkles className="w-4 h-4 text-gold-400" /> 100% Direct Artisan Payment
+          </span>
+          <span className="text-[11px] text-gray-400">0% Commission</span>
         </div>
 
         {/* QR Code and Reference Number Container */}
@@ -131,23 +165,45 @@ export default function PaymentGateway() {
 
           {!submitted ? (
             <>
-              {/* PhonePe QR Code Image Display */}
+              {/* Artisan QR Code Image Display */}
               <div className="text-center space-y-3">
-                <div className="bg-black p-4 rounded-2xl border border-dark-600 inline-block shadow-2xl relative group">
+                <div className="bg-white p-4 rounded-2xl border-2 border-gold-500/40 inline-block shadow-2xl relative group max-w-[280px]">
                   <img
-                    src={phonepeQr}
-                    alt="PhonePe QR Code - ROHAN RAVIKUMAR KOKKARI"
-                    className="w-64 h-auto mx-auto rounded-lg shadow-md"
+                    src={displayQr}
+                    alt={`UPI QR Code - ${payeeName}`}
+                    className="w-56 h-56 mx-auto rounded-lg object-contain"
                   />
-                  <div className="mt-3 pt-2 border-t border-dark-700/60">
-                    <p className="text-xs font-bold text-gray-300 tracking-wider">ROHAN RAVIKUMAR KOKKARI</p>
-                    <p className="text-[10px] text-gray-500">Scan & Pay using PhonePe / GPay / Paytm</p>
+                  <div className="mt-2.5 pt-2 border-t border-gray-200 text-center">
+                    <p className="text-xs font-bold text-gray-900 tracking-wider truncate">{payeeName}</p>
+                    <p className="text-[10px] text-gray-600 font-medium">Scan using PhonePe · GPay · Paytm · BHIM</p>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gold-400">Step 1: Scan QR Code & Pay ₹{order?.total_price?.toLocaleString()}</p>
-                  <p className="text-[11px] text-gray-400">Step 2: Copy the 12-digit Ref. No. / UTR from your UPI app receipt</p>
+                {/* 1-Click Copy UPI ID & Mobile App Launcher */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-dark-900 border border-dark-600 max-w-xs mx-auto">
+                    <span className="text-xs text-gray-400 font-mono">UPI: <strong className="text-white">{artisanUpiId}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyUpi(artisanUpiId)}
+                      className="px-2.5 py-1 bg-dark-700 hover:bg-dark-600 text-gold-400 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border border-dark-500 cursor-pointer"
+                    >
+                      {copiedUpi ? <><HiCheck className="w-3.5 h-3.5 text-green-400" /> Copied!</> : <><HiClipboardCopy className="w-3.5 h-3.5" /> Copy</>}
+                    </button>
+                  </div>
+
+                  {/* Mobile Direct Pay Intent Button */}
+                  <a
+                    href={upiIntentUrl}
+                    className="sm:hidden inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow transition-all no-underline"
+                  >
+                    ⚡ Open in PhonePe / GPay App
+                  </a>
+                </div>
+
+                <div className="space-y-1 pt-1">
+                  <p className="text-xs font-semibold text-gold-400">Step 1: Scan Artisan QR Code & Pay ₹{order?.total_price?.toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-400">Step 2: Copy the 12-digit Ref. No. / UTR from your UPI app</p>
                 </div>
               </div>
 
@@ -167,7 +223,7 @@ export default function PaymentGateway() {
                     className="input-field w-full text-base font-mono font-bold tracking-wider bg-dark-900 border-gold-500/50 focus:border-gold-400 text-gold-300"
                   />
                   <p className="text-[11px] text-gray-400">
-                    Enter the UTR / Ref. No. generated after completing payment on PhonePe.
+                    Enter the UTR / Ref. No. shown on your UPI app receipt after payment.
                   </p>
                 </div>
 
@@ -182,7 +238,7 @@ export default function PaymentGateway() {
                       Submitting Ref. No...
                     </>
                   ) : (
-                    'Submit Ref. No. for Admin Verification 🚀'
+                    'Submit Ref. No. for Verification 🚀'
                   )}
                 </button>
               </form>
@@ -197,7 +253,7 @@ export default function PaymentGateway() {
               <div className="space-y-2">
                 <h2 className="text-xl font-bold text-white">Ref. No. Submitted!</h2>
                 <p className="text-xs text-gold-400 font-semibold uppercase tracking-wider bg-gold-500/10 border border-gold-500/20 py-1 px-3 rounded-full inline-block">
-                  ⏱️ Pending Admin Verification
+                  ⏱️ Pending Payment Verification
                 </p>
               </div>
 
@@ -207,21 +263,21 @@ export default function PaymentGateway() {
                   <span className="text-white font-bold">#{orderId?.substring(0, 8)}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>Payment Method:</span>
-                  <span className="text-white font-bold">PhonePe / UPI</span>
+                  <span>Payee Artisan:</span>
+                  <span className="text-white font-bold truncate max-w-[180px]">{payeeName}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
                   <span>Submitted Ref. No:</span>
                   <span className="text-gold-400 font-bold">{refNo || order?.transaction_id}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>Total Payable:</span>
+                  <span>Total Amount:</span>
                   <span className="text-white font-bold">₹{order?.total_price?.toLocaleString()}</span>
                 </div>
               </div>
 
               <p className="text-xs text-gray-400 leading-relaxed px-2">
-                Thank you! Your payment reference number has been sent to Admin for verification. Once the Admin verifies your payment, your order will be processed.
+                Thank you! Your payment reference number has been received. Your artisan order is now being processed.
               </p>
 
               {waLink && (
@@ -234,7 +290,7 @@ export default function PaymentGateway() {
                   <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.143 4.174 4.29-1.125z" />
                   </svg>
-                  Send Ref. No. to Admin WhatsApp 🚀
+                  Send Ref. No. on WhatsApp 🚀
                 </a>
               )}
 
@@ -248,7 +304,7 @@ export default function PaymentGateway() {
           )}
 
           <p className="text-[10px] text-gray-500 text-center flex items-center justify-center gap-1">
-            <HiShieldCheck className="w-3.5 h-3.5 text-green-500" /> PhonePe Official QR Payment Verification
+            <HiShieldCheck className="w-3.5 h-3.5 text-green-500" /> Direct Artisan UPI Settlement & Secure Handshake
           </p>
         </div>
 
@@ -256,3 +312,4 @@ export default function PaymentGateway() {
     </div>
   );
 }
+

@@ -9,9 +9,40 @@ const generateToken = (id) => {
   });
 };
 
+// Helper to parse bio for UPI metadata
+const parseArtisanUpi = (profile) => {
+  if (!profile) return profile;
+  let upi_id = profile.upi_id || null;
+  let upi_qr_code = profile.upi_qr_code || null;
+  let cleanBio = profile.bio || '';
+  
+  if (cleanBio && cleanBio.includes('__UPI_META__:')) {
+    try {
+      const parts = cleanBio.split('__UPI_META__:');
+      cleanBio = parts[0].trim();
+      const meta = JSON.parse(parts[1]);
+      if (meta.upi_id) upi_id = meta.upi_id;
+      if (meta.upi_qr_code) upi_qr_code = meta.upi_qr_code;
+    } catch (e) {}
+  }
+  return { ...profile, bio: cleanBio, upi_id, upi_qr_code };
+};
+
+const formatBioWithUpi = (bio, upi_id, upi_qr_code) => {
+  let cleanBio = (bio || '').split('__UPI_META__:')[0].trim();
+  if (upi_id || upi_qr_code) {
+    const meta = JSON.stringify({ upi_id: upi_id || '', upi_qr_code: upi_qr_code || '' });
+    return `${cleanBio} __UPI_META__:${meta}`.trim();
+  }
+  return cleanBio;
+};
+
+exports.parseArtisanUpi = parseArtisanUpi;
+exports.formatBioWithUpi = formatBioWithUpi;
+
 exports.register = async (req, res) => {
   try {
-    const { name, phone, password, role = 'user', store_name, artisan_type } = req.body;
+    const { name, phone, password, role = 'user', store_name, artisan_type, upi_id, upi_qr_code } = req.body;
 
     if (!name || !phone || !password) {
       return res.status(400).json({ error: 'Please provide all fields' });
@@ -44,20 +75,22 @@ exports.register = async (req, res) => {
 
     if (error) throw error;
 
-    // If artisan, also create artisan_profiles row
+    // If artisan, also create artisan_profiles row with UPI information
     let artisanProfile = null;
     if (userRole === 'artisan') {
+      const bioWithUpi = formatBioWithUpi('', upi_id, upi_qr_code);
       const { data: profile, error: profileError } = await supabase
         .from('artisan_profiles')
         .insert([{
           user_id: user.id,
           store_name: store_name || name,
           artisan_type: artisan_type || 'General',
+          bio: bioWithUpi,
           verification_status: 'pending'
         }])
         .select()
         .single();
-      if (!profileError) artisanProfile = profile;
+      if (!profileError) artisanProfile = parseArtisanUpi(profile);
     }
 
     const token = generateToken(user.id);
@@ -107,7 +140,7 @@ exports.login = async (req, res) => {
         .select('*')
         .eq('user_id', user.id)
         .single();
-      artisanProfile = profile || null;
+      artisanProfile = profile ? parseArtisanUpi(profile) : null;
     }
 
     const token = generateToken(user.id);
