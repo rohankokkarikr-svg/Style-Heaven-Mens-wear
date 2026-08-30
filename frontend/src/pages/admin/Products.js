@@ -12,14 +12,14 @@ const CATEGORIES = [
 ];
 
 const SIZE_PRESETS = {
-  'Sarees':           ['Standard (5.5m)', 'Standard (6.3m with Blouse)', 'Free Size'],
+  'Sarees':           ['Standard (5.5m)', 'Standard (6.3m)', 'Free Size'],
   'Kurtas':           ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
   'Handloom':         ['S', 'M', 'L', 'XL', 'XXL', 'Free Size'],
   'Handmade':         ['One Size', 'Adjustable', 'Custom', 'S', 'M', 'L'],
   "Women's Fashion":  ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
   "Men's Fashion":    ['38', '40', '42', '44', '46', 'S', 'M', 'L', 'XL', 'XXL'],
   'Traditional Wear': ['38', '40', '42', '44', '46', 'Free Size'],
-  'Accessories':      ['One Size', 'Adjustable Free Size', 'Set of 6 Buttons', '7', '8', '9', '10', '11'],
+  'Accessories':      ['One Size', 'Adjustable', 'Set of 6', '7', '8', '9', '10', '11'],
 };
 
 const EMPTY_FORM = {

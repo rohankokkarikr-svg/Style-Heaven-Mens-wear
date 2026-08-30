@@ -92,7 +92,7 @@ exports.createOrder = async (req, res) => {
       user_id,
       total_price,
       shipping_address,
-      phone,
+      phone: String(phone || '').replace(/[^\d+]/g, '').substring(0, 20),
       discount_amount: discount_amount || 0,
       coupon_code: coupon_code ? coupon_code.trim().toUpperCase() : null,
       status: 'pending',
@@ -155,13 +155,13 @@ exports.createOrder = async (req, res) => {
       order.payment_method = payment_method || 'cod';
     }
 
-    // 2. Create order items
+    // 2. Create order items (safely sanitize size to max 20 chars to fit DB schema)
     const orderItems = items.map(item => ({
       order_id: order.id,
       product_id: item.product_id,
-      quantity: item.quantity,
-      price_at_time: item.price_at_time,
-      size: item.size
+      quantity: Number(item.quantity) || 1,
+      price_at_time: Number(item.price_at_time),
+      size: String(item.size || 'Standard').trim().substring(0, 20)
     }));
 
     const { error: itemsError } = await supabase
