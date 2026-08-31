@@ -2797,8 +2797,8 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 58,
-    image_url: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1000&auto=format&fit=crop'],
+    image_url: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=800&auto=format&fit=crop',
+    images: ['https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=1000&auto=format&fit=crop'],
     short_description: 'Naturally hollowed cured bamboo stem planters with drainage holes and braided hanging rope.',
     description: 'Perfect for indoor money plants, succulents, ivy, and herbs. Creates a stunning vertical green wall garden.',
     material: 'Natural Giant Timber Bamboo & Jute Ropes',
@@ -2820,12 +2820,5 @@ const HANDICRAFT_PRODUCTS = [
     return_policy: '7 days return.'
   }
 ];
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    HANDICRAFT_CATEGORIES,
-    HANDICRAFT_PRODUCTS
-  };
-}
 
 export { HANDICRAFT_CATEGORIES, HANDICRAFT_PRODUCTS };

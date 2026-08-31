@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HiTruck, HiShieldCheck, HiRefresh, HiArrowRight, HiTag, HiSparkles } from 'react-icons/hi';
+import { HiTruck, HiShieldCheck, HiRefresh, HiArrowRight, HiTag } from 'react-icons/hi';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
 import HeroSlider from '../components/HeroSlider';
@@ -49,6 +49,13 @@ export default function Home() {
     { icon: HiTruck, title: 'Free Shipping', desc: 'On orders over Rs.1500' },
     { icon: HiShieldCheck, title: 'Authentic Handmade', desc: '100% artisan-crafted products' },
     { icon: HiRefresh, title: 'Easy Returns', desc: '7 days return policy' },
+  ];
+
+  const whyFeatures = [
+    { emoji: '🎨', title: 'Support Indian Artisans', desc: 'Every purchase directly empowers generational handicraft artisans across India.' },
+    { emoji: '🤖', title: 'AI-Assisted Catalog', desc: 'Artisans use our AI to catalog traditional crafts in seconds with GI authentication.' },
+    { emoji: '🧵', title: 'Certified Craftsmanship', desc: 'Genuine Handloom, GI-tagged crafts, and 100% natural handmade products.' },
+    { emoji: '🇮🇳', title: 'Made in India', desc: "Celebrating India's 5000-year textile, pottery, metalwork, and folk art heritage." },
   ];
 
   return (

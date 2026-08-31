@@ -11,8 +11,7 @@ import {
   HiSearch,
   HiLogout,
   HiChartBar,
-  HiStar,
-  HiSparkles
+  HiStar
 } from 'react-icons/hi';
 import { FaTrophy } from 'react-icons/fa';
 import UserAvatar from './UserAvatar';
