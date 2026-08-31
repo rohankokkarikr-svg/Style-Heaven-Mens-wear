@@ -17,7 +17,7 @@ const { GoogleGenAI } = require('@google/genai');
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const FALLBACK_MODEL = 'gemini-2.0-flash';
+const FALLBACK_MODEL = 'gemini-3.6-flash';
 
 const SEVEN_CATEGORIES = [
   'Handloom & Textiles',
