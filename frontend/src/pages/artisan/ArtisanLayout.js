@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { HiChartPie, HiCollection, HiSparkles, HiShoppingBag, HiCurrencyRupee, HiStar, HiUser, HiLogout, HiMenu, HiX } from 'react-icons/hi';
+import { HiChartPie, HiCollection, HiSparkles, HiShoppingBag, HiCurrencyRupee, HiUser, HiLogout, HiMenu, HiX, HiLightBulb } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ArtisanLayout() {
@@ -9,12 +9,15 @@ export default function ArtisanLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const links = [
-    { name: 'Dashboard',   path: '/artisan',           icon: HiChartPie },
-    { name: 'My Products', path: '/artisan/products',  icon: HiCollection },
-    { name: 'AI Studio ✨', path: '/artisan/ai-studio', icon: HiSparkles },
-    { name: 'Orders',      path: '/artisan/orders',    icon: HiShoppingBag },
-    { name: 'Earnings',    path: '/artisan/earnings',  icon: HiCurrencyRupee },
-    { name: 'Profile',     path: '/artisan/profile',   icon: HiUser },
+    { name: 'Dashboard',      path: '/artisan',                icon: HiChartPie },
+    { name: 'My Products',    path: '/artisan/products',       icon: HiCollection },
+    { name: 'AI Studio',     path: '/artisan/ai-studio',      icon: HiSparkles,     highlight: true },
+    { name: 'Price Suggester',path: '/artisan/ai-price',       icon: HiCurrencyRupee, highlight: true },
+    { name: 'Artisan Story',  path: '/artisan/ai-story',       icon: HiUser,          highlight: true },
+    { name: 'AI Insights',    path: '/artisan/ai-insights',    icon: HiLightBulb,     highlight: true },
+    { name: 'Orders',         path: '/artisan/orders',         icon: HiShoppingBag },
+    { name: 'Earnings',       path: '/artisan/earnings',       icon: HiCurrencyRupee },
+    { name: 'Profile',        path: '/artisan/profile',        icon: HiUser },
   ];
 
   const isActive = (path) => path === '/artisan' ? location.pathname === '/artisan' : location.pathname.startsWith(path);
@@ -47,14 +50,15 @@ export default function ArtisanLayout() {
               </span>
             </div>
           )}
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {links.map((l) => {
               const active = isActive(l.path);
               return (
                 <Link key={l.name} to={l.path} onClick={() => setSidebarOpen(false)}
-                  className={'admin-sidebar-item ' + (active ? 'active ' : '') + (l.path.includes('ai-studio') ? 'bg-gold-500/5 border border-gold-500/20' : '')}>
+                  className={'admin-sidebar-item ' + (active ? 'active ' : '') + (l.highlight ? 'bg-gold-500/5 border border-gold-500/20' : '')}>
                   <l.icon className="w-5 h-5 shrink-0" />
                   {l.name}
+                  {l.highlight && !active && <span className="ml-auto text-[9px] font-bold text-gold-500 bg-gold-500/10 px-1.5 py-0.5 rounded-full">AI</span>}
                 </Link>
               );
             })}

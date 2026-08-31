@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiCollection, HiShoppingBag, HiCurrencyRupee, HiSparkles, HiArrowRight, HiStar } from 'react-icons/hi';
-import { artisanAPI, productAPI } from '../../services/api';
+import { artisanAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ArtisanDashboard() {
@@ -87,18 +87,27 @@ export default function ArtisanDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: 'Add Product with AI', href: '/artisan/ai-studio', emoji: '🤖', desc: 'Use AI to generate listing' },
-          { label: 'View My Products', href: '/artisan/products', emoji: '📦', desc: 'Manage your inventory' },
-          { label: 'Update Profile', href: '/artisan/profile', emoji: '🏪', desc: 'Edit store information' },
-        ].map((a, i) => (
-          <Link key={i} to={a.href} className="card p-5 hover:border-gold-500/40 group">
-            <div className="text-3xl mb-2">{a.emoji}</div>
-            <h4 className="font-semibold text-white group-hover:text-gold-400 transition-colors">{a.label}</h4>
-            <p className="text-gray-500 text-xs mt-1">{a.desc}</p>
-          </Link>
-        ))}
+      <div>
+        <h3 className="text-white font-semibold mb-4">AI-Powered Tools</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { label: 'AI Smart Catalog',   href: '/artisan/ai-studio',   emoji: '🤖', desc: 'Upload photo → AI generates full product listing', ai: true },
+            { label: 'Price Suggester',    href: '/artisan/ai-price',    emoji: '💰', desc: 'Transparent cost breakdown + AI price range', ai: true },
+            { label: 'My Artisan Story',   href: '/artisan/ai-story',    emoji: '✍️', desc: 'AI writes your biography from your information', ai: true },
+            { label: 'AI Insights',        href: '/artisan/ai-insights', emoji: '📊', desc: 'Real data trends and business insights', ai: true },
+            { label: 'View My Products',   href: '/artisan/products',    emoji: '📦', desc: 'Manage your inventory' },
+            { label: 'Update Profile',     href: '/artisan/profile',     emoji: '🏪', desc: 'Edit store information' },
+          ].map((a, i) => (
+            <Link key={i} to={a.href} className={'card p-5 hover:border-gold-500/40 group ' + (a.ai ? 'border-gold-500/20' : '')}>
+              <div className="flex items-start justify-between mb-2">
+                <div className="text-2xl">{a.emoji}</div>
+                {a.ai && <span className="text-[9px] font-bold text-gold-500 bg-gold-500/10 px-1.5 py-0.5 rounded-full border border-gold-500/30">AI</span>}
+              </div>
+              <h4 className="font-semibold text-white group-hover:text-gold-400 transition-colors text-sm">{a.label}</h4>
+              <p className="text-gray-500 text-xs mt-1">{a.desc}</p>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

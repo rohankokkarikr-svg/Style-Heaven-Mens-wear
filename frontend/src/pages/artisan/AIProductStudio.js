@@ -1,12 +1,67 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { HiUpload, HiMicrophone, HiSparkles, HiPencil, HiCheck, HiX, HiRefresh } from 'react-icons/hi';
-import { aiAPI, productAPI, artisanAPI } from '../../services/api';
+import { HiMicrophone, HiSparkles, HiCheck, HiX, HiRefresh, HiChevronRight, HiChevronLeft, HiGlobe, HiCurrencyRupee, HiPhotograph } from 'react-icons/hi';
+import { aiAPI, productAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-const STEPS = ['upload', 'describe', 'generate', 'review', 'publish'];
-const CATEGORIES = ['Sarees', "Women's Fashion", "Men's Fashion", 'Handloom', 'Handmade', 'Accessories', 'Traditional Wear', 'Kurtas', 'Jewelry'];
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const STEPS = [
+  { id: 'upload',      label: 'Upload Photo',       icon: '📸' },
+  { id: 'describe',    label: 'Describe Product',   icon: '🎤' },
+  { id: 'generate',    label: 'AI Analysis',        icon: '🤖' },
+  { id: 'review',      label: 'Review & Edit',      icon: '✨' },
+  { id: 'price',       label: 'Price Suggestion',   icon: '💰' },
+  { id: 'translate',   label: 'Multilingual',       icon: '🌐' },
+  { id: 'publish',     label: 'Publish',            icon: '🚀' },
+];
+
+const SEVEN_CATEGORIES = [
+  'Handloom & Textiles',
+  'Home Décor & Furnishings',
+  'Handmade Jewelry & Accessories',
+  'Pottery & Terracotta',
+  'Wooden Handicrafts',
+  'Traditional Paintings & Wall Art',
+  'Eco-Friendly & Natural Products',
+];
+
+const LANGUAGES = [
+  { code: 'en', label: 'English',  flag: '🇬🇧' },
+  { code: 'hi', label: 'Hindi',    flag: '🇮🇳' },
+  { code: 'kn', label: 'Kannada',  flag: 'ಕ' },
+  { code: 'mr', label: 'Marathi',  flag: 'म' },
+];
+
+const AI_LOADING_MESSAGES = [
+  '⏳ AI is analyzing your product...',
+  '🧠 Understanding craftsmanship...',
+  '📝 Creating your catalog...',
+  '🏷️ Selecting the best category...',
+  '💰 Calculating price suggestion...',
+  '✨ Your smart catalog is ready!',
+];
+
+// ── Utility ──────────────────────────────────────────────────────────────────
+
+function Field({ label, children }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function Input({ value, onChange, placeholder, multiline }) {
+  const cls = 'w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-500/60 placeholder-gray-600 transition-colors';
+  return multiline
+    ? <textarea rows={3} className={cls} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
+    : <input className={cls} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />;
+}
+
+// ── Main Component ───────────────────────────────────────────────────────────
 
 export default function AIProductStudio() {
   const { user } = useAuth();
@@ -14,428 +69,672 @@ export default function AIProductStudio() {
   const fileInputRef = useRef();
   const recognitionRef = useRef(null);
 
+  // Step state
   const [step, setStep] = useState(0);
+
+  // Step 1 — Image
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [description, setDescription] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [aiResult, setAiResult] = useState(null);
-  const [editedResult, setEditedResult] = useState(null);
 
-  const uploadFileToCloudinary = async (file) => {
+  // Step 2 — Description & Language
+  const [description, setDescription] = useState('');
+  const [inputLanguage, setInputLanguage] = useState('English');
+  const [isListening, setIsListening] = useState(false);
+
+  // Step 3 — AI Processing
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const loadingInterval = useRef(null);
+
+  // Step 4 — Review & Edit catalog
+  const [catalog, setCatalog] = useState(null);
+
+  // Step 5 — Price
+  const [priceInputs, setPriceInputs] = useState({ rawMaterial: '', labor: '', expenses: '', margin: 30 });
+  const [priceSuggestion, setPriceSuggestion] = useState(null);
+  const [isCalcPrice, setIsCalcPrice] = useState(false);
+  const [finalPrice, setFinalPrice] = useState('');
+
+  // Step 6 — Translations
+  const [translations, setTranslations] = useState(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [selectedLangs, setSelectedLangs] = useState(['Hindi']);
+
+  // Step 7 — Publish
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  const startLoadingMessages = () => {
+    let i = 0;
+    setLoadingMsgIdx(0);
+    loadingInterval.current = setInterval(() => {
+      i++;
+      if (i < AI_LOADING_MESSAGES.length - 1) setLoadingMsgIdx(i);
+      else clearInterval(loadingInterval.current);
+    }, 1400);
+  };
+
+  const stopLoadingMessages = () => {
+    clearInterval(loadingInterval.current);
+    setLoadingMsgIdx(AI_LOADING_MESSAGES.length - 1);
+  };
+
+  const updateCatalogField = (field, value) => setCatalog(prev => ({ ...prev, [field]: value }));
+
+  // ── Step 1: Image Upload ───────────────────────────────────────────────────
+
+  const uploadToCloudinary = async (file) => {
     setIsUploadingImage(true);
-    const toastId = toast.loading('Uploading image to Cloudinary ☁️...');
+    const id = toast.loading('Uploading image...');
     try {
       const fd = new FormData();
       fd.append('image', file);
       const { data } = await productAPI.uploadDirect(fd);
       if (data?.imageUrl) {
         setImageUrl(data.imageUrl);
-        toast.success('Image stored in Cloudinary! ☁️✨', { id: toastId });
+        toast.success('Image uploaded!', { id });
         return data.imageUrl;
-      } else {
-        throw new Error('No image URL returned');
       }
-    } catch (err) {
-      console.warn('Cloudinary upload warning:', err);
-      // Fallback to high-quality data URL so the artisan is never blocked
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImageUrl(reader.result);
-          toast.success('Image loaded successfully! 🎨', { id: toastId });
-          resolve(reader.result);
-        };
-        reader.onerror = () => {
-          toast.error('Could not process image file', { id: toastId });
-          resolve(null);
-        };
-        reader.readAsDataURL(file);
-      });
+      throw new Error('No URL returned');
+    } catch {
+      toast.dismiss(id);
+      const reader = new FileReader();
+      reader.onloadend = () => { setImageUrl(reader.result); };
+      reader.readAsDataURL(file);
+      return null;
     } finally {
       setIsUploadingImage(false);
     }
   };
 
-  const handleImageDrop = useCallback(async (e) => {
+  const handleFileDrop = useCallback(async (e) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer?.files[0] || e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) {
-      toast.error('Please upload a valid image file (JPG, PNG, WEBP)');
-      return;
-    }
+    if (!file?.type.startsWith('image/')) { toast.error('Please upload a valid image.'); return; }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
-    setStep(1);
+    await uploadToCloudinary(file);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Direct Cloudinary upload immediately
-    await uploadFileToCloudinary(file);
-  }, []);
-
-  const handleImageChangeInStep = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) {
-      toast.error('Please upload a valid image file');
-      return;
-    }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-    await uploadFileToCloudinary(file);
-  };
+  // ── Step 2: Voice Input ────────────────────────────────────────────────────
 
   const startVoice = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { toast.error('Voice input not supported in this browser. Please type your description.'); return; }
-    const rec = new SpeechRecognition();
-    rec.continuous = false; rec.interimResults = false; rec.lang = 'en-IN';
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast.error('Voice input not supported in this browser.'); return; }
+    const langMap = { 'English': 'en-IN', 'Hindi': 'hi-IN', 'Kannada': 'kn-IN', 'Marathi': 'mr-IN' };
+    const rec = new SR();
+    rec.continuous = false; rec.lang = langMap[inputLanguage] || 'en-IN';
     rec.onstart = () => setIsListening(true);
-    rec.onresult = (e) => { setDescription(prev => prev + ' ' + e.results[0][0].transcript); };
+    rec.onresult = (e) => setDescription(prev => (prev + ' ' + e.results[0][0].transcript).trim());
     rec.onend = () => setIsListening(false);
     rec.onerror = () => { setIsListening(false); toast.error('Voice recognition failed. Please type instead.'); };
-    rec.start(); recognitionRef.current = rec;
+    rec.start();
+    recognitionRef.current = rec;
   };
 
   const stopVoice = () => { recognitionRef.current?.stop(); setIsListening(false); };
 
+  // ── Step 3: AI Generation ──────────────────────────────────────────────────
+
   const handleGenerate = async () => {
     if (!imageFile && !description.trim()) {
-      toast.error('Please upload an image or describe your product');
+      toast.error('Please upload a photo or describe your product.');
       return;
     }
-
     setStep(2);
     setIsGenerating(true);
+    startLoadingMessages();
+
     try {
-      let currentCloudinaryUrl = imageUrl;
-      if (!currentCloudinaryUrl && imageFile) {
-        currentCloudinaryUrl = await uploadFileToCloudinary(imageFile);
-      }
+      let cloudUrl = imageUrl;
+      if (!cloudUrl && imageFile) cloudUrl = await uploadToCloudinary(imageFile);
 
-      const { data } = await aiAPI.analyzeProduct({
-        image_url: currentCloudinaryUrl || '',
-        description: description.trim()
+      const { data } = await aiAPI.generateFullCatalog({
+        description: description.trim(),
+        image_url: cloudUrl || '',
+        language: inputLanguage,
       });
 
-      if (data && data.product_name) {
-        setAiResult(data);
-        setEditedResult({
-          ...data,
-          price: data.suggested_price || 999,
-          sizes: ['Free Size'],
-          stock_quantity: 10
-        });
-        setStep(3);
-        toast.success('AI Product Listing Generated! ✨');
-      } else {
-        throw new Error('Invalid AI response structure');
-      }
-    } catch (err) {
-      console.warn('AI API error, applying smart studio intelligence fallback:', err);
-      // Smart artisan product intelligence fallback
-      const desc = description.trim() || 'Handmade Artisan Craft';
-      const fallbackName = desc.length > 5 ? desc.split(' ').slice(0, 5).join(' ') : 'Artisan Handcrafted Product';
-      const fallbackResult = {
-        product_name: fallbackName.charAt(0).toUpperCase() + fallbackName.slice(1),
-        description: `Authentic handcrafted artisan piece crafted by skilled Indian artisans. ${desc}. Each piece is created with exquisite attention to detail, preserving rich traditional Indian heritage.`,
-        category: desc.toLowerCase().includes('saree') ? 'Sarees' : desc.toLowerCase().includes('kurta') ? "Men's Fashion" : 'Handloom',
-        subcategory: 'Artisan Collection',
-        material: 'Pure Handloom Fabric',
-        style: 'Ethnic & Traditional',
-        tags: ['handmade', 'artisan', 'indian-craft', 'exclusive'],
-        color_suggestions: ['Traditional', 'Hand-dyed'],
-        suggested_price: 1499,
-        price_range: { min: 800, max: 3500 },
-        ai_notes: 'Pricing and attributes curated by KalaStyle AI.'
-      };
-
-      setAiResult(fallbackResult);
-      setEditedResult({
-        ...fallbackResult,
-        price: 1499,
-        sizes: ['Free Size'],
-        stock_quantity: 10
+      const cat = data.catalog || data;
+      setCatalog({
+        productName:      cat.productName      || cat.product_name      || 'Artisan Product',
+        shortDescription: cat.shortDescription || cat.short_description || '',
+        fullDescription:  cat.fullDescription  || cat.full_description  || cat.description || '',
+        category:         cat.category         || SEVEN_CATEGORIES[0],
+        subcategory:      cat.subcategory       || '',
+        materials:        Array.isArray(cat.materials) ? cat.materials.join(', ') : (cat.material || ''),
+        craftTechnique:   cat.craftTechnique    || cat.craft_technique   || '',
+        suggestedTags:    Array.isArray(cat.suggestedTags) ? cat.suggestedTags.join(', ') : (Array.isArray(cat.tags) ? cat.tags.join(', ') : ''),
+        keyFeatures:      Array.isArray(cat.keyFeatures) ? cat.keyFeatures.join('\n') : '',
+        careInstructions: Array.isArray(cat.careInstructions) ? cat.careInstructions.join('\n') : '',
+        priceMin:         cat.suggestedPriceRange?.minimum || cat.price_range?.min || 499,
+        priceMax:         cat.suggestedPriceRange?.maximum || cat.price_range?.max || 2999,
+        isAIGenerated:    data.isAIGenerated !== false,
       });
+      stopLoadingMessages();
       setStep(3);
-      toast.success('Product Details Generated! ✨');
+      toast.success(data.isAIGenerated ? 'AI catalog generated!' : 'Smart catalog ready!');
+    } catch (err) {
+      stopLoadingMessages();
+      toast.error('Generation failed. Please try again.');
+      setStep(1);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const updateField = (field, value) => setEditedResult(prev => ({ ...prev, [field]: value }));
+  // ── Step 5: Price Calculation ──────────────────────────────────────────────
+
+  const handleCalculatePrice = async () => {
+    const raw = parseFloat(priceInputs.rawMaterial) || 0;
+    const labor = parseFloat(priceInputs.labor) || 0;
+    const exp = parseFloat(priceInputs.expenses) || 0;
+    const margin = parseFloat(priceInputs.margin) || 30;
+    if (raw + labor + exp === 0) { toast.error('Please enter at least one cost.'); return; }
+    setIsCalcPrice(true);
+    try {
+      const { data } = await aiAPI.suggestPrice({
+        rawMaterialCost: raw, laborCost: labor, additionalExpenses: exp,
+        desiredMarginPercent: margin,
+        category: catalog?.category || '',
+        description: catalog?.productName || '',
+      });
+      setPriceSuggestion(data);
+      setFinalPrice(String(data.breakdown?.suggestedPrice || ''));
+    } catch {
+      const base = raw + labor + exp;
+      const suggested = Math.round(base * (1 + margin / 100));
+      setPriceSuggestion({
+        breakdown: { rawMaterialCost: raw, laborCost: labor, additionalExpenses: exp, baseCost: base, marginPercent: margin, suggestedPrice: suggested },
+        aiRange: { minimum: Math.round(suggested * 0.9), maximum: Math.round(suggested * 1.3) },
+        aiExplanation: 'Calculated from your actual costs.',
+        disclaimer: 'AI-generated estimate — final pricing decision belongs to the artisan.',
+      });
+      setFinalPrice(String(suggested));
+    } finally {
+      setIsCalcPrice(false);
+    }
+  };
+
+  // ── Step 6: Translation ────────────────────────────────────────────────────
+
+  const handleTranslate = async () => {
+    if (!catalog?.productName) { toast.error('Please complete the catalog first.'); return; }
+    setIsTranslating(true);
+    try {
+      const { data } = await aiAPI.translateProduct({
+        productName: catalog.productName,
+        description: catalog.shortDescription,
+        targetLanguages: ['English', ...selectedLangs],
+      });
+      setTranslations(data.translations);
+    } catch {
+      setTranslations({
+        English: { productName: catalog.productName, description: catalog.shortDescription },
+      });
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // ── Step 7: Publish ────────────────────────────────────────────────────────
 
   const handlePublish = async (isDraft = false) => {
-    if (!editedResult?.product_name) {
-      toast.error('Product name is required');
-      return;
-    }
-
-    if (isUploadingImage) {
-      toast.error('Please wait for image upload to Cloudinary to finish.');
-      return;
-    }
-
+    if (!catalog?.productName) { toast.error('Product name is required.'); return; }
+    if (isUploadingImage) { toast.error('Please wait for image upload to finish.'); return; }
     setIsPublishing(true);
     try {
-      let finalCloudinaryUrl = imageUrl;
-      if (!finalCloudinaryUrl && imageFile) {
-        finalCloudinaryUrl = await uploadFileToCloudinary(imageFile);
-      }
+      let finalUrl = imageUrl;
+      if (!finalUrl && imageFile) finalUrl = await uploadToCloudinary(imageFile);
 
-      const profile = user?.artisan_profile;
+      const price = parseFloat(finalPrice) || catalog?.priceMin || 999;
       const productData = {
-        name: editedResult.product_name,
-        description: editedResult.description,
-        price: parseFloat(editedResult.price) || editedResult.suggested_price || 999,
-        original_price: parseFloat(editedResult.price) * 1.2,
-        category: editedResult.category || 'Handmade',
-        subcategory: editedResult.subcategory,
-        material: editedResult.material,
-        style: editedResult.style,
-        tags: editedResult.tags || [],
-        sizes: editedResult.sizes || ['Free Size'],
-        stock_quantity: editedResult.stock_quantity || 10,
-        is_in_stock: true,
-        ai_generated: true,
-        ai_suggested_price: editedResult.suggested_price,
-        image_url: finalCloudinaryUrl || '',
-        artisan_id: profile?.id,
-        is_handmade: true,
+        name:           catalog.productName,
+        description:    catalog.fullDescription || catalog.shortDescription,
+        price,
+        original_price: Math.round(price * 1.2),
+        category:       catalog.category,
+        subcategory:    catalog.subcategory,
+        material:       catalog.materials,
+        style:          catalog.craftTechnique,
+        tags:           catalog.suggestedTags?.split(',').map(t => t.trim()).filter(Boolean),
+        image_url:      finalUrl || '',
+        sizes:          ['Free Size'],
+        stock_quantity: 10,
+        artisan_id:     user?.artisan_profile?.id,
+        artisan_name:   user?.name,
+        status:         isDraft ? 'draft' : 'active',
+        ai_generated:   catalog.isAIGenerated,
       };
+
       await productAPI.create(productData);
-      toast.success(isDraft ? 'Draft saved!' : 'Product published to store! 🎉');
-      setStep(4);
-      setTimeout(() => navigate('/artisan/products'), 2000);
+      toast.success(isDraft ? 'Saved as draft!' : 'Product published! 🎉');
+      navigate('/artisan/products');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to publish. Please try again.');
+      toast.error('Publish failed. Please try again.');
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const reset = () => {
-    setStep(0);
-    setImageFile(null);
-    setImagePreview('');
-    setImageUrl('');
-    setIsUploadingImage(false);
-    setDescription('');
-    setAiResult(null);
-    setEditedResult(null);
-  };
+  // ── Step Progress Bar ──────────────────────────────────────────────────────
+
+  const ProgressBar = () => (
+    <div className="flex items-center gap-0 mb-8 overflow-x-auto pb-1">
+      {STEPS.map((s, i) => (
+        <React.Fragment key={s.id}>
+          <button
+            onClick={() => i < step && setStep(i)}
+            className={`flex flex-col items-center gap-1 shrink-0 transition-all duration-300 ${i <= step ? 'opacity-100' : 'opacity-40'}`}
+          >
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
+              i < step ? 'bg-gold-500 border-gold-500 text-dark-900' :
+              i === step ? 'border-gold-500 text-gold-400 bg-gold-500/10' :
+              'border-dark-600 text-gray-500 bg-dark-800'
+            }`}>
+              {i < step ? <HiCheck className="w-4 h-4" /> : s.icon}
+            </div>
+            <span className={`text-[9px] font-medium whitespace-nowrap ${i === step ? 'text-gold-400' : 'text-gray-500'}`}>{s.label}</span>
+          </button>
+          {i < STEPS.length - 1 && (
+            <div className={`h-px flex-1 mx-1 min-w-[12px] transition-colors ${i < step ? 'bg-gold-500/60' : 'bg-dark-600'}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-serif font-bold text-white flex items-center gap-3">
-          <HiSparkles className="w-8 h-8 text-gold-400" /> AI Product Studio
+          <HiSparkles className="text-gold-400 w-7 h-7" /> AI Smart Catalog Studio
         </h1>
-        <p className="text-gray-400 mt-1">From Artisan to Online Store in One Click ✨</p>
+        <p className="text-gray-400 text-sm mt-1">From photo to published product in 7 simple steps.</p>
       </div>
 
-      {/* Progress Steps */}
-      <div className="flex items-center gap-1 md:gap-2 overflow-x-auto pb-2">
-        {['📸 Upload', '📝 Describe', '🤖 Generate', '✏️ Review', '🚀 Done'].map((label, i) => (
-          <React.Fragment key={i}>
-            <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${i <= step ? 'bg-gold-500 text-dark-900' : 'bg-dark-700 text-gray-400'}`}>{label}</div>
-            {i < 4 && <div className={`h-0.5 flex-1 min-w-4 ${i < step ? 'bg-gold-500' : 'bg-dark-600'}`} />}
-          </React.Fragment>
-        ))}
-      </div>
+      <ProgressBar />
 
-      {/* STEP 0: Upload Image */}
+      {/* ── STEP 1: Upload ── */}
       {step === 0 && (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={handleImageDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 ${isDragging ? 'border-gold-400 bg-gold-500/10 scale-102' : 'border-dark-400 hover:border-gold-500/60 hover:bg-dark-700/50'}`}
-        >
-          <div className="text-6xl mb-4">📸</div>
-          <h3 className="text-xl font-semibold text-white mb-2">Upload Your Product Photo</h3>
-          <p className="text-gray-400 text-sm mb-4">Drag & drop your product image here, or click to browse</p>
-          <p className="text-gray-500 text-xs">Supports JPG, PNG, WEBP · Max 10MB</p>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageDrop} />
-        </div>
-      )}
-
-      {/* STEP 1: Describe */}
-      {step === 1 && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="aspect-square rounded-xl overflow-hidden bg-dark-700 border border-dark-500 relative group">
-                <img src={imageUrl || imagePreview} alt="Product" className="w-full h-full object-cover" />
-                {isUploadingImage ? (
-                  <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-                    <div className="w-10 h-10 border-2 border-gold-400 border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-sm font-semibold text-gold-400">Uploading to Cloudinary ☁️...</p>
-                  </div>
-                ) : imageUrl ? (
-                  <div className="absolute top-3 left-3 bg-dark-900/90 border border-green-500/40 text-green-400 text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
-                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    <span>Stored in Cloudinary ☁️</span>
-                  </div>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-3 mt-3">
-                <label className="text-xs text-gold-400 hover:text-gold-300 flex items-center gap-1 cursor-pointer font-medium">
-                  <HiPencil className="w-4 h-4" /> Replace Image
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChangeInStep} />
-                </label>
-                <span className="text-gray-600">|</span>
-                <button onClick={() => { setStep(0); setImageFile(null); setImagePreview(''); setImageUrl(''); }} className="text-xs text-gray-400 hover:text-red-400 flex items-center gap-1">
-                  <HiX className="w-4 h-4" /> Remove
+        <div className="card p-8 space-y-6">
+          <h2 className="text-lg font-semibold text-white">Step 1 — Upload Product Photo</h2>
+          <div
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${isDragging ? 'border-gold-500 bg-gold-500/5' : 'border-dark-600 hover:border-gold-500/50'}`}
+            onDrop={handleFileDrop}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {imagePreview ? (
+              <div className="space-y-3">
+                <img src={imagePreview} alt="Product" className="max-h-64 mx-auto rounded-xl object-cover shadow-xl" />
+                <p className="text-gold-400 text-sm font-medium">
+                  {isUploadingImage ? '⏳ Uploading...' : '✅ Image ready'}
+                </p>
+                <button onClick={(e) => { e.stopPropagation(); setImageFile(null); setImagePreview(''); setImageUrl(''); }}
+                  className="text-gray-500 hover:text-red-400 text-xs flex items-center gap-1 mx-auto transition-colors">
+                  <HiX className="w-3 h-3" /> Remove
                 </button>
               </div>
-            </div>
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Describe your product (in any language)</label>
-                <textarea
-                  rows={6}
-                  className="input-field resize-none"
-                  placeholder={`Example:\n"This is a handmade cotton saree made by handloom artisans in Karnataka. It has beautiful traditional motifs and is perfect for weddings."`}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
+            ) : (
+              <div className="space-y-3">
+                <HiPhotograph className="w-16 h-16 text-gray-600 mx-auto" />
+                <div>
+                  <p className="text-white font-medium">Drag & drop your product photo here</p>
+                  <p className="text-gray-500 text-sm mt-1">or click to browse — JPG, PNG, WEBP</p>
+                </div>
               </div>
-              <button
-                onClick={isListening ? stopVoice : startVoice}
-                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all ${isListening ? 'bg-red-500/20 border border-red-500 text-red-400 animate-pulse' : 'btn-outline'}`}
-              >
-                <HiMicrophone className={`w-5 h-5 ${isListening ? 'text-red-400' : ''}`} />
-                {isListening ? 'Listening... (click to stop)' : '🎤 Speak Description (Voice Input)'}
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileDrop} />
+          </div>
+
+          <div className="flex justify-between items-center">
+            <p className="text-gray-500 text-xs">Photo helps AI identify your product accurately</p>
+            <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-2">
+              Skip photo <HiChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {imagePreview && (
+            <button
+              onClick={() => setStep(1)}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+              disabled={isUploadingImage}
+            >
+              Continue to Description <HiChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── STEP 2: Describe ── */}
+      {step === 1 && (
+        <div className="card p-8 space-y-6">
+          <h2 className="text-lg font-semibold text-white">Step 2 — Describe Your Product</h2>
+
+          {/* Language selector */}
+          <div className="flex gap-2 flex-wrap">
+            <span className="text-xs text-gray-400 self-center">Describe in:</span>
+            {LANGUAGES.map(l => (
+              <button key={l.code}
+                onClick={() => setInputLanguage(l.label)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${inputLanguage === l.label ? 'bg-gold-500/20 border-gold-500 text-gold-400' : 'border-dark-600 text-gray-400 hover:border-dark-500'}`}>
+                {l.flag} {l.label}
               </button>
-              <div className="text-xs text-gray-500 bg-dark-700 rounded-lg p-3">
-                💡 <strong>Tip:</strong> Mention material (cotton/silk), type (saree/kurta), occasion, and origin (Karnataka/Rajasthan) for better AI results.
-              </div>
-              <button onClick={handleGenerate} disabled={isUploadingImage} className="btn-primary flex items-center justify-center gap-2 py-4">
-                <HiSparkles className="w-5 h-5" /> Generate with AI ✨
-              </button>
+            ))}
+          </div>
+
+          {/* Voice input */}
+          <div className="flex items-start gap-3">
+            <button
+              onClick={isListening ? stopVoice : startVoice}
+              className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all border-2 ${isListening ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' : 'border-gold-500/40 text-gold-400 hover:bg-gold-500/10'}`}
+              title={isListening ? 'Stop recording' : 'Start voice input'}
+            >
+              <HiMicrophone className="w-5 h-5" />
+            </button>
+            <div className="flex-1 space-y-2">
+              <textarea
+                rows={5}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder={`Describe your product in ${inputLanguage}...\n\nExample: This basket is handmade using natural bamboo. It takes two days to make. The technique has been passed down in my family for generations.`}
+                className="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-gold-500/60 placeholder-gray-600 transition-colors resize-none"
+              />
+              {isListening && (
+                <div className="flex items-center gap-2 text-red-400 text-xs animate-pulse">
+                  <span className="w-2 h-2 bg-red-400 rounded-full" />
+                  Listening... speak now
+                </div>
+              )}
             </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep(0)} className="btn-secondary flex items-center gap-2">
+              <HiChevronLeft className="w-4 h-4" /> Back
+            </button>
+            <button
+              onClick={handleGenerate}
+              disabled={!description.trim() && !imageUrl}
+              className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              <HiSparkles className="w-4 h-4" /> Generate Smart Catalog
+            </button>
           </div>
         </div>
       )}
 
-      {/* STEP 2: Generating */}
+      {/* ── STEP 3: AI Processing ── */}
       {step === 2 && (
-        <div className="card p-12 text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gold-500/10 border-2 border-gold-500/30 flex items-center justify-center text-4xl animate-spin">✨</div>
-          <h3 className="text-xl font-serif font-bold text-white mb-2">KalaStyle AI is analyzing your product…</h3>
-          <p className="text-gray-400 text-sm">Generating product name, description, category, tags, and price suggestions…</p>
-          <div className="mt-6 flex justify-center gap-1">
-            {[1,2,3].map(i => <div key={i} className="w-2 h-2 bg-gold-500 rounded-full animate-bounce" style={{animationDelay: `${i*0.15}s`}} />)}
+        <div className="card p-12 flex flex-col items-center justify-center gap-6 text-center min-h-64">
+          <div className="w-16 h-16 border-4 border-gold-500/20 border-t-gold-500 rounded-full animate-spin" />
+          <div className="space-y-2">
+            <p className="text-white font-semibold text-lg">{AI_LOADING_MESSAGES[loadingMsgIdx]}</p>
+            <p className="text-gray-500 text-sm">Powered by Gemini AI — analyzing your artisan product</p>
+          </div>
+          <div className="flex gap-1">
+            {AI_LOADING_MESSAGES.slice(0, -1).map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i <= loadingMsgIdx ? 'w-8 bg-gold-500' : 'w-2 bg-dark-600'}`} />
+            ))}
           </div>
         </div>
       )}
 
-      {/* STEP 3: Review & Edit */}
-      {step === 3 && editedResult && (
-        <div className="space-y-6">
+      {/* ── STEP 4: Review & Edit ── */}
+      {step === 3 && catalog && (
+        <div className="card p-6 space-y-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-gold-400">
-              <HiCheck className="w-5 h-5" />
-              <span className="text-sm font-medium">AI has analyzed your product! Review and edit below.</span>
-            </div>
-            <button onClick={() => setStep(1)} className="text-xs text-gray-400 hover:text-gold-400 flex items-center gap-1"><HiRefresh className="w-4 h-4" /> Regenerate</button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Image Preview */}
-            <div className="md:col-span-1">
-              <div className="aspect-square rounded-xl overflow-hidden bg-dark-700 border border-dark-500 relative group">
-                {imageUrl || imagePreview ? (
-                  <img src={imageUrl || imagePreview} alt="Product" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-6xl">📦</div>
-                )}
-                {isUploadingImage ? (
-                  <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-                    <div className="w-8 h-8 border-2 border-gold-400 border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-xs font-semibold text-gold-400">Uploading to Cloudinary ☁️...</p>
-                  </div>
-                ) : imageUrl ? (
-                  <div className="absolute top-2 left-2 bg-dark-900/90 border border-green-500/40 text-green-400 text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                    <span>Cloudinary ☁️</span>
-                  </div>
-                ) : null}
-              </div>
-              <label className="mt-2 text-xs text-gold-400 hover:text-gold-300 flex items-center gap-1 cursor-pointer font-medium justify-center border border-dark-500 py-1.5 rounded-lg bg-dark-800">
-                <HiPencil className="w-3.5 h-3.5" /> Replace Photo (Cloudinary)
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChangeInStep} />
-              </label>
-              {aiResult?.ai_notes && <p className="text-xs text-gray-500 mt-2 italic">{aiResult.ai_notes}</p>}
-            </div>
-
-            {/* AI-Generated Fields */}
-            <div className="md:col-span-2 space-y-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Product Name *</label>
-                <input className="input-field" value={editedResult.product_name} onChange={e => updateField('product_name', e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Description</label>
-                <textarea rows={4} className="input-field resize-none" value={editedResult.description} onChange={e => updateField('description', e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Category</label>
-                  <select className="input-field" value={editedResult.category} onChange={e => updateField('category', e.target.value)}>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Material</label>
-                  <input className="input-field" value={editedResult.material || ''} onChange={e => updateField('material', e.target.value)} placeholder="e.g. Cotton, Silk" />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Your Price (Rs.) *</label>
-                  <input type="number" className="input-field" value={editedResult.price} onChange={e => updateField('price', e.target.value)} />
-                  <p className="text-xs text-gold-500 mt-1">AI Suggested: Rs.{editedResult.suggested_price?.toLocaleString()} (Range: Rs.{editedResult.price_range?.min}–{editedResult.price_range?.max})</p>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Stock Qty</label>
-                  <input type="number" className="input-field" value={editedResult.stock_quantity || 10} onChange={e => updateField('stock_quantity', parseInt(e.target.value))} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Tags</label>
-                <input className="input-field" value={(editedResult.tags || []).join(', ')} onChange={e => updateField('tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))} placeholder="tag1, tag2, tag3" />
-              </div>
+            <h2 className="text-lg font-semibold text-white">Step 4 — Review & Edit AI Catalog</h2>
+            <div className="flex items-center gap-2">
+              {catalog.isAIGenerated ? (
+                <span className="text-xs px-2 py-1 bg-gold-500/15 text-gold-400 border border-gold-500/30 rounded-full">AI Generated</span>
+              ) : (
+                <span className="text-xs px-2 py-1 bg-dark-700 text-gray-400 border border-dark-600 rounded-full">Smart Fallback</span>
+              )}
+              <button onClick={handleGenerate} className="text-gray-400 hover:text-gold-400 transition-colors" title="Regenerate">
+                <HiRefresh className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-dark-600">
-            <button onClick={() => handlePublish(true)} disabled={isPublishing} className="btn-outline flex-1 flex items-center justify-center gap-2">
-              💾 Save as Draft
+          {imagePreview && (
+            <div className="flex gap-4 p-4 bg-dark-700/50 rounded-xl border border-dark-600">
+              <img src={imagePreview} alt="Product" className="w-20 h-20 object-cover rounded-lg shrink-0" />
+              <div className="text-xs text-gray-400 space-y-1 self-center">
+                <p className="text-white font-medium text-sm">{catalog.productName}</p>
+                <p className="text-gold-400">{catalog.category}</p>
+                <p>AI confidence: {catalog.isAIGenerated ? 'High — Gemini analyzed your product' : 'Smart fallback mode'}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Product Name *">
+              <Input value={catalog.productName} onChange={v => updateCatalogField('productName', v)} placeholder="Product name" />
+            </Field>
+            <Field label="Category *">
+              <select
+                value={catalog.category}
+                onChange={e => updateCatalogField('category', e.target.value)}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-500/60"
+              >
+                {SEVEN_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+            <Field label="Subcategory">
+              <Input value={catalog.subcategory} onChange={v => updateCatalogField('subcategory', v)} placeholder="e.g. Wooden Toys" />
+            </Field>
+            <Field label="Materials">
+              <Input value={catalog.materials} onChange={v => updateCatalogField('materials', v)} placeholder="e.g. Bamboo, Jute" />
+            </Field>
+            <Field label="Craft Technique">
+              <Input value={catalog.craftTechnique} onChange={v => updateCatalogField('craftTechnique', v)} placeholder="e.g. Handwoven, Hand-carved" />
+            </Field>
+            <Field label="Tags (comma-separated)">
+              <Input value={catalog.suggestedTags} onChange={v => updateCatalogField('suggestedTags', v)} placeholder="handmade, artisan, bamboo" />
+            </Field>
+          </div>
+
+          <Field label="Short Description">
+            <Input value={catalog.shortDescription} onChange={v => updateCatalogField('shortDescription', v)} placeholder="1-2 sentence product summary" multiline />
+          </Field>
+          <Field label="Full Description">
+            <Input value={catalog.fullDescription} onChange={v => updateCatalogField('fullDescription', v)} placeholder="Full product description" multiline />
+          </Field>
+          <Field label="Key Features (one per line)">
+            <Input value={catalog.keyFeatures} onChange={v => updateCatalogField('keyFeatures', v)} placeholder="100% handmade&#10;Authentic craft" multiline />
+          </Field>
+          <Field label="Care Instructions (one per line)">
+            <Input value={catalog.careInstructions} onChange={v => updateCatalogField('careInstructions', v)} placeholder="Handle with care&#10;Store in cool place" multiline />
+          </Field>
+
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-2">
+              <HiChevronLeft className="w-4 h-4" /> Back
             </button>
-            <button onClick={() => handlePublish(false)} disabled={isPublishing} className="btn-primary flex-1 flex items-center justify-center gap-2 py-4">
-              {isPublishing ? 'Publishing...' : <><HiCheck className="w-5 h-5" /> Publish Product 🚀</>}
+            <button onClick={() => setStep(4)} className="btn-primary flex-1 flex items-center justify-center gap-2">
+              Next: Price Suggestion <HiChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 4: Success */}
+      {/* ── STEP 5: Price Suggestion ── */}
       {step === 4 && (
-        <div className="card p-12 text-center">
-          <div className="text-6xl mb-4 animate-bounce">🎉</div>
-          <h3 className="text-2xl font-serif font-bold text-white mb-2">Product Published!</h3>
-          <p className="text-gray-400">Your product is now live on KalaStyle AI marketplace.</p>
-          <div className="flex justify-center gap-3 mt-6">
-            <button onClick={reset} className="btn-outline">Create Another</button>
-            <a href="/artisan/products" className="btn-primary">View My Products</a>
+        <div className="card p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <HiCurrencyRupee className="text-gold-400 w-5 h-5" /> Step 5 — AI Price Suggestion
+          </h2>
+          <p className="text-gray-400 text-sm">Enter your costs for a transparent price calculation. AI will suggest a fair range.</p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { key: 'rawMaterial', label: 'Raw Material (₹)', placeholder: '200' },
+              { key: 'labor',       label: 'Labor Cost (₹)',   placeholder: '300' },
+              { key: 'expenses',    label: 'Other Expenses (₹)', placeholder: '100' },
+              { key: 'margin',      label: 'Profit Margin (%)', placeholder: '30' },
+            ].map(({ key, label, placeholder }) => (
+              <Field key={key} label={label}>
+                <input
+                  type="number" min="0"
+                  value={priceInputs[key]}
+                  onChange={e => setPriceInputs(p => ({ ...p, [key]: e.target.value }))}
+                  placeholder={placeholder}
+                  className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-500/60"
+                />
+              </Field>
+            ))}
           </div>
+
+          <button onClick={handleCalculatePrice} disabled={isCalcPrice} className="btn-primary w-full flex items-center justify-center gap-2">
+            {isCalcPrice ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</> : <><HiSparkles className="w-4 h-4" /> Calculate AI Price</>}
+          </button>
+
+          {priceSuggestion && (
+            <div className="bg-dark-700/50 rounded-xl p-5 space-y-4 border border-dark-600">
+              <h3 className="text-white font-semibold">Price Breakdown</h3>
+              <div className="space-y-2 text-sm">
+                {[
+                  ['Raw Material', `₹${priceSuggestion.breakdown.rawMaterialCost}`],
+                  ['Labor Cost',   `₹${priceSuggestion.breakdown.laborCost}`],
+                  ['Other Expenses', `₹${priceSuggestion.breakdown.additionalExpenses}`],
+                  ['Base Cost',    `₹${priceSuggestion.breakdown.baseCost}`],
+                  [`Profit (${priceSuggestion.breakdown.marginPercent}%)`, `₹${priceSuggestion.breakdown.marginAmount || Math.round(priceSuggestion.breakdown.baseCost * priceSuggestion.breakdown.marginPercent / 100)}`],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between text-gray-400">
+                    <span>{k}</span><span>{v}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-white font-bold border-t border-dark-600 pt-2">
+                  <span>Suggested Price</span><span className="text-gold-400">₹{priceSuggestion.breakdown.suggestedPrice}</span>
+                </div>
+              </div>
+
+              {priceSuggestion.aiRange && (
+                <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg p-3 space-y-1">
+                  <p className="text-gold-400 text-xs font-semibold">AI Recommended Range</p>
+                  <p className="text-white font-bold">₹{priceSuggestion.aiRange.minimum} – ₹{priceSuggestion.aiRange.maximum}</p>
+                  {priceSuggestion.aiExplanation && <p className="text-gray-400 text-xs">{priceSuggestion.aiExplanation}</p>}
+                </div>
+              )}
+
+              <p className="text-gray-500 text-xs italic">{priceSuggestion.disclaimer}</p>
+
+              <Field label="Your Final Price (₹)">
+                <input
+                  type="number" min="0"
+                  value={finalPrice}
+                  onChange={e => setFinalPrice(e.target.value)}
+                  className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-500/60"
+                  placeholder="Enter your final price"
+                />
+              </Field>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep(3)} className="btn-secondary flex items-center gap-2">
+              <HiChevronLeft className="w-4 h-4" /> Back
+            </button>
+            <button onClick={() => setStep(5)} className="btn-primary flex-1 flex items-center justify-center gap-2">
+              Next: Languages <HiChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 6: Multilingual ── */}
+      {step === 5 && (
+        <div className="card p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <HiGlobe className="text-gold-400 w-5 h-5" /> Step 6 — Multilingual Catalog
+          </h2>
+          <p className="text-gray-400 text-sm">Generate your product listing in multiple Indian languages to reach more buyers.</p>
+
+          <div className="flex gap-2 flex-wrap">
+            {['Hindi', 'Kannada', 'Marathi'].map(lang => (
+              <button key={lang}
+                onClick={() => setSelectedLangs(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${selectedLangs.includes(lang) ? 'bg-gold-500/20 border-gold-500 text-gold-400' : 'border-dark-600 text-gray-400 hover:border-dark-500'}`}>
+                {lang}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={handleTranslate} disabled={isTranslating || selectedLangs.length === 0} className="btn-primary flex items-center gap-2">
+            {isTranslating ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Translating...</> : <><HiGlobe className="w-4 h-4" /> Generate Translations</>}
+          </button>
+
+          {translations && (
+            <div className="space-y-3">
+              {Object.entries(translations).map(([lang, content]) => (
+                <div key={lang} className="bg-dark-700/50 border border-dark-600 rounded-xl p-4 space-y-2">
+                  <p className="text-gold-400 text-xs font-semibold uppercase tracking-wide">{lang}</p>
+                  <p className="text-white font-medium text-sm">{content.productName}</p>
+                  <p className="text-gray-400 text-xs leading-relaxed">{content.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep(4)} className="btn-secondary flex items-center gap-2">
+              <HiChevronLeft className="w-4 h-4" /> Back
+            </button>
+            <button onClick={() => setStep(6)} className="btn-primary flex-1 flex items-center justify-center gap-2">
+              Next: Publish <HiChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 7: Publish ── */}
+      {step === 6 && catalog && (
+        <div className="card p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-white">Step 7 — Publish Your Product</h2>
+
+          {/* Final summary */}
+          <div className="bg-dark-700/50 rounded-xl p-5 border border-dark-600 space-y-3">
+            <div className="flex gap-4">
+              {imagePreview && <img src={imagePreview} alt="" className="w-20 h-20 rounded-lg object-cover shrink-0" />}
+              <div className="space-y-1">
+                <h3 className="text-white font-bold">{catalog.productName}</h3>
+                <p className="text-gold-400 text-sm">{catalog.category}</p>
+                <p className="text-gray-400 text-xs line-clamp-2">{catalog.shortDescription}</p>
+                {finalPrice && <p className="text-green-400 font-semibold">₹{finalPrice}</p>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {catalog.suggestedTags?.split(',').slice(0, 5).map(tag => (
+                <span key={tag.trim()} className="px-2 py-0.5 text-xs bg-dark-600 text-gray-300 rounded-full">{tag.trim()}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => handlePublish(true)} disabled={isPublishing}
+              className="btn-secondary flex items-center justify-center gap-2 disabled:opacity-40">
+              Save as Draft
+            </button>
+            <button onClick={() => handlePublish(false)} disabled={isPublishing}
+              className="btn-primary flex items-center justify-center gap-2 disabled:opacity-40">
+              {isPublishing ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Publishing...</> : '🚀 Publish Now'}
+            </button>
+          </div>
+
+          <button onClick={() => setStep(5)} className="text-gray-500 hover:text-gray-300 text-sm flex items-center gap-1 transition-colors">
+            <HiChevronLeft className="w-4 h-4" /> Back to translations
+          </button>
         </div>
       )}
     </div>

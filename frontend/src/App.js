@@ -36,6 +36,9 @@ import ArtisanLayout from './pages/artisan/ArtisanLayout';
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard';
 import ArtisanProducts from './pages/artisan/ArtisanProducts';
 import AIProductStudio from './pages/artisan/AIProductStudio';
+import AIPriceSuggestion from './pages/artisan/AIPriceSuggestion';
+import AIArtisanStory from './pages/artisan/AIArtisanStory';
+import AIInsightsDashboard from './pages/artisan/AIInsightsDashboard';
 import ArtisanOrders from './pages/artisan/ArtisanOrders';
 import ArtisanEarnings from './pages/artisan/ArtisanEarnings';
 import ArtisanProfile from './pages/artisan/ArtisanProfile';
@@ -101,11 +104,14 @@ function App() {
                 {/* Artisan Routes */}
                 <Route path="/artisan" element={<ArtisanRoute><ArtisanLayout /></ArtisanRoute>}>
                   <Route index element={<ArtisanDashboard />} />
-                  <Route path="products" element={<ArtisanProducts />} />
-                  <Route path="ai-studio" element={<AIProductStudio />} />
-                  <Route path="orders" element={<ArtisanOrders />} />
-                  <Route path="earnings" element={<ArtisanEarnings />} />
-                  <Route path="profile" element={<ArtisanProfile />} />
+                  <Route path="products"    element={<ArtisanProducts />} />
+                  <Route path="ai-studio"   element={<AIProductStudio />} />
+                  <Route path="ai-price"    element={<AIPriceSuggestion />} />
+                  <Route path="ai-story"    element={<AIArtisanStory />} />
+                  <Route path="ai-insights" element={<AIInsightsDashboard />} />
+                  <Route path="orders"      element={<ArtisanOrders />} />
+                  <Route path="earnings"    element={<ArtisanEarnings />} />
+                  <Route path="profile"     element={<ArtisanProfile />} />
                 </Route>
 
                 {/* Payment Gateway (No Navbar/Footer) */}

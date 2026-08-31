@@ -137,8 +137,15 @@ export const artisanAPI = {
 
 // ─── AI ──────────────────────────────────────────
 export const aiAPI = {
-  analyzeProduct:      (data) => api.post('/ai/analyze-product', data),
-  generateDescription: (data) => api.post('/ai/generate-description', data),
+  analyzeProduct:       (data) => api.post('/ai/analyze-product',     data),
+  generateDescription:  (data) => api.post('/ai/generate-description', data),
+  generateFullCatalog:  (data) => api.post('/ai/full-catalog',         data),
+  detectCategory:       (data) => api.post('/ai/detect-category',      data),
+  translateProduct:     (data) => api.post('/ai/translate',            data),
+  suggestPrice:         (data) => api.post('/ai/suggest-price',        data),
+  generateArtisanStory: (data) => api.post('/ai/artisan-story',        data),
+  getInsights:          (data) => api.post('/ai/insights',             data),
+  smartSearch:          (data) => api.post('/ai/smart-search',         data),
 };
 
 export default api;
