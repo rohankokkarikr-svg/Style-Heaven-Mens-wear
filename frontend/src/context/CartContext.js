@@ -29,15 +29,15 @@ export const CartProvider = ({ children }) => {
     });
 
     if (exists) {
-      toast.success('Cart updated!');
+      toast.success(`${product.name} quantity updated! 🛒`, { id: 'cart-toast' });
     } else {
-      toast.success(`${product.name} added to cart 🛒`);
+      toast.success(`${product.name} added to cart 🛒`, { id: 'cart-toast' });
     }
   };
 
   const removeFromCart = (key) => {
     setItems((prev) => prev.filter((i) => i.key !== key));
-    toast.success('Item removed');
+    toast.success('Item removed', { id: 'cart-toast' });
   };
 
   const updateQuantity = (key, quantity) => {

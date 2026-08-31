@@ -34,10 +34,10 @@ export const WishlistProvider = ({ children }) => {
     setWishlist((prev) => {
       const exists = prev.some((item) => item.id === product.id);
       if (exists) {
-        toast('Already in your Wishlist ❤️', { icon: '✨' });
+        toast('Already in your Wishlist ❤️', { icon: '✨', id: 'wishlist-toast' });
         return prev;
       }
-      toast.success(`${product.name || 'Item'} added to Wishlist! ❤️`);
+      toast.success(`${product.name || 'Item'} added to Wishlist! ❤️`, { id: 'wishlist-toast' });
       return [...prev, product];
     });
   };
@@ -45,7 +45,7 @@ export const WishlistProvider = ({ children }) => {
   const removeFromWishlist = (productId) => {
     setWishlist((prev) => {
       const next = prev.filter((item) => item.id !== productId);
-      toast.success('Removed from Wishlist');
+      toast.success('Removed from Wishlist', { id: 'wishlist-toast' });
       return next;
     });
   };
