@@ -64,10 +64,10 @@ export default function IndianHandicraftsSection() {
 
                   {/* Top Badges */}
                   <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-                    <span className="w-10 h-10 rounded-xl bg-dark-900/85 backdrop-blur-md border border-dark-600 flex items-center justify-center text-xl shadow-lg group-hover:scale-110 transition-transform">
-                      {cat.icon}
-                    </span>
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-dark-900/90 backdrop-blur-md text-gold-400 border border-gold-500/30 shadow-md">
+                      {cat.featuredTag || 'Authentic Craft'}
+                    </span>
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-dark-900/90 backdrop-blur-md text-gray-200 border border-dark-600 shadow-md">
                       {cat.productCount} Products
                     </span>
                   </div>

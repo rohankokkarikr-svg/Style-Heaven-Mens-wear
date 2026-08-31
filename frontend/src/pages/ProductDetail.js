@@ -162,12 +162,12 @@ export default function ProductDetail() {
   };
 
   const tabs = [
-    { id: 'description', label: '📖 Description' },
-    { id: 'craftsmanship', label: '🛠️ Craftsmanship & Process' },
-    { id: 'artisan', label: '👨‍🎨 About the Artisan' },
-    { id: 'dimensions', label: '📏 Dimensions & Specs' },
-    { id: 'care', label: '🧹 Care Instructions' },
-    { id: 'shipping', label: '🚚 Shipping & Returns' },
+    { id: 'description', label: 'Description' },
+    { id: 'craftsmanship', label: 'Craftsmanship & Process' },
+    { id: 'artisan', label: 'About the Artisan' },
+    { id: 'dimensions', label: 'Dimensions & Specs' },
+    { id: 'care', label: 'Care Instructions' },
+    { id: 'shipping', label: 'Shipping & Returns' },
   ];
 
   return (

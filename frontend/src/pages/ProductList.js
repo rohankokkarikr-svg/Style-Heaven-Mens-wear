@@ -252,7 +252,9 @@ export default function ProductList() {
             <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-dark-950/80 to-transparent" />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 w-full">
               <div className="max-w-2xl">
-                <span className="text-4xl mb-3 block">{currentCategoryInfo.icon}</span>
+                <span className="text-xs uppercase tracking-widest text-gold-400 font-bold mb-2 block">
+                  Indian Handicraft Collection
+                </span>
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-white tracking-tight">
                   {currentCategoryInfo.name}
                 </h1>
@@ -264,7 +266,7 @@ export default function ProductList() {
                     {filteredAndSortedProducts.length} Artisanal Products Available
                   </span>
                   <span>•</span>
-                  <span>100% GI / Handcrafted Certified</span>
+                  <span>100% Certified Authentic</span>
                 </div>
               </div>
             </div>
@@ -274,29 +276,13 @@ export default function ProductList() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/30 text-gold-400 text-xs font-semibold uppercase tracking-widest mb-2">
-                    <span>🇮🇳</span>
-                    <span>All Indian Handicrafts Collection</span>
-                  </div>
-                  <h1 className="text-3xl sm:text-4xl font-serif font-bold text-white">
-                    {searchQuery ? `Search Results for "${searchQuery}"` : 'Explore Indian Handicrafts'}
+                  <h1 className="text-3xl sm:text-4xl font-serif font-bold text-white tracking-tight">
+                    Explore Indian Handicrafts
                   </h1>
-                  <p className="text-gray-400 text-sm mt-1">
-                    Discover India's heritage handlooms, traditional paintings, blue pottery, and artisanal woodwork.
+                  <p className="text-gray-400 text-sm mt-2">
+                    Browse handloom textiles, home décor, brass jewelry, pottery, and folk art.
                   </p>
                 </div>
-
-                {/* Search Bar in Header */}
-                <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
-                  <input
-                    type="text"
-                    value={internalSearch}
-                    onChange={(e) => setInternalSearch(e.target.value)}
-                    placeholder="Search by craft, material, state..."
-                    className="w-full bg-dark-800 border border-dark-600 focus:border-gold-500 rounded-xl px-4 py-2.5 pl-10 text-sm text-white placeholder-gray-500 focus:outline-none transition-all shadow-inner"
-                  />
-                  <HiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                </form>
               </div>
             </div>
           </div>
@@ -304,9 +290,9 @@ export default function ProductList() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Controls Bar: Total Count, Mobile Filter Button, Sorting Dropdown */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-dark-800/80 p-4 rounded-2xl border border-dark-700">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8">
+        {/* Results count & Sort Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-800 p-4 rounded-2xl border border-dark-700 mb-8">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-white">
               Showing <span className="text-gold-400">{filteredAndSortedProducts.length}</span> Products
@@ -342,10 +328,10 @@ export default function ProductList() {
               >
                 <option value="popular">Most Popular</option>
                 <option value="newest">Newest Arrivals</option>
-                <option value="rating">Best Rated ⭐</option>
+                <option value="rating">Best Rated</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
-                <option value="discount">Highest Discount 🔥</option>
+                <option value="discount">Highest Discount</option>
               </select>
             </div>
           </div>
@@ -390,7 +376,7 @@ export default function ProductList() {
                           : 'text-gray-300 hover:bg-dark-700/60'
                       }`}
                     >
-                      ✨ All Categories
+                      All Categories
                     </button>
                   </li>
                   {HANDICRAFT_CATEGORIES.map((cat) => (
@@ -403,10 +389,7 @@ export default function ProductList() {
                             : 'text-gray-300 hover:bg-dark-700/60'
                         }`}
                       >
-                        <span className="flex items-center gap-2 truncate">
-                          <span>{cat.icon}</span>
-                          <span className="truncate">{cat.name}</span>
-                        </span>
+                        <span className="truncate">{cat.name}</span>
                         <span className="text-[10px] text-gray-500">({cat.productCount})</span>
                       </button>
                     </li>
