@@ -81,7 +81,7 @@ exports.analyzeProduct = async (req, res) => {
 
     // Real Gemini API call
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `You are an expert e-commerce product listing assistant for KalaStyle AI, a marketplace for Indian artisans.
 
@@ -149,7 +149,7 @@ exports.generateDescription = async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `Convert this simple artisan product description into a professional, attractive e-commerce product description in ${language}.
 
