@@ -37,9 +37,25 @@ export default function ArtisanProducts() {
           {products.map(p => (
             <div key={p.id} className="card overflow-hidden group">
               <div className="aspect-video bg-dark-700 relative overflow-hidden">
-                {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">📦</div>}
-                {p.ai_generated && <span className="absolute top-2 left-2 bg-gold-500 text-dark-900 text-[10px] font-bold px-2 py-0.5 rounded-full">🤖 AI Generated</span>}
-                <div className="absolute top-2 right-2"><span className={'text-[10px] font-bold px-2 py-0.5 rounded-full ' + (p.is_in_stock ? 'bg-green-500/80 text-white' : 'bg-red-500/80 text-white')}>{p.is_in_stock ? 'In Stock' : 'Out of Stock'}</span></div>
+                {p.image_url ? (
+                  <img
+                    src={p.image_url}
+                    alt={p.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&auto=format&fit=crop';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-dark-800 text-gray-400">
+                    <span className="text-3xl mb-1">🎨</span>
+                    <span className="text-[10px] text-gray-500 font-medium">Authentic Craft</span>
+                  </div>
+                )}
+                {p.ai_generated && <span className="absolute top-2 left-2 bg-gold-500 text-dark-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">🤖 AI Generated</span>}
+                <div className="absolute top-2 right-2"><span className={'text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md ' + (p.is_in_stock ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white')}>{p.is_in_stock ? 'In Stock' : 'Out of Stock'}</span></div>
               </div>
               <div className="p-4">
                 <h3 className="font-semibold text-white truncate">{p.name}</h3>

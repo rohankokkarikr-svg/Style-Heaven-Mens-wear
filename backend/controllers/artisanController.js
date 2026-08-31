@@ -107,8 +107,9 @@ exports.getMyStats = async (req, res) => {
 
     const { data: products } = await supabase
       .from('products')
-      .select('id, name, price, stock_quantity, is_in_stock, created_at')
-      .eq('artisan_id', profile.id);
+      .select('id, name, price, stock_quantity, is_in_stock, image_url, ai_generated, category, created_at')
+      .eq('artisan_id', profile.id)
+      .order('created_at', { ascending: false });
 
     const productIds = (products || []).map(p => p.id);
 
