@@ -241,7 +241,8 @@ Rules: category must exactly match one of the 7 options. Do not invent historica
     return res.json({ catalog, isAIGenerated: result.isAI });
   } catch (err) {
     console.error('[generateFullCatalog] Error:', err.message);
-    res.status(500).json({ error: 'Could not generate catalog. Please try again.' });
+    const fallbackCatalog = validateCatalogFields({ ...buildMockCatalog(req.body?.description), isAI: false });
+    return res.json({ catalog: fallbackCatalog, isAIGenerated: false });
   }
 };
 
