@@ -46,16 +46,29 @@ function getModelName() {
 // ── Core: Generate Text ──────────────────────────────────────────────────────
 
 /**
- * generateText(prompt)
- * Sends a plain text prompt to Gemini and returns the response string.
+ * generateText(prompt, retries)
+ * Sends a plain text prompt to Gemini with automatic retry on transient errors (503, 429)
+ * and returns the response string.
  */
-async function generateText(prompt) {
+async function generateText(prompt, retries = 2) {
   const ai = getClient();
-  const response = await ai.models.generateContent({
-    model: getModelName(),
-    contents: prompt,
-  });
-  return response.text.trim();
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: getModelName(),
+        contents: prompt,
+      });
+      return response.text.trim();
+    } catch (err) {
+      const isTransient = err.message?.includes('503') || err.message?.includes('429') || err.message?.includes('high demand') || err.status === 503 || err.status === 429;
+      if (isTransient && attempt < retries) {
+        console.warn(`[geminiService] Transient AI spike (attempt ${attempt + 1}/${retries + 1}). Retrying in ${(attempt + 1) * 1000}ms...`);
+        await new Promise(r => setTimeout(r, (attempt + 1) * 1000));
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 // ── Core: Analyze Image ──────────────────────────────────────────────────────
