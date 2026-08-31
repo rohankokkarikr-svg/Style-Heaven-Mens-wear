@@ -48,6 +48,7 @@ app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/artisans', require('./routes/artisans'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Health check — also checks if Supabase is reachable
 app.get('/health', async (req, res) => {

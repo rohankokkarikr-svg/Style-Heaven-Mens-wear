@@ -46,13 +46,22 @@ import ArtisanProfile from './pages/artisan/ArtisanProfile';
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
-import AdminProducts from './pages/admin/Products';
-import AdminOrders from './pages/admin/Orders';
-import DiscountBanner from './pages/admin/DiscountBanner';
-import HeroSettings from './pages/admin/HeroSettings';
-import AdminReviews from './pages/admin/Reviews';
-import Settings from './pages/admin/Settings';
 import AdminArtisans from './pages/admin/Artisans';
+import Customers from './pages/admin/Customers';
+import AdminProducts from './pages/admin/Products';
+import Categories from './pages/admin/Categories';
+import AdminOrders from './pages/admin/Orders';
+import Payments from './pages/admin/Payments';
+import AIManagement from './pages/admin/AIManagement';
+import AdminReviews from './pages/admin/Reviews';
+import Reports from './pages/admin/Reports';
+import Analytics from './pages/admin/Analytics';
+import Notifications from './pages/admin/Notifications';
+import ContentManagement from './pages/admin/ContentManagement';
+import HeroSettings from './pages/admin/HeroSettings';
+import DiscountBanner from './pages/admin/DiscountBanner';
+import ActivityLogs from './pages/admin/ActivityLogs';
+import Settings from './pages/admin/Settings';
 
 function MaintenanceGuard({ children }) {
   const { settings } = useSettings();
@@ -92,12 +101,22 @@ function App() {
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
                   <Route index element={<Dashboard />} />
-                  <Route path="products" element={<AdminProducts />} />
-                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="dashboard" element={<Dashboard />} />
                   <Route path="artisans" element={<AdminArtisans />} />
+                  <Route path="customers" element={<Customers />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="categories" element={<Categories />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="payments" element={<Payments />} />
+                  <Route path="ai" element={<AIManagement />} />
+                  <Route path="reviews" element={<AdminReviews />} />
+                  <Route path="reports" element={<Reports />} />
+                  <Route path="analytics" element={<Analytics />} />
+                  <Route path="notifications" element={<Notifications />} />
+                  <Route path="content" element={<ContentManagement />} />
                   <Route path="hero-settings" element={<HeroSettings />} />
                   <Route path="discount-banner" element={<DiscountBanner />} />
-                  <Route path="reviews" element={<AdminReviews />} />
+                  <Route path="activity" element={<ActivityLogs />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>
 

@@ -1,53 +1,45 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { productAPI } from '../../services/api';
-import {
-  HiPlus, HiPencil, HiTrash, HiSearch, HiX,
-  HiPhotograph, HiTag, HiCube, HiCheckCircle
+import React, { useEffect, useState } from 'react';
+import { 
+  HiSearch, 
+  HiFilter, 
+  HiCheckCircle, 
+  HiXCircle, 
+  HiEye, 
+  HiEyeOff, 
+  HiTrash, 
+  HiRefresh,
+  HiSparkles,
+  HiX,
+  HiExternalLink
 } from 'react-icons/hi';
+import { adminAPI } from '../../services/api';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
-const CATEGORIES = [
-  'Sarees', 'Kurtas', 'Handloom', 'Handmade',
-  "Women's Fashion", "Men's Fashion", 'Traditional Wear', 'Accessories'
-];
+export default function Products() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Rejection modal state
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('Incorrect product details or category mismatch');
+  const [rejecting, setRejecting] = useState(false);
 
-const SIZE_PRESETS = {
-  'Sarees':           ['Standard (5.5m)', 'Standard (6.3m)', 'Free Size'],
-  'Kurtas':           ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
-  'Handloom':         ['S', 'M', 'L', 'XL', 'XXL', 'Free Size'],
-  'Handmade':         ['One Size', 'Adjustable', 'Custom', 'S', 'M', 'L'],
-  "Women's Fashion":  ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  "Men's Fashion":    ['38', '40', '42', '44', '46', 'S', 'M', 'L', 'XL', 'XXL'],
-  'Traditional Wear': ['38', '40', '42', '44', '46', 'Free Size'],
-  'Accessories':      ['One Size', 'Adjustable', 'Set of 6', '7', '8', '9', '10', '11'],
-};
-
-const EMPTY_FORM = {
-  name: '', description: '', price: '', original_price: '',
-  category: 'Sarees', sizes: [], stock_quantity: 25, is_in_stock: true,
-  image_url: '',
-};
-
-export default function AdminProducts() {
-  const [products, setProducts]       = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [search, setSearch]           = useState('');
-  const [filterCat, setFilterCat]     = useState('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState(null);
-  const [formData, setFormData]       = useState(EMPTY_FORM);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [uploading, setUploading]     = useState(false);
-  const [submitting, setSubmitting]   = useState(false);
-  const fileRef = useRef();
-
-  // ── fetch ──────────────────────────────────────────────────────────────────
-  useEffect(() => { fetchProducts(); }, [search]);
+  // View modal state
+  const [previewProduct, setPreviewProduct] = useState(null);
 
   const fetchProducts = async () => {
+    setLoading(true);
     try {
-      const { data } = await productAPI.getAll({ search });
-      setProducts(data);
+      const { data } = await adminAPI.getProducts({ 
+        search, 
+        category: categoryFilter, 
+        status: statusFilter 
+      });
+      setProducts(data || []);
     } catch {
       toast.error('Failed to load products');
     } finally {
@@ -55,481 +47,347 @@ export default function AdminProducts() {
     }
   };
 
-  // ── filtered list ──────────────────────────────────────────────────────────
-  const filtered = filterCat === 'all'
-    ? products
-    : products.filter(p => p.category === filterCat);
+  useEffect(() => {
+    fetchProducts();
+  }, [categoryFilter, statusFilter]);
 
-  // ── modal open ─────────────────────────────────────────────────────────────
-  const openModal = (product = null) => {
-    if (product) {
-      setCurrentProduct(product);
-      setFormData({
-        name:           product.name,
-        description:    product.description || '',
-        price:          product.price,
-        original_price: product.original_price || '',
-        category:       product.category,
-        sizes:          product.sizes || [],
-        stock_quantity: product.stock_quantity ?? 50,
-        is_in_stock:    product.is_in_stock !== false,
-        image_url:      product.image_url || '',
-      });
-      setImagePreview(product.image_url || null);
-    } else {
-      setCurrentProduct(null);
-      setFormData(EMPTY_FORM);
-      setImagePreview(null);
-    }
-    setIsModalOpen(true);
-  };
-
-  // ── size toggle ────────────────────────────────────────────────────────────
-  const toggleSize = (size) => {
-    setFormData(prev => ({
-      ...prev,
-      sizes: prev.sizes.includes(size)
-        ? prev.sizes.filter(s => s !== size)
-        : [...prev.sizes, size],
-    }));
-  };
-
-  const handleCategoryChange = (cat) => {
-    setFormData(prev => ({ ...prev, category: cat, sizes: [] }));
-  };
-
-  // ── image file change ──────────────────────────────────────────────────────
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImagePreview(URL.createObjectURL(file));
-      
-      setUploading(true);
-      const fd = new FormData();
-      fd.append('image', file);
-      try {
-        const { data } = await productAPI.uploadDirect(fd);
-        setFormData(prev => ({ ...prev, image_url: data.imageUrl }));
-        setImagePreview(data.imageUrl);
-        toast.success('📷 Image uploaded directly to Cloudinary!');
-      } catch (err) {
-        toast.error('Failed to upload image directly to Cloudinary');
-      } finally {
-        setUploading(false);
-      }
-    }
-  };
-
-  // ── submit ─────────────────────────────────────────────────────────────────
-  const handleSubmit = async (e) => {
+  const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim())          return toast.error('Product name is required');
-    if (!formData.price)                return toast.error('Price is required');
-    if (formData.sizes.length === 0)    return toast.error('Select at least one size');
-    if (!formData.image_url)            return toast.error('Please upload a product image or enter an image URL');
-
-    setSubmitting(true);
-    try {
-      const payload = {
-        name:           formData.name.trim(),
-        description:    formData.description.trim(),
-        price:          Number(formData.price),
-        original_price: formData.original_price ? Number(formData.original_price) : null,
-        category:       formData.category,
-        sizes:          formData.sizes,
-        stock_quantity: Number(formData.stock_quantity),
-        is_in_stock:    formData.is_in_stock,
-        image_url:      formData.image_url,
-      };
-
-      if (currentProduct) {
-        await productAPI.update(currentProduct.id, payload);
-        toast.success('✅ Product updated!');
-      } else {
-        await productAPI.create(payload);
-        toast.success('✅ Product created!');
-      }
-
-      setIsModalOpen(false);
-      fetchProducts();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save product');
-    } finally {
-      setSubmitting(false);
-      setUploading(false);
-    }
+    fetchProducts();
   };
 
-  // ── delete ─────────────────────────────────────────────────────────────────
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product permanently?')) return;
+  const handleApprove = async (id) => {
     try {
-      await productAPI.delete(id);
-      toast.success('Product deleted');
-      fetchProducts();
+      await adminAPI.approveProduct(id);
+      toast.success('Product approved and published!');
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, status: 'approved', rejection_reason: null } : p));
     } catch {
-      toast.error('Failed to delete');
+      toast.error('Failed to approve product');
     }
   };
 
-  // ── render ─────────────────────────────────────────────────────────────────
+  const handleRejectSubmit = async () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please specify a rejection reason');
+      return;
+    }
+    setRejecting(true);
+    try {
+      await adminAPI.rejectProduct(rejectModal.id, { reason: rejectReason });
+      toast.success('Product rejected with reason noted');
+      setProducts(prev => prev.map(p => p.id === rejectModal.id ? { ...p, status: 'rejected', rejection_reason: rejectReason } : p));
+      setRejectModal(null);
+      setRejectReason('Incorrect product details or category mismatch');
+    } catch {
+      toast.error('Failed to reject product');
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  const handleHideToggle = async (id, isCurrentlyHidden) => {
+    const nextHidden = !isCurrentlyHidden;
+    try {
+      await adminAPI.hideProduct(id, { is_hidden: nextHidden });
+      toast.success(nextHidden ? 'Product hidden from public catalog' : 'Product unhidden');
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, is_hidden: nextHidden } : p));
+    } catch {
+      toast.error('Failed to update visibility');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to permanently delete this product?')) return;
+    try {
+      await adminAPI.deleteProduct(id);
+      toast.success('Product deleted');
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch {
+      toast.error('Failed to delete product');
+    }
+  };
+
+  const getStatusBadge = (p) => {
+    if (p.is_hidden) {
+      return <span className="badge bg-gray-500/20 text-gray-400 border border-gray-500/30">⚫ Hidden</span>;
+    }
+    switch (p.status) {
+      case 'approved':
+        return <span className="badge bg-green-500/20 text-green-400 border border-green-500/30">🟢 Approved</span>;
+      case 'rejected':
+        return <span className="badge bg-red-500/20 text-red-400 border border-red-500/30" title={p.rejection_reason || 'Rejected'}>🔴 Rejected</span>;
+      default:
+        return <span className="badge bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">🟡 Pending</span>;
+    }
+  };
+
   return (
-    <div>
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Manage Products</h1>
-          <p className="text-gray-400 text-sm mt-0.5">{filtered.length} products {filterCat !== 'all' ? `in ${filterCat}` : 'total'}</p>
+          <h1 className="text-2xl font-serif font-bold text-white">Product Management & Quality Assurance</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Review artisan submissions, approve handcrafted products, and monitor catalog compliance.
+          </p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-          {/* Search */}
-          <div className="relative flex-1 md:w-56">
-            <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              className="input-field pl-10 py-2 w-full"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <button
+          onClick={fetchProducts}
+          className="btn-secondary self-start sm:self-auto flex items-center gap-2 text-xs py-2"
+        >
+          <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh List
+        </button>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="card p-4 space-y-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full md:w-96">
+            <div className="relative flex-1">
+              <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search products by title, category, material..."
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500/60"
+              />
+            </div>
+            <button type="submit" className="btn-primary text-xs py-2 px-3">Search</button>
+          </form>
+
+          {/* Status Filter Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
+            {['all', 'pending', 'approved', 'rejected'].map(st => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`text-xs px-3 py-1.5 rounded-lg capitalize whitespace-nowrap transition-all border ${
+                  statusFilter === st
+                    ? 'bg-gold-500/20 border-gold-500/50 text-gold-400 font-semibold'
+                    : 'border-dark-600 text-gray-400 hover:text-white'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
           </div>
-          {/* Category filter */}
-          <select
-            className="input-field py-2 flex-1 md:w-44"
-            value={filterCat}
-            onChange={(e) => setFilterCat(e.target.value)}
-          >
-            <option value="all">All Categories</option>
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          {/* Add button */}
-          <button onClick={() => openModal()} className="btn-primary py-2 flex items-center gap-2 shrink-0">
-            <HiPlus className="w-5 h-5" /> Add Product
-          </button>
         </div>
       </div>
 
-      {/* Category tab pills */}
-      <div className="flex gap-2 flex-wrap mb-5">
-        {['all', ...CATEGORIES].map(c => (
-          <button
-            key={c}
-            onClick={() => setFilterCat(c)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-              filterCat === c
-                ? 'bg-gold-500 text-dark-900 border-gold-500'
-                : 'border-dark-500 text-gray-400 hover:border-gold-500/50 hover:text-gray-200'
-            }`}
-          >
-            {c === 'all' ? 'All' : c}
-          </button>
-        ))}
-      </div>
-
-      {/* Table */}
+      {/* Products Table */}
       <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-dark-800 border-b border-dark-600">
-                <th className="p-4 text-sm font-semibold text-gray-300">Product</th>
-                <th className="p-4 text-sm font-semibold text-gray-300">Category</th>
-                <th className="p-4 text-sm font-semibold text-gray-300">Price</th>
-                <th className="p-4 text-sm font-semibold text-gray-300">Sizes</th>
-                <th className="p-4 text-sm font-semibold text-gray-300">Stock</th>
-                <th className="p-4 text-sm font-semibold text-gray-300 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dark-600">
-              {loading ? (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Loading products...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-500">No products found.</td></tr>
-              ) : (
-                filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-dark-800/50 transition-colors">
-                    <td className="p-4">
+        {loading ? (
+          <div className="p-8 space-y-4">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-14 shimmer rounded-lg" />)}
+          </div>
+        ) : products.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-dark-800/80 text-gray-400 border-b border-dark-600 uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="py-3 px-4">Product Info</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">Artisan Store</th>
+                  <th className="py-3 px-4">Price & Stock</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dark-600/50">
+                {products.map(p => (
+                  <tr key={p.id} className="hover:bg-dark-700/30 transition-colors">
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-14 rounded-lg bg-dark-600 overflow-hidden shrink-0 border border-dark-500">
-                          {p.image_url
-                            ? <img src={p.image_url} alt="" className="w-full h-full object-cover" />
-                            : <span className="flex items-center justify-center h-full text-xl">👔</span>}
-                        </div>
-                        <div>
-                          <div className="font-medium text-white line-clamp-1">{p.name}</div>
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <div className="text-xs text-gray-500 line-clamp-1">{p.description}</div>
-                          </div>
+                        <img
+                          src={p.image_url || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=120&auto=format&fit=crop'}
+                          alt={p.name}
+                          className="w-11 h-11 rounded-lg object-cover ring-1 ring-dark-500 shrink-0"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=120&auto=format&fit=crop';
+                          }}
+                        />
+                        <div className="overflow-hidden max-w-xs">
+                          <p className="font-semibold text-white truncate flex items-center gap-1.5">
+                            {p.name}
+                            {p.ai_generated && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded">
+                                AI
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-gray-400 text-[10px] truncate">{p.material || 'Authentic Handcraft'}</p>
+                          {p.rejection_reason && (
+                            <p className="text-red-400 text-[10px] truncate font-medium">⚠️ {p.rejection_reason}</p>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 text-[11px] bg-dark-700 border border-dark-500 rounded-full text-gray-300">
+                    <td className="py-3 px-4 text-gray-300">
+                      <span className="px-2 py-0.5 rounded bg-dark-700 text-gray-300 border border-dark-600">
                         {p.category}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <div className="text-gold-400 font-semibold">₹{p.price?.toLocaleString()}</div>
-                      {p.original_price && (
-                        <div className="text-gray-500 text-xs line-through">₹{p.original_price?.toLocaleString()}</div>
-                      )}
+                    <td className="py-3 px-4 text-gray-300 font-medium">
+                      {p.artisan_profiles?.store_name || p.artisan_name || 'KalaStyle Artisan'}
                     </td>
-                    <td className="p-4">
-                      <div className="flex gap-1 flex-wrap max-w-[120px]">
-                        {p.sizes?.slice(0, 4).map(s => (
-                          <span key={s} className="px-1.5 py-0.5 text-[10px] bg-dark-600 rounded text-gray-300">{s}</span>
-                        ))}
-                        {p.sizes?.length > 4 && (
-                          <span className="text-[10px] text-gray-500">+{p.sizes.length - 4}</span>
-                        )}
-                      </div>
+                    <td className="py-3 px-4">
+                      <p className="font-bold text-gold-400">₹{(p.price || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[10px] text-gray-400">Stock: {p.stock_quantity || 0}</p>
                     </td>
-                    <td className="p-4">
-                      {p.is_in_stock === false || p.stock_quantity <= 0 ? (
-                        <span className="px-2 py-1 text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 rounded-full">Out of Stock</span>
-                      ) : p.stock_quantity < 5 ? (
-                        <span className="px-2 py-1 text-[10px] bg-red-500/20 text-red-400 border border-red-500/40 rounded-full font-bold animate-pulse">⚠️ Low Stock Alert ({p.stock_quantity} left)</span>
-                      ) : p.stock_quantity < 10 ? (
-                        <span className="px-2 py-1 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full">Low: {p.stock_quantity}</span>
-                      ) : (
-                        <span className="px-2 py-1 text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 rounded-full">In Stock ({p.stock_quantity})</span>
-                      )}
+                    <td className="py-3 px-4">
+                      {getStatusBadge(p)}
                     </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openModal(p)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" title="Edit">
-                          <HiPencil className="w-4 h-4" />
+                    <td className="py-3 px-4 text-right space-x-1.5">
+                      <button
+                        onClick={() => setPreviewProduct(p)}
+                        className="p-1.5 text-gray-400 hover:text-white rounded bg-dark-700 hover:bg-dark-600"
+                        title="Quick View Details"
+                      >
+                        <HiEye className="w-4 h-4" />
+                      </button>
+                      <Link
+                        to={`/products/${p.id}`}
+                        target="_blank"
+                        className="p-1.5 text-gray-400 hover:text-gold-400 rounded bg-dark-700 hover:bg-dark-600 inline-block"
+                        title="View Live Page"
+                      >
+                        <HiExternalLink className="w-4 h-4" />
+                      </Link>
+                      {p.status !== 'approved' && (
+                        <button
+                          onClick={() => handleApprove(p.id)}
+                          className="p-1.5 text-green-400 hover:text-green-300 rounded bg-green-500/10 hover:bg-green-500/20"
+                          title="Approve Listing"
+                        >
+                          <HiCheckCircle className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(p.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Delete">
-                          <HiTrash className="w-4 h-4" />
+                      )}
+                      {p.status !== 'rejected' && (
+                        <button
+                          onClick={() => setRejectModal(p)}
+                          className="p-1.5 text-yellow-400 hover:text-yellow-300 rounded bg-yellow-500/10 hover:bg-yellow-500/20"
+                          title="Reject with Reason"
+                        >
+                          <HiXCircle className="w-4 h-4" />
                         </button>
-                      </div>
+                      )}
+                      <button
+                        onClick={() => handleHideToggle(p.id, p.is_hidden)}
+                        className={`p-1.5 rounded transition-colors ${
+                          p.is_hidden 
+                            ? 'text-gray-300 bg-gray-600/20 hover:bg-gray-600/30' 
+                            : 'text-gray-400 hover:text-gray-200 bg-dark-700 hover:bg-dark-600'
+                        }`}
+                        title={p.is_hidden ? 'Unhide Product' : 'Hide from Public Store'}
+                      >
+                        {p.is_hidden ? <HiEye className="w-4 h-4" /> : <HiEyeOff className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1.5 text-red-400 hover:text-red-300 rounded bg-red-500/10 hover:bg-red-500/20"
+                        title="Delete Product"
+                      >
+                        <HiTrash className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-12 text-center text-gray-500 text-sm">
+            No products found matching your search or filter.
+          </div>
+        )}
       </div>
 
-      {/* ── Add / Edit Modal ─────────────────────────────────────────────── */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-dark-800 rounded-2xl shadow-card border border-dark-600 w-full max-w-2xl my-6">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center px-6 py-5 border-b border-dark-600">
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  {currentProduct ? '✏️ Edit Product' : '➕ Add New Product'}
-                </h2>
-                <p className="text-gray-400 text-xs mt-0.5">Fill in all the details manually</p>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white p-1">
-                <HiX className="w-6 h-6" />
+      {/* Modal: Rejection Reason */}
+      {rejectModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card max-w-md w-full p-6 space-y-4 border border-dark-500">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-white text-sm">Reject Product: {rejectModal.name}</h3>
+              <button onClick={() => setRejectModal(null)} className="text-gray-400 hover:text-white">
+                <HiX className="w-5 h-5" />
               </button>
             </div>
+            <p className="text-xs text-gray-400">
+              Provide a clear reason so the artisan knows what to correct:
+            </p>
+            <div className="space-y-2">
+              {[
+                'Incorrect product details or category mismatch',
+                'Low resolution or unclear product imagery',
+                'Missing craft material information',
+                'Pricing or shipping policy discrepancy',
+                'Duplicate listing'
+              ].map(opt => (
+                <label key={opt} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="reason"
+                    checked={rejectReason === opt}
+                    onChange={() => setRejectReason(opt)}
+                    className="text-gold-500 focus:ring-0"
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+              <textarea
+                rows={3}
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Or type custom rejection reason..."
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500 mt-2 resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setRejectModal(null)} className="btn-secondary text-xs py-2 px-3">
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectSubmit}
+                disabled={rejecting}
+                className="btn-primary bg-red-500 hover:bg-red-600 border-red-500 text-white text-xs py-2 px-4"
+              >
+                {rejecting ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-
-              {/* ── Section 1: Basic Info ─────────────────────────────── */}
+      {/* Modal: Quick Preview */}
+      {previewProduct && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card max-w-lg w-full p-6 space-y-4 border border-dark-500 relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setPreviewProduct(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+              <HiX className="w-5 h-5" />
+            </button>
+            <div className="flex gap-4 items-start">
+              <img
+                src={previewProduct.image_url || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=300&auto=format&fit=crop'}
+                alt=""
+                className="w-24 h-24 rounded-xl object-cover ring-1 ring-gold-500 shrink-0"
+              />
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3">
-                  <HiTag className="w-4 h-4" /> Basic Information
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-sm text-gray-400 mb-1">Product Name <span className="text-red-400">*</span></label>
-                    <input
-                      required type="text"
-                      className="input-field"
-                      placeholder="e.g. Classic White Oxford Shirt"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Category <span className="text-red-400">*</span></label>
-                    <select
-                      className="input-field"
-                      value={formData.category}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                    >
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block text-sm text-gray-400 mb-1">Description</label>
-                    <textarea
-                      rows="3"
-                      className="input-field resize-none"
-                      placeholder="Describe the product — material, fit, occasion..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    />
-                  </div>
-                </div>
+                <h3 className="font-bold text-white text-base">{previewProduct.name}</h3>
+                <p className="text-gold-400 text-xs font-semibold">{previewProduct.category} • ₹{previewProduct.price}</p>
+                <div className="mt-1">{getStatusBadge(previewProduct)}</div>
               </div>
-
-              {/* ── Section 2: Pricing ───────────────────────────────── */}
-              <div>
-                <div className="flex items-center gap-2 text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3">
-                  <HiTag className="w-4 h-4" /> Pricing
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Selling Price (₹) <span className="text-red-400">*</span></label>
-                    <input
-                      required type="number" min="1"
-                      className="input-field"
-                      placeholder="e.g. 799"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Original / MRP (₹) <span className="text-xs text-gray-500">optional</span></label>
-                    <input
-                      type="number" min="0"
-                      className="input-field"
-                      placeholder="e.g. 1199 (shows strikethrough)"
-                      value={formData.original_price}
-                      onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                    />
-                  </div>
-                </div>
+            </div>
+            <div className="space-y-2 text-xs border-t border-dark-600 pt-3">
+              <p><strong className="text-gray-400">Material:</strong> <span className="text-gray-200">{previewProduct.material || 'Handcrafted'}</span></p>
+              <p><strong className="text-gray-400">Artisan:</strong> <span className="text-gray-200">{previewProduct.artisan_profiles?.store_name || 'KalaStyle Artisan'}</span></p>
+              <p><strong className="text-gray-400">Description:</strong></p>
+              <div className="p-3 bg-dark-750 rounded-lg text-gray-300 leading-relaxed border border-dark-600">
+                {previewProduct.description || 'No description provided.'}
               </div>
-
-              {/* ── Section 3: Sizes ─────────────────────────────────── */}
-              <div>
-                <div className="flex items-center gap-2 text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3">
-                  <HiCube className="w-4 h-4" /> Available Sizes <span className="text-red-400 font-normal normal-case">*</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(SIZE_PRESETS[formData.category] || SIZE_PRESETS['T-Shirts']).map(size => (
-                    <button
-                      key={size} type="button"
-                      onClick={() => toggleSize(size)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
-                        formData.sizes.includes(size)
-                          ? 'bg-gold-500 text-dark-900 border-gold-500 shadow-gold'
-                          : 'border-dark-500 text-gray-400 hover:border-gold-500/50 hover:text-gray-200'
-                      }`}
-                    >
-                      {formData.sizes.includes(size) && <HiCheckCircle className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />}
-                      {size}
-                    </button>
-                  ))}
-                </div>
-                {formData.sizes.length > 0 && (
-                  <p className="text-xs text-gold-400 mt-2">Selected: {formData.sizes.join(', ')}</p>
-                )}
-              </div>
-
-              {/* ── Section 4: Stock ─────────────────────────────────── */}
-              <div>
-                <div className="flex items-center gap-2 text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3">
-                  <HiCube className="w-4 h-4" /> Stock
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Stock Quantity</label>
-                    <input
-                      type="number" min="0"
-                      className="input-field"
-                      value={formData.stock_quantity}
-                      onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Availability</label>
-                    <select
-                      className="input-field"
-                      value={String(formData.is_in_stock)}
-                      onChange={(e) => setFormData({ ...formData, is_in_stock: e.target.value === 'true' })}
-                    >
-                      <option value="true">✅ In Stock</option>
-                      <option value="false">❌ Out of Stock</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Section 5: Image ─────────────────────────────────── */}
-              <div>
-                <div className="flex items-center gap-2 text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3">
-                  <HiPhotograph className="w-4 h-4" /> Product Image <span className="text-red-400 font-normal normal-case">*</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Upload file */}
-                  <div
-                    className="border-2 border-dashed border-dark-500 rounded-xl p-4 text-center cursor-pointer hover:border-gold-500/50 transition-colors"
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    <HiPhotograph className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">Click to upload image</p>
-                    <p className="text-xs text-gray-600 mt-1">JPG, PNG, WEBP — uploaded to Cloudinary</p>
-                    <input
-                      ref={fileRef}
-                      type="file" accept="image/*" className="hidden"
-                      onChange={handleImageChange}
-                    />
-                  </div>
-                  {/* OR image URL */}
-                  <div className="flex flex-col justify-center">
-                    <label className="block text-sm text-gray-400 mb-1">Or paste image URL</label>
-                    <input
-                      type="url"
-                      className="input-field"
-                      placeholder="https://..."
-                      value={formData.image_url}
-                      onChange={(e) => {
-                        setFormData({ ...formData, image_url: e.target.value });
-                        setImagePreview(e.target.value || null);
-                      }}
-                    />
-                    <p className="text-xs text-gray-600 mt-1">Cloudinary / Unsplash / direct link</p>
-                  </div>
-                </div>
-                {/* Image preview */}
-                {imagePreview && (
-                  <div className="mt-3 flex items-center gap-3">
-                    <div className="w-20 h-24 rounded-lg bg-dark-700 overflow-hidden border border-dark-500 shrink-0">
-                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-green-400 font-medium">✅ Image preview</p>
-                      <button
-                        type="button"
-                        onClick={() => { setImagePreview(null); setFormData(p => ({ ...p, image_url: '' })); }}
-                        className="text-xs text-red-400 hover:underline mt-1"
-                      >
-                        Remove image
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Footer ───────────────────────────────────────────── */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-dark-600">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="btn-outline px-5 py-2.5"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting || uploading}
-                  className="btn-primary px-7 py-2.5 min-w-[130px]"
-                >
-                  {uploading ? '⬆️ Uploading...' : submitting ? '💾 Saving...' : currentProduct ? '✅ Update Product' : '➕ Add Product'}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

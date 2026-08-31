@@ -148,4 +148,40 @@ export const aiAPI = {
   smartSearch:          (data) => api.post('/ai/smart-search',           data, { timeout: 60000 }),
 };
 
+// ─── Admin Control Center ────────────────────────
+export const adminAPI = {
+  getOverview:          ()         => api.get('/admin/overview'),
+  getArtisans:          (params)   => api.get('/admin/artisans', { params }),
+  updateArtisanStatus:  (id, data) => api.put(`/admin/artisans/${id}/status`, data),
+  getCustomers:         (params)   => api.get('/admin/customers', { params }),
+  updateCustomerStatus: (id, data) => api.put(`/admin/customers/${id}/status`, data),
+  getProducts:          (params)   => api.get('/admin/products', { params }),
+  approveProduct:       (id)       => api.put(`/admin/products/${id}/approve`),
+  rejectProduct:        (id, data) => api.put(`/admin/products/${id}/reject`, data),
+  hideProduct:          (id, data) => api.put(`/admin/products/${id}/hide`, data),
+  deleteProduct:        (id)       => api.delete(`/admin/products/${id}`),
+  getCategories:        ()         => api.get('/admin/categories'),
+  createCategory:       (data)     => api.post('/admin/categories', data),
+  updateCategory:       (id, data) => api.put(`/admin/categories/${id}`, data),
+  deleteCategory:       (id)       => api.delete(`/admin/categories/${id}`),
+  getOrders:            (params)   => api.get('/admin/orders', { params }),
+  updateOrderStatus:    (id, data) => api.put(`/admin/orders/${id}/status`, data),
+  getPayments:          ()         => api.get('/admin/payments'),
+  getAIContent:         ()         => api.get('/admin/ai/content'),
+  getAIStats:           ()         => api.get('/admin/ai/stats'),
+  getReviews:           (params)   => api.get('/admin/reviews', { params }),
+  approveReview:        (id, data) => api.put(`/admin/reviews/${id}/approve`, data),
+  deleteReview:         (id)       => api.delete(`/admin/reviews/${id}`),
+  getReports:           ()         => api.get('/admin/reports'),
+  updateReportStatus:   (id, data) => api.put(`/admin/reports/${id}/status`, data),
+  getAnalytics:         ()         => api.get('/admin/analytics'),
+  getNotifications:     ()         => api.get('/admin/notifications'),
+  sendNotification:     (data)     => api.post('/admin/notifications', data),
+  getContent:           ()         => api.get('/admin/content'),
+  getActivityLogs:      ()         => api.get('/admin/activity'),
+  getSettings:          ()         => api.get('/admin/settings'),
+  updateSettings:       (data)     => api.put('/admin/settings', data),
+};
+
 export default api;
+

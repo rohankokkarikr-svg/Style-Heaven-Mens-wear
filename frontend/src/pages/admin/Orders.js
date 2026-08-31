@@ -1,260 +1,307 @@
-import React, { useState, useEffect } from 'react';
-import { orderAPI } from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { 
+  HiSearch, 
+  HiFilter, 
+  HiShoppingBag, 
+  HiEye, 
+  HiRefresh, 
+  HiX,
+  HiCheckCircle,
+  HiClock,
+  HiTruck
+} from 'react-icons/hi';
+import { adminAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
-export default function AdminOrders() {
+export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [verifyingId, setVerifyingId] = useState(null);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [filter]);
-
-  const extractRefNo = (o) => {
-    if (o.transaction_id && o.transaction_id.trim() && !o.transaction_id.startsWith('TXN_')) {
-      return o.transaction_id.trim();
-    }
-    if (o.shipping_address) {
-      const match = o.shipping_address.match(/Ref\.?\s*No\.?:\s*([A-Za-z0-9_]+)/i);
-      if (match) return match[1];
-      const txnMatch = o.shipping_address.match(/TXN:?\s*([A-Za-z0-9_]+)/i);
-      if (txnMatch) return txnMatch[1];
-    }
-    if (o.transaction_id) return o.transaction_id;
-    return null;
-  };
-
-  const getEffectivePaymentMethod = (o) => {
-    let pm = o.payment_method || '';
-    if (!pm && o.shipping_address) {
-      const match = o.shipping_address.match(/\[Method:\s*([^\]]+)\]/i);
-      if (match) pm = match[1];
-    }
-    if (!pm) return 'COD (Cash on Delivery)';
-    const pmLower = pm.toLowerCase();
-    if (pmLower.includes('upi') || pmLower.includes('phonepe') || pmLower.includes('online')) {
-      return 'UPI / PhonePe QR';
-    }
-    if (pmLower.includes('cod')) {
-      return 'COD (Cash on Delivery)';
-    }
-    return pm.replace('_', ' ');
-  };
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [updating, setUpdating] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const params = (filter !== 'all' && filter !== 'payment_verification_pending') ? { status: filter } : {};
-      const { data } = await orderAPI.getAll(params);
-      let list = data || [];
-      if (filter === 'payment_verification_pending') {
-        list = list.filter(o => 
-          o.payment_status === 'pending_verification' || 
-          o.status === 'payment_verification_pending' || 
-          (o.shipping_address && o.shipping_address.includes('Status: Pending Verification')) ||
-          (o.shipping_address && o.shipping_address.includes('Ref. No:'))
-        );
-      }
-      setOrders(list);
-    } catch (err) {
+      const { data } = await adminAPI.getOrders({ search, status: statusFilter });
+      setOrders(data || []);
+    } catch {
       toast.error('Failed to load orders');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      await orderAPI.updateStatus(id, { status: newStatus });
-      toast.success('Order status updated');
-      fetchOrders();
-    } catch (err) {
-      toast.error('Failed to update status');
-    }
+  useEffect(() => {
+    fetchOrders();
+  }, [statusFilter]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchOrders();
   };
 
-  const handleVerifyPayment = async (id, action) => {
-    setVerifyingId(id);
+  const handleStatusChange = async (id, newStatus, newPaymentStatus) => {
+    setUpdating(true);
     try {
-      await orderAPI.verifyPayment(id, { action });
-      if (action === 'approve') {
-        toast.success('Payment verified & Order confirmed! 🎉');
-      } else {
-        toast.error('Payment rejected & Order cancelled');
+      await adminAPI.updateOrderStatus(id, { 
+        status: newStatus,
+        payment_status: newPaymentStatus
+      });
+      toast.success(`Order status updated to ${newStatus}`);
+      setOrders(prev => prev.map(o => o.id === id ? { 
+        ...o, 
+        status: newStatus, 
+        ...(newPaymentStatus ? { payment_status: newPaymentStatus } : {}) 
+      } : o));
+      if (selectedOrder && selectedOrder.id === id) {
+        setSelectedOrder(prev => ({ ...prev, status: newStatus, ...(newPaymentStatus ? { payment_status: newPaymentStatus } : {}) }));
       }
-      fetchOrders();
-    } catch (err) {
-      toast.error('Failed to verify payment');
+    } catch {
+      toast.error('Failed to update order status');
     } finally {
-      setVerifyingId(null);
+      setUpdating(false);
     }
   };
 
-  const getStatusColor = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'delivered': return 'text-green-400 bg-green-500/10 border-green-500/20';
-      case 'shipped': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
-      case 'cancelled': return 'text-red-400 bg-red-500/10 border-red-500/20';
-      case 'payment_verification_pending': return 'text-amber-400 bg-amber-500/10 border-amber-500/30 animate-pulse';
-      default: return 'text-gold-400 bg-gold-500/10 border-gold-500/20'; // pending/processing
+  const getStatusBadge = (status) => {
+    const s = (status || 'pending').toLowerCase();
+    switch (s) {
+      case 'delivered':
+        return <span className="badge bg-green-500/20 text-green-400 border border-green-500/30">🟢 Delivered</span>;
+      case 'shipped':
+        return <span className="badge bg-purple-500/20 text-purple-400 border border-purple-500/30">🚚 Shipped</span>;
+      case 'processing':
+        return <span className="badge bg-blue-500/20 text-blue-400 border border-blue-500/30">📦 Processing</span>;
+      case 'confirmed':
+        return <span className="badge bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">🔵 Confirmed</span>;
+      case 'cancelled':
+        return <span className="badge bg-red-500/20 text-red-400 border border-red-500/30">🔴 Cancelled</span>;
+      default:
+        return <span className="badge bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">🟡 Pending</span>;
     }
-  };
-
-  const renderStatusText = (status) => {
-    if (status === 'payment_verification_pending') return '⏱️ Pending Verification';
-    return status;
-  };
-
-  const buildCustomerWhatsappLink = (o) => {
-    if (!o.phone) return null;
-    let digits = String(o.phone).replace(/\D/g, '');
-    if (digits.length === 10) digits = '91' + digits;
-    const msg = `Hello ${o.users?.name || 'Customer'}, regarding your KalaStyle AI Order #${o.id?.substring(0, 8)} (Total: ₹${o.total_price?.toLocaleString()})...`;
-    return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
   };
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-white">Manage Orders</h1>
-        
-        <div className="flex gap-2 flex-wrap">
-          {['all', 'pending', 'payment_verification_pending', 'shipped', 'delivered', 'cancelled'].map((st) => (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-serif font-bold text-white">Order Management & Fulfillment</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Monitor customer orders, track artisan fulfillment, and update delivery milestones.
+          </p>
+        </div>
+        <button
+          onClick={fetchOrders}
+          className="btn-secondary self-start sm:self-auto flex items-center gap-2 text-xs py-2"
+        >
+          <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Orders
+        </button>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full md:w-96">
+          <div className="relative flex-1">
+            <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by Order ID, customer, phone..."
+              className="w-full bg-dark-700 border border-dark-500 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500/60"
+            />
+          </div>
+          <button type="submit" className="btn-primary text-xs py-2 px-3">Search</button>
+        </form>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
+          {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(st => (
             <button
               key={st}
-              onClick={() => setFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold capitalize transition-all cursor-pointer ${
-                filter === st 
-                  ? 'bg-gold-500 text-dark-900 shadow-sm' 
-                  : 'bg-dark-800 text-gray-400 hover:text-gold-400 border border-dark-600'
+              onClick={() => setStatusFilter(st)}
+              className={`text-xs px-3 py-1.5 rounded-lg capitalize whitespace-nowrap transition-all border ${
+                statusFilter === st
+                  ? 'bg-gold-500/20 border-gold-500/50 text-gold-400 font-semibold'
+                  : 'border-dark-600 text-gray-400 hover:text-white'
               }`}
             >
-              {st === 'payment_verification_pending' ? 'Verification Pending ⏱️' : st}
+              {st}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="bg-dark-800 border border-dark-600 rounded-2xl shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-dark-900/50 border-b border-dark-600">
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Total</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Payment & Ref. No.</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dark-600/50">
-              {loading ? (
-                <tr><td colSpan="7" className="p-8 text-center text-gray-400">Loading orders...</td></tr>
-              ) : orders.length === 0 ? (
-                <tr><td colSpan="7" className="p-8 text-center text-gray-400">No orders found.</td></tr>
-              ) : (
-                orders.map((o) => {
-                  const refNo = extractRefNo(o);
-                  const isPendingVerif = o.payment_status === 'pending_verification' || 
-                    o.status === 'payment_verification_pending' || 
-                    (o.shipping_address && o.shipping_address.includes('Status: Pending Verification')) ||
-                    (o.shipping_address && o.shipping_address.includes('Ref. No:'));
-
-                  return (
-                    <tr key={o.id} className="hover:bg-dark-900/30 transition-colors">
-                      <td className="p-4 font-mono text-xs text-gray-400">#{o.id.substring(0,8)}</td>
-                      <td className="p-4 text-xs text-gray-500">{new Date(o.created_at).toLocaleDateString()}</td>
-                      <td className="p-4">
-                        <p className="text-white font-bold text-sm">{o.users?.name || 'User'}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                          <span>{o.phone}</span>
-                          {buildCustomerWhatsappLink(o) && (
-                            <a
-                              href={buildCustomerWhatsappLink(o)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="Chat with customer on WhatsApp"
-                              className="text-green-400 hover:text-green-300 ml-1 inline-flex items-center"
-                            >
-                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.143 4.174 4.29-1.125z" />
-                              </svg>
-                            </a>
-                          )}
-                        </p>
-                      </td>
-                      <td className="p-4 font-black text-white text-sm">₹{o.total_price.toLocaleString()}</td>
-                      <td className="p-4">
-                        <p className="text-xs font-bold text-gray-300 capitalize">
-                          {getEffectivePaymentMethod(o)}
-                        </p>
-                        <p className={`text-[10px] font-black capitalize ${
-                          o.payment_status?.toLowerCase() === 'paid' 
-                            ? 'text-green-400' 
-                            : isPendingVerif 
-                              ? 'text-amber-400 font-bold animate-pulse' 
-                              : 'text-amber-500'
-                        }`}>
-                          {isPendingVerif ? '⏱️ Ref Submitted (Pending Admin Verification)' : (o.payment_status || 'Pending')}
-                        </p>
-                        {refNo ? (
-                          <div className="mt-1">
-                            <span className="text-xs font-mono text-gold-300 font-extrabold bg-gold-500/15 px-2.5 py-1 rounded-md border border-gold-500/40 inline-block shadow-sm">
-                              🔑 UTR / Ref. No: {refNo}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-gray-500 italic block mt-0.5">No Ref. No.</span>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span className={`badge border px-2.5 py-1 uppercase text-[10px] font-bold ${getStatusColor(o.status)}`}>
-                          {renderStatusText(o.status)}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        {isPendingVerif ? (
-                          <div className="flex justify-end gap-1.5">
-                            <button
-                              onClick={() => handleVerifyPayment(o.id, 'approve')}
-                              disabled={verifyingId === o.id}
-                              className="px-2.5 py-1 text-[11px] font-bold text-green-400 hover:text-green-300 border border-green-500/40 bg-green-500/10 hover:bg-green-500/20 rounded-md transition-all cursor-pointer"
-                            >
-                              ✅ Verify & Approve
-                            </button>
-                            <button
-                              onClick={() => handleVerifyPayment(o.id, 'reject')}
-                              disabled={verifyingId === o.id}
-                              className="px-2.5 py-1 text-[11px] font-bold text-red-400 hover:text-red-300 border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 rounded-md transition-all cursor-pointer"
-                            >
-                              ❌ Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <select 
-                            className="bg-dark-900 border border-dark-500 text-xs rounded-lg px-2 py-1 text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 font-semibold cursor-pointer"
-                            value={o.status}
-                            onChange={(e) => handleStatusChange(o.id, e.target.value)}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Orders Table */}
+      <div className="card overflow-hidden">
+        {loading ? (
+          <div className="p-8 space-y-4">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-14 shimmer rounded-lg" />)}
+          </div>
+        ) : orders.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-dark-800/80 text-gray-400 border-b border-dark-600 uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="py-3 px-4">Order ID</th>
+                  <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Items Summary</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4">Delivery Status</th>
+                  <th className="py-3 px-4">Payment</th>
+                  <th className="py-3 px-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dark-600/50">
+                {orders.map(o => (
+                  <tr key={o.id} className="hover:bg-dark-700/30 transition-colors">
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-gold-400 font-bold">
+                        #{o.id ? o.id.slice(0, 8).toUpperCase() : 'ORDER'}
+                      </span>
+                      <p className="text-[10px] text-gray-500">
+                        {o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN') : '-'}
+                      </p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-semibold text-white truncate">{o.users?.name || 'Customer'}</p>
+                      <p className="text-gray-400 text-[10px] truncate">{o.users?.email || o.phone}</p>
+                    </td>
+                    <td className="py-3 px-4 text-gray-300">
+                      {o.order_items?.length > 0 ? (
+                        <span>{o.order_items.length} item(s)</span>
+                      ) : (
+                        <span>1 product</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-bold text-white">₹{Number(o.total_price || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[10px] text-gray-400">{o.payment_method || 'Online'}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      {getStatusBadge(o.status)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`text-[11px] font-semibold ${
+                        o.payment_status === 'paid' || o.payment_status === 'successful' ? 'text-green-400' : 'text-yellow-400'
+                      }`}>
+                        {o.payment_status || 'Pending'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={() => setSelectedOrder(o)}
+                        className="btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1 ml-auto"
+                      >
+                        <HiEye className="w-3.5 h-3.5" /> Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-12 text-center text-gray-500 text-sm">
+            No orders found matching your search.
+          </div>
+        )}
       </div>
+
+      {/* Modal: Order Details & Status Update */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card max-w-xl w-full p-6 space-y-4 border border-dark-500 relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedOrder(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <HiX className="w-5 h-5" />
+            </button>
+
+            <div>
+              <span className="text-gold-400 font-mono text-xs font-bold">
+                ORDER #{selectedOrder.id?.slice(0, 8).toUpperCase()}
+              </span>
+              <h3 className="text-lg font-bold text-white mt-0.5">Order Fulfillment Details</h3>
+              <p className="text-gray-400 text-xs">
+                Placed on {new Date(selectedOrder.created_at).toLocaleString('en-IN')}
+              </p>
+            </div>
+
+            {/* Quick Status Pill Bar */}
+            <div className="p-3 bg-dark-750 rounded-xl border border-dark-600 space-y-2">
+              <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                Update Order Delivery Status:
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(st => (
+                  <button
+                    key={st}
+                    disabled={updating}
+                    onClick={() => handleStatusChange(selectedOrder.id, st)}
+                    className={`text-xs px-2.5 py-1 rounded-lg capitalize border font-medium transition-all ${
+                      (selectedOrder.status || 'pending').toLowerCase() === st
+                        ? 'bg-gold-500 border-gold-500 text-dark-900 font-bold'
+                        : 'border-dark-600 text-gray-400 hover:text-white hover:border-dark-500'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customer & Shipping Info */}
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="p-3 rounded-lg bg-dark-750 border border-dark-600 space-y-1">
+                <p className="font-bold text-white">Customer Information</p>
+                <p className="text-gray-300">{selectedOrder.users?.name || 'Customer'}</p>
+                <p className="text-gray-400">{selectedOrder.users?.email}</p>
+                <p className="text-gray-400">Phone: {selectedOrder.phone}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-dark-750 border border-dark-600 space-y-1">
+                <p className="font-bold text-white">Shipping Address</p>
+                <p className="text-gray-300 leading-relaxed">{selectedOrder.shipping_address || 'Address on file'}</p>
+              </div>
+            </div>
+
+            {/* Items in Order */}
+            <div className="space-y-2 text-xs border-t border-dark-600 pt-3">
+              <p className="font-bold text-white">Ordered Handcrafted Items</p>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {(selectedOrder.order_items || []).map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-dark-750 border border-dark-600">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={item.products?.image_url || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=100'}
+                        alt=""
+                        className="w-8 h-8 rounded object-cover ring-1 ring-dark-500 shrink-0"
+                      />
+                      <div>
+                        <p className="font-medium text-white truncate max-w-xs">{item.products?.name || 'Handicraft Item'}</p>
+                        <p className="text-[10px] text-gray-400">Qty: {item.quantity} • Size: {item.size || 'Standard'}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-gold-400">
+                      ₹{((item.price_at_time || item.products?.price || 0) * item.quantity).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Total Calculation */}
+            <div className="flex justify-between items-center text-sm font-bold text-white border-t border-dark-600 pt-3">
+              <span>Total Amount Paid</span>
+              <span className="text-gold-400 text-lg">₹{Number(selectedOrder.total_price || 0).toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

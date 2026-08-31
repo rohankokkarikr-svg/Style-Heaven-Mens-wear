@@ -1,264 +1,208 @@
-import React, { useState, useEffect } from 'react';
-import { HiCog, HiSave, HiCheckCircle, HiRefresh } from 'react-icons/hi';
+import React, { useEffect, useState } from 'react';
+import { 
+  HiCog, 
+  HiShieldCheck, 
+  HiSparkles, 
+  HiCurrencyRupee, 
+  HiSave,
+  HiRefresh
+} from 'react-icons/hi';
+import { adminAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { settingsAPI } from '../../services/api';
-import { useSettings } from '../../context/SettingsContext';
-
-const DEFAULT_SETTINGS = {
-  storeName: 'KalaStyle AI',
-  supportEmail: 'support@kalastyle.ai',
-  supportPhone: '+91 7676558335',
-  storeAddress: 'KalaStyle AI, Supporting Artisans & Handloom Crafts Across India',
-  currency: 'INR (₹)',
-  taxRate: '18',
-  maintenanceMode: false,
-  orderNotifications: true,
-  instagramUrl: 'https://www.instagram.com/style_heaven_mens_wear?igsh=MXVueXV5ejc1bXVvNQ==',
-  whatsappNumber: '917676558335',
-  footerTagline: "Redefining men's fashion with premium quality fabrics, timeless designs, and unmatched elegance.",
-};
 
 export default function Settings() {
-  const { refreshSettings } = useSettings();
-  const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(true);
-  const [saved, setSaved] = useState(false);
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState({
+    platform_name: 'KalaStyle AI',
+    contact_email: 'support@kalastyle.ai',
+    contact_phone: '+91 7676558335',
+    currency: 'INR',
+    currency_symbol: '₹',
+    tax_rate: 5.0,
+    platform_commission: 10.0,
+    ai_features_enabled: true,
+    daily_ai_limit_per_artisan: 50,
+    auto_approve_products: false,
+    maintenance_mode: false,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Load current settings from backend on mount
-  useEffect(() => {
-    settingsAPI.get()
-      .then(({ data }) => setSettings({ ...DEFAULT_SETTINGS, ...data }))
-      .catch(() => toast.error('Could not load current settings'))
-      .finally(() => setFetchLoading(false));
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSaved(false);
-    setSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const fetchSettings = async () => {
     setLoading(true);
     try {
-      await settingsAPI.update(settings);
-      // Refresh the global SettingsContext so all pages see the new values
-      await refreshSettings();
-      setSaved(true);
-      toast.success('✅ Settings saved! All pages updated.');
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      toast.error('Failed to save settings. Please try again.');
+      const { data } = await adminAPI.getSettings();
+      if (data) setSettings(prev => ({ ...prev, ...data }));
+    } catch {
+      toast.error('Failed to load settings');
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetchLoading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <div className="w-10 h-10 border-4 border-dark-600 border-t-gold-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await adminAPI.updateSettings(settings);
+      toast.success('Platform settings saved successfully!');
+    } catch {
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto pb-10">
-      <div className="flex justify-between items-end mb-8">
+    <div className="space-y-8 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-white mb-2">Store Settings</h1>
-          <p className="text-gray-400">Changes here appear live across all pages of the website.</p>
+          <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+            <HiCog className="text-gold-400 w-7 h-7" /> Platform & Marketplace Settings
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Configure marketplace commission rates, contact metadata, and AI operation limits.
+          </p>
         </div>
         <button
-          onClick={handleSave}
-          disabled={loading}
-          className={`btn-primary flex items-center gap-2 transition-all ${saved ? 'bg-green-600 hover:bg-green-600' : ''}`}
+          onClick={fetchSettings}
+          className="btn-secondary self-start sm:self-auto flex items-center gap-2 text-xs py-2"
         >
-          {loading ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : saved ? (
-            <HiCheckCircle className="w-5 h-5" />
-          ) : (
-            <HiSave className="w-5 h-5" />
-          )}
-          {saved ? 'Saved!' : 'Save Changes'}
+          <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Reset
         </button>
       </div>
 
-      {/* Live update notice */}
-      <div className="flex items-center gap-3 bg-gold-500/5 border border-gold-500/20 rounded-xl px-5 py-3 mb-8">
-        <HiRefresh className="w-4 h-4 text-gold-400 shrink-0" />
-        <p className="text-xs text-gray-400">
-          <span className="text-gold-400 font-semibold">Live Sync:</span>{' '}
-          Footer contact details, store name, tagline, and social links update globally when you save.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Nav */}
-        <div className="hidden md:block col-span-1">
-          <nav className="sticky top-24 space-y-2">
-            <a href="#general"     className="block px-4 py-3 rounded-lg bg-gold-500/10 text-gold-400 font-medium border border-gold-500/20">General Information</a>
-            <a href="#contact"     className="block px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-800 hover:text-white transition-colors">Contact Details</a>
-            <a href="#social"      className="block px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-800 hover:text-white transition-colors">Social & Links</a>
-            <a href="#preferences" className="block px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-800 hover:text-white transition-colors">Store Preferences</a>
-          </nav>
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* 1. General Branding & Contact */}
+        <div className="card p-6 space-y-4 border border-dark-600">
+          <h2 className="font-bold text-white text-base flex items-center gap-2">
+            <HiShieldCheck className="text-gold-400 w-5 h-5" /> General Marketplace Information
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Platform Name</label>
+              <input
+                type="text"
+                value={settings.platform_name}
+                onChange={e => setSettings({ ...settings, platform_name: e.target.value })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Support Contact Email</label>
+              <input
+                type="email"
+                value={settings.contact_email}
+                onChange={e => setSettings({ ...settings, contact_email: e.target.value })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Contact Phone</label>
+              <input
+                type="text"
+                value={settings.contact_phone}
+                onChange={e => setSettings({ ...settings, contact_phone: e.target.value })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Settings Forms */}
-        <div className="col-span-1 md:col-span-2 space-y-8">
-
-          {/* General Info */}
-          <div id="general" className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-6 border-b border-dark-600 pb-4 flex items-center gap-2">
-              <HiCog className="text-gold-400" /> General Information
-            </h2>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Store Name</label>
-                <input
-                  type="text" name="storeName" value={settings.storeName} onChange={handleChange}
-                  className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-colors"
-                />
-                <p className="text-[10px] text-gray-600 mt-1">Appears in the footer, navbar, and browser tab.</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Footer Tagline</label>
-                <textarea
-                  name="footerTagline" value={settings.footerTagline} onChange={handleChange} rows={2}
-                  className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-colors resize-none"
-                />
-                <p className="text-[10px] text-gray-600 mt-1">Short description shown in the footer below the logo.</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Currency</label>
-                  <select
-                    name="currency" value={settings.currency} onChange={handleChange}
-                    className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 transition-colors appearance-none"
-                  >
-                    <option value="INR (₹)">INR (₹)</option>
-                    <option value="USD ($)">USD ($)</option>
-                    <option value="EUR (€)">EUR (€)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Tax Rate (%)</label>
-                  <input
-                    type="number" name="taxRate" value={settings.taxRate} onChange={handleChange}
-                    className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 transition-colors"
-                  />
-                </div>
-              </div>
+        {/* 2. Commercial & Commission Settings */}
+        <div className="card p-6 space-y-4 border border-dark-600">
+          <h2 className="font-bold text-white text-base flex items-center gap-2">
+            <HiCurrencyRupee className="text-green-400 w-5 h-5" /> Commission & Taxation
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Currency Code</label>
+              <input
+                type="text"
+                value={settings.currency}
+                onChange={e => setSettings({ ...settings, currency: e.target.value })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">GST / Tax Rate (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={settings.tax_rate}
+                onChange={e => setSettings({ ...settings, tax_rate: Number(e.target.value) })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Platform Commission (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={settings.platform_commission}
+                onChange={e => setSettings({ ...settings, platform_commission: Number(e.target.value) })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
             </div>
           </div>
+        </div>
 
-          {/* Contact Details */}
-          <div id="contact" className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-6 border-b border-dark-600 pb-4">Contact Details</h2>
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Support Email</label>
-                  <input
-                    type="email" name="supportEmail" value={settings.supportEmail} onChange={handleChange}
-                    className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Support Phone</label>
-                  <input
-                    type="tel" name="supportPhone" value={settings.supportPhone} onChange={handleChange}
-                    className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 transition-colors"
-                  />
-                  <p className="text-[10px] text-gray-600 mt-1">Shown in footer (with country code, e.g. +91...)</p>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Store Physical Address</label>
-                <textarea
-                  name="storeAddress" value={settings.storeAddress} onChange={handleChange} rows={3}
-                  className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 transition-colors resize-none"
-                />
-                <p className="text-[10px] text-gray-600 mt-1">Used in the footer and auto-linked to Google Maps.</p>
-              </div>
-            </div>
+        {/* 3. AI Safety & Resource Allocation */}
+        <div className="card p-6 space-y-4 border border-dark-600">
+          <h2 className="font-bold text-white text-base flex items-center gap-2">
+            <HiSparkles className="text-gold-400 w-5 h-5" /> Gemini AI Engine Controls
+          </h2>
+          
+          <div className="p-3 bg-dark-750 border border-dark-600 rounded-xl text-xs text-gray-400 flex items-start gap-2">
+            <span className="text-gold-400 font-bold">🔒 Security Notice:</span>
+            <span>API Keys are securely maintained in server environment variables and never exposed to the frontend.</span>
           </div>
 
-          {/* Social Links */}
-          <div id="social" className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-6 border-b border-dark-600 pb-4">Social & Links</h2>
-            <div className="space-y-5">
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-dark-700/50 border border-dark-600">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Instagram URL</label>
-                <input
-                  type="url" name="instagramUrl" value={settings.instagramUrl} onChange={handleChange}
-                  placeholder="https://www.instagram.com/youraccount"
-                  className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 transition-colors"
-                />
+                <p className="font-bold text-white">Enable AI Studio & Multilingual Features</p>
+                <p className="text-gray-400 text-[11px]">Allows artisans to use voice input, image analysis, and automated catalog generation.</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">WhatsApp Number</label>
-                <input
-                  type="text" name="whatsappNumber" value={settings.whatsappNumber} onChange={handleChange}
-                  placeholder="919876543210 (country code + number, no spaces)"
-                  className="w-full bg-dark-900 border border-dark-500 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-gold-500 transition-colors"
-                />
-                <p className="text-[10px] text-gray-600 mt-1">No + or spaces. Example: 917676558335</p>
-              </div>
+              <input
+                type="checkbox"
+                checked={settings.ai_features_enabled}
+                onChange={e => setSettings({ ...settings, ai_features_enabled: e.target.checked })}
+                className="h-5 w-5 rounded text-gold-500 bg-dark-800 border-dark-500 focus:ring-0 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Daily AI Generation Limit per Artisan</label>
+              <input
+                type="number"
+                value={settings.daily_ai_limit_per_artisan}
+                onChange={e => setSettings({ ...settings, daily_ai_limit_per_artisan: Number(e.target.value) })}
+                className="w-full sm:w-48 bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
             </div>
           </div>
+        </div>
 
-          {/* Preferences */}
-          <div id="preferences" className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-6 border-b border-dark-600 pb-4">Store Preferences</h2>
-            <div className="space-y-6">
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div>
-                  <p className="text-white font-medium mb-1 group-hover:text-gold-400 transition-colors">Order Notifications</p>
-                  <p className="text-sm text-gray-500">Receive email alerts for every new order placed</p>
-                </div>
-                <div className="relative shrink-0">
-                  <input type="checkbox" name="orderNotifications" checked={settings.orderNotifications} onChange={handleChange} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-dark-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500"></div>
-                </div>
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div>
-                  <p className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors">Maintenance Mode</p>
-                  <p className="text-sm text-gray-500">Temporarily hide the storefront from customers</p>
-                </div>
-                <div className="relative shrink-0">
-                  <input type="checkbox" name="maintenanceMode" checked={settings.maintenanceMode} onChange={handleChange} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-dark-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* Save button (bottom) */}
+        {/* Save Button */}
+        <div className="flex justify-end pt-2">
           <button
-            onClick={handleSave}
-            disabled={loading}
-            className={`w-full btn-primary py-4 flex items-center justify-center gap-2 text-base ${saved ? 'bg-green-600 hover:bg-green-600' : ''}`}
+            type="submit"
+            disabled={saving}
+            className="btn-primary text-sm py-2.5 px-6 flex items-center gap-2 shadow-gold"
           >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : saved ? (
-              <HiCheckCircle className="w-5 h-5" />
-            ) : (
-              <HiSave className="w-5 h-5" />
-            )}
-            {saved ? 'All Pages Updated!' : 'Save & Apply Changes'}
+            <HiSave className="w-4 h-4" />
+            <span>{saving ? 'Saving Changes...' : 'Save Platform Settings'}</span>
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

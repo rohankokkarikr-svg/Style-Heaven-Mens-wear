@@ -1,5 +1,5 @@
-import React, { Navigate } from 'react';
-import { Navigate as NavRedirect } from 'react-router-dom';
+import React from 'react';
+import { Navigate as NavRedirect, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 /** Protects any route behind authentication */
@@ -11,10 +11,40 @@ export function PrivateRoute({ children }) {
 
 /** Only allows admin-role users */
 export function AdminRoute({ children }) {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, isAdmin, isArtisan, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (!isAuthenticated) return <NavRedirect to="/login" replace />;
-  if (!isAdmin)         return <NavRedirect to="/"      replace />;
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-dark-900 px-4">
+        <div className="card max-w-md w-full p-8 text-center space-y-6 border border-red-500/30">
+          <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center text-3xl mx-auto">
+            🚫
+          </div>
+          <div>
+            <h2 className="text-2xl font-serif font-bold text-white">Access Denied</h2>
+            <p className="text-gray-400 text-sm mt-2">
+              You do not have administrative permissions to access the Admin Control Center.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              onClick={() => window.history.back()}
+              className="btn-secondary w-full"
+            >
+              ← Go Back
+            </button>
+            <Link
+              to={isArtisan ? '/artisan' : '/'}
+              className="btn-primary w-full text-center block"
+            >
+              {isArtisan ? 'Go to Artisan Studio' : 'Return to Storefront'}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return children;
 }
 

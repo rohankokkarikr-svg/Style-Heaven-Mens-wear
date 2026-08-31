@@ -1,357 +1,268 @@
-import React, { useState, useEffect } from 'react';
-import { dashboardAPI } from '../../services/api';
-import { 
-  HiCurrencyRupee, HiShoppingBag, HiCollection, HiTrendingUp, 
-  HiTrendingDown, HiStar, HiClock, HiCheckCircle, HiXCircle, HiTruck,
-  HiShoppingCart
-} from 'react-icons/hi';
-import { StatCardSkeleton } from '../../components/Skeleton';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line
-} from 'recharts';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const COLORS = ['#D4AF37', '#60A5FA', '#34D399', '#A78BFA', '#F472B6', '#FBBF24'];
-const STATUS_COLORS = {
-  pending: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
-  shipped: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  delivered: 'text-green-400 bg-green-400/10 border-green-400/20',
-  cancelled: 'text-red-400 bg-red-400/10 border-red-400/20',
-};
+import { 
+  HiUserGroup, 
+  HiUsers, 
+  HiCollection, 
+  HiShoppingBag, 
+  HiCurrencyRupee, 
+  HiSparkles, 
+  HiArrowRight, 
+  HiRefresh,
+  HiCheckCircle,
+  HiClock,
+  HiXCircle,
+  HiPlus,
+  HiBell,
+  HiEye
+} from 'react-icons/hi';
+import { adminAPI } from '../../services/api';
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  const fetchOverview = async () => {
+    setLoading(true);
+    try {
+      const { data: res } = await adminAPI.getOverview();
+      setData(res);
+    } catch (err) {
+      console.error('Failed to load admin overview:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data } = await dashboardAPI.getStats();
-        setStats(data);
-      } catch (err) {
-        console.error("Dashboard API error:", err);
-        setError("Failed to load dashboard data. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
+    fetchOverview();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-serif font-bold text-white mb-8">Dashboard Overview</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array.from({length:4}).map((_,i) => <StatCardSkeleton key={i} />)}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <HiXCircle className="w-16 h-16 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">Error</h2>
-        <p className="text-gray-400">{error}</p>
-      </div>
-    );
-  }
-
-  const kpiCards = [
-    { 
-      title: 'Total Revenue', 
-      value: `₹${stats.totalRevenue?.toLocaleString()}`, 
-      sub: stats.revenueChange >= 0 ? `+${stats.revenueChange}% from last 30d` : `${stats.revenueChange}% from last 30d`,
-      icon: HiCurrencyRupee, 
-      color: 'text-green-400', 
-      bg: 'bg-green-400/10',
-      trend: stats.revenueChange >= 0 ? 'up' : 'down'
-    },
-    { 
-      title: 'Total Orders', 
-      value: stats.totalOrders, 
-      sub: `${stats.todayOrders} today`,
-      icon: HiShoppingBag, 
-      color: 'text-blue-400', 
-      bg: 'bg-blue-400/10',
-      trend: 'up'
-    },
-    { 
-      title: 'Conversion Rate', 
-      value: `${stats.conversionRate}%`, 
-      sub: `Avg. Order: ₹${stats.avgOrderValue?.toLocaleString()}`,
-      icon: HiTrendingUp, 
-      color: 'text-gold-400', 
-      bg: 'bg-gold-400/10',
-      trend: 'up'
-    },
-    { 
-      title: 'Active Products', 
-      value: stats.totalProducts, 
-      sub: stats.pendingReviews > 0 ? `${stats.pendingReviews} pending reviews` : 'All reviews approved',
-      icon: HiCollection, 
-      color: 'text-purple-400', 
-      bg: 'bg-purple-400/10',
-      trend: 'neutral'
-    },
-  ];
-
-  const pieData = Object.entries(stats.orderStatusCounts || {}).map(([name, value]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1),
-    value
-  })).filter(d => d.value > 0);
-
   return (
-    <div className="space-y-8 pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Top Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-dark-800 via-dark-800 to-gold-500/10 border border-dark-600 p-6 rounded-2xl">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-white mb-2">Dashboard Overview</h1>
-          <p className="text-gray-400">Welcome back! Here's what's happening with your store today.</p>
+          <h1 className="text-2xl md:text-3xl font-serif font-bold text-white flex items-center gap-3">
+            <span>Marketplace Control Center</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-400 font-sans font-semibold">
+              Live Real-Time
+            </span>
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Complete platform oversight for Indian Artisans, Customers, Products, and AI Operations.
+          </p>
         </div>
-        <div className="bg-dark-800 border border-dark-600 rounded-lg px-4 py-2 flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-sm font-medium text-gray-300">Live Data Sync</span>
-        </div>
-      </div>
-      
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiCards.map((c, i) => (
-          <div key={i} className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6 hover:border-gold-500/30 transition-all group">
-            <div className="flex justify-between items-start mb-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${c.bg} group-hover:scale-110 transition-transform`}>
-                <c.icon className={`w-6 h-6 ${c.color}`} />
-              </div>
-              {c.trend === 'up' && <HiTrendingUp className="w-5 h-5 text-green-400" />}
-              {c.trend === 'down' && <HiTrendingDown className="w-5 h-5 text-red-400" />}
-            </div>
-            <div>
-              <p className="text-sm text-gray-400 font-medium mb-1">{c.title}</p>
-              <h3 className="text-2xl font-bold text-white mb-2">{c.value}</h3>
-              <p className="text-xs text-gray-500">{c.sub}</p>
-            </div>
-          </div>
-        ))}
+        <button
+          onClick={fetchOverview}
+          disabled={loading}
+          className="btn-secondary self-start sm:self-auto flex items-center gap-2 text-xs py-2 px-3 shrink-0"
+        >
+          <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh Data</span>
+        </button>
       </div>
 
-      {/* Main Charts Row */}
+      {/* Primary KPI Stats Grid */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="card h-28 shimmer" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {/* Total Artisans */}
+          <div className="card p-4 flex flex-col justify-between border-l-4 border-l-gold-500">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400">Total Artisans</span>
+              <div className="p-2 rounded-lg bg-gold-500/10 text-gold-400">
+                <HiUserGroup className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-white">{data?.totalArtisans || 0}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                <span className="text-green-400 font-semibold">{data?.verifiedArtisans || 0}</span> verified
+                {data?.pendingArtisans > 0 && <span className="text-yellow-400 ml-1">({data.pendingArtisans} pending)</span>}
+              </p>
+            </div>
+          </div>
+
+          {/* Total Customers */}
+          <div className="card p-4 flex flex-col justify-between border-l-4 border-l-blue-500">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400">Customers</span>
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <HiUsers className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-white">{data?.totalCustomers || 0}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Registered buyers</p>
+            </div>
+          </div>
+
+          {/* Total Products */}
+          <div className="card p-4 flex flex-col justify-between border-l-4 border-l-purple-500">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400">Total Products</span>
+              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                <HiCollection className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-white">{data?.productStats?.total || 0}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                <span className="text-green-400">{data?.productStats?.active || 0}</span> live / <span className="text-red-400">{data?.productStats?.outOfStock || 0}</span> OOS
+              </p>
+            </div>
+          </div>
+
+          {/* Total Orders */}
+          <div className="card p-4 flex flex-col justify-between border-l-4 border-l-emerald-500">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400">Total Orders</span>
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <HiShoppingBag className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-white">{data?.orderStats?.total || 0}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                <span className="text-yellow-400">{data?.orderStats?.pending || 0} pending</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Total Revenue */}
+          <div className="card p-4 flex flex-col justify-between border-l-4 border-l-cyan-500">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400">Revenue</span>
+              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+                <HiCurrencyRupee className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-white">₹{(data?.totalRevenue || 0).toLocaleString('en-IN')}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Platform GMV</p>
+            </div>
+          </div>
+
+          {/* AI Catalogs */}
+          <div className="card p-4 flex flex-col justify-between border-l-4 border-l-pink-500">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400">AI Powered</span>
+              <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400">
+                <HiSparkles className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-white">{data?.productStats?.aiGenerated || 0}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">AI catalogs generated</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Action Matrix */}
+      <div className="card p-6 space-y-4">
+        <h2 className="text-base font-semibold text-white">⚡ Quick Actions</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: 'Add Category', path: '/admin/categories', icon: HiPlus, color: 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20' },
+            { label: 'Pending Artisans', path: '/admin/artisans?status=pending', icon: HiUserGroup, color: 'text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20' },
+            { label: 'Review Products', path: '/admin/products', icon: HiCollection, color: 'text-purple-400 bg-purple-500/10 hover:bg-purple-500/20' },
+            { label: 'Manage Orders', path: '/admin/orders', icon: HiShoppingBag, color: 'text-green-400 bg-green-500/10 hover:bg-green-500/20' },
+            { label: 'Broadcast Alert', path: '/admin/notifications', icon: HiBell, color: 'text-pink-400 bg-pink-500/10 hover:bg-pink-500/20' },
+            { label: 'AI Review', path: '/admin/ai', icon: HiSparkles, color: 'text-gold-400 bg-gold-500/10 hover:bg-gold-500/20' },
+          ].map((a, i) => (
+            <Link
+              key={i}
+              to={a.path}
+              className={`p-3.5 rounded-xl border border-dark-600 flex flex-col items-center justify-center text-center gap-2 transition-all group ${a.color}`}
+            >
+              <a.icon className="w-5 h-5 transition-transform group-hover:scale-110" />
+              <span className="text-xs font-semibold text-white">{a.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Operational Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Area Chart */}
-        <div className="lg:col-span-2 bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white">Revenue Overview (Last 7 Days)</h3>
-            <span className="text-xs font-medium bg-dark-700 px-2.5 py-1 rounded-md text-gray-300">Daily</span>
+        {/* Order Status Breakdown */}
+        <div className="card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-white text-sm">Order Status Flow</h3>
+            <Link to="/admin/orders" className="text-xs text-gold-400 hover:underline">View All</Link>
           </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis dataKey="name" stroke="#666" tick={{fill: '#888', fontSize: 12}} axisLine={false} tickLine={false} />
-                <YAxis stroke="#666" tick={{fill: '#888', fontSize: 12}} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v >= 1000 ? (v/1000).toFixed(1) + 'k' : v}`} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.5)' }}
-                  itemStyle={{ color: '#D4AF37' }}
-                  labelStyle={{ color: '#ccc', marginBottom: '4px' }}
-                  formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
-                />
-                <Area type="monotone" dataKey="amount" stroke="#D4AF37" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" activeDot={{r: 6, strokeWidth: 0, fill: '#D4AF37'}} />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="space-y-2.5">
+            {[
+              { label: 'Pending Payment / Verification', count: data?.orderStats?.pending || 0, color: 'bg-yellow-500', icon: HiClock },
+              { label: 'Processing in Workshop', count: data?.orderStats?.processing || 0, color: 'bg-blue-500', icon: HiRefresh },
+              { label: 'Shipped & In-Transit', count: data?.orderStats?.shipped || 0, color: 'bg-purple-500', icon: HiArrowRight },
+              { label: 'Delivered to Customer', count: data?.orderStats?.delivered || 0, color: 'bg-green-500', icon: HiCheckCircle },
+              { label: 'Cancelled / Returned', count: data?.orderStats?.cancelled || 0, color: 'bg-red-500', icon: HiXCircle },
+            ].map((s, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-dark-700/50 border border-dark-600/70 text-xs">
+                <div className="flex items-center gap-2.5 text-gray-300">
+                  <span className={`w-2 h-2 rounded-full ${s.color}`} />
+                  <span>{s.label}</span>
+                </div>
+                <span className="font-bold text-white">{s.count}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Order Status Pie Chart */}
-        <div className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6 flex flex-col">
-          <h3 className="text-lg font-bold text-white mb-6">Order Status</h3>
-          {pieData.length > 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+        {/* Product Catalog Breakdown */}
+        <div className="card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-white text-sm">Product Inventory Health</h3>
+            <Link to="/admin/products" className="text-xs text-gold-400 hover:underline">Manage</Link>
+          </div>
+          <div className="space-y-2.5">
+            {[
+              { label: 'Active Live Listings', count: data?.productStats?.active || 0, text: 'text-green-400' },
+              { label: 'Pending Quality Approval', count: data?.productStats?.pending || 0, text: 'text-yellow-400' },
+              { label: 'Rejected / Needs Revision', count: data?.productStats?.rejected || 0, text: 'text-red-400' },
+              { label: 'Out of Stock Items', count: data?.productStats?.outOfStock || 0, text: 'text-gray-400' },
+              { label: 'AI Enhanced Listings', count: data?.productStats?.aiGenerated || 0, text: 'text-gold-400' },
+            ].map((p, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-dark-700/50 border border-dark-600/70 text-xs">
+                <span className="text-gray-300">{p.label}</span>
+                <span className={`font-bold ${p.text}`}>{p.count}</span>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-6 w-full">
-                {pieData.map((entry, index) => (
-                  <div key={entry.name} className="flex items-center gap-2 text-sm">
-                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                    <span className="text-gray-400">{entry.name}</span>
-                    <span className="text-white font-medium ml-auto">{entry.value}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Real-time Activity Feed */}
+        <div className="card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-white text-sm">Recent Platform Activity</h3>
+            <Link to="/admin/activity" className="text-xs text-gold-400 hover:underline">Full Log</Link>
+          </div>
+          {data?.recentActivity?.length > 0 ? (
+            <div className="space-y-3">
+              {data.recentActivity.map((act, idx) => (
+                <div key={idx} className="flex items-start gap-3 p-2.5 rounded-lg bg-dark-700/40 border border-dark-600/50 text-xs">
+                  <div className="p-1.5 rounded-full bg-gold-500/10 text-gold-400 shrink-0 mt-0.5">
+                    <HiEye className="w-3.5 h-3.5" />
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-gray-200 font-medium truncate">{act.message}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      {act.time ? new Date(act.time).toLocaleString('en-IN') : 'Recently'}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-             <div className="flex-1 flex items-center justify-center text-gray-500">No order data available</div>
+            <div className="text-center py-8 text-gray-500 text-xs">
+              No recent activity recorded yet.
+            </div>
           )}
-        </div>
-      </div>
-
-      {/* Secondary Charts & Lists Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Sales by Category Bar Chart */}
-        <div className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-white mb-6">Units Sold by Category</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.salesData} layout="vertical" margin={{top: 0, right: 0, left: -20, bottom: 0}}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                <XAxis type="number" stroke="#666" tick={{fill: '#888', fontSize: 12}} axisLine={false} tickLine={false} />
-                <YAxis dataKey="name" type="category" stroke="#666" tick={{fill: '#ccc', fontSize: 12}} axisLine={false} tickLine={false} />
-                <Tooltip 
-                  cursor={{fill: '#2a2a2a'}}
-                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                  itemStyle={{ color: '#D4AF37' }}
-                />
-                <Bar dataKey="count" name="Units Sold" fill="#D4AF37" radius={[0, 4, 4, 0]} barSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Top Products List */}
-        <div className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white">Top Performing Products</h3>
-            <Link to="/admin/products" className="text-sm text-gold-400 hover:text-gold-300">View All</Link>
-          </div>
-          <div className="space-y-4">
-            {stats.topProducts && stats.topProducts.length > 0 ? (
-              stats.topProducts.map((p, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-dark-700/50 hover:bg-dark-700 transition-colors">
-                  <div className="w-8 h-8 rounded-md bg-dark-600 flex items-center justify-center text-gold-400 font-bold text-xs shrink-0">
-                    #{i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{p.name}</p>
-                    <p className="text-xs text-gray-400">{p.qty} units sold</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-white">₹{p.revenue?.toLocaleString()}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-6">No product sales yet</div>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Orders List */}
-        <div className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white">Recent Orders</h3>
-            <Link to="/admin/orders" className="text-sm text-gold-400 hover:text-gold-300">View All</Link>
-          </div>
-          <div className="space-y-4">
-            {stats.recentOrders && stats.recentOrders.length > 0 ? (
-              stats.recentOrders.map((o) => {
-                const statusStyle = STATUS_COLORS[o.status] || STATUS_COLORS.pending;
-                return (
-                  <div key={o.id} className="flex flex-col gap-2 p-3 rounded-lg bg-dark-700/50 border border-dark-600">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-medium text-white">{o.customerName}</p>
-                        <p className="text-xs text-gray-400">{new Date(o.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <span className="text-sm font-bold text-white">₹{o.total?.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <p className="text-xs text-gray-500 font-mono">#{o.shortId}</p>
-                      <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border ${statusStyle}`}>
-                        {o.status}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="text-center text-gray-500 py-6">No recent orders</div>
-            )}
-          </div>
-        </div>
-        
-      </div>
-
-      {/* Inventory Alerts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Low Stock Products */}
-        <div className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-              Low Stock Alerts
-            </h3>
-            <span className="text-xs bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-1 rounded">Action Required</span>
-          </div>
-          <div className="space-y-4">
-            {stats.lowStock && stats.lowStock.length > 0 ? (
-              stats.lowStock.map((p, i) => (
-                <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-dark-700/50 border border-dark-600">
-                  <p className="text-sm font-medium text-white truncate flex-1 pr-4">{p.name}</p>
-                  <span className="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">
-                    Only {p.stock} left
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-6">All products are sufficiently stocked</div>
-            )}
-          </div>
-        </div>
-
-        {/* Out of Stock Products */}
-        <div className="bg-dark-800/80 backdrop-blur-sm border border-dark-600 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-              Out of Stock
-            </h3>
-            <span className="text-xs bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-1 rounded">Critical</span>
-          </div>
-          <div className="space-y-4">
-            {stats.outOfStock && stats.outOfStock.length > 0 ? (
-              stats.outOfStock.map((p, i) => (
-                <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-dark-700/50 border border-dark-600">
-                  <p className="text-sm font-medium text-white truncate flex-1 pr-4">{p.name}</p>
-                  <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded">
-                    Sold Out
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-6">No products are out of stock</div>
-            )}
-          </div>
         </div>
       </div>
     </div>
