@@ -55,7 +55,6 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
       return;
     }
     addToCart(product, 'Standard', quantity);
-    toast.success(`Added ${quantity} × ${product.name} to cart! 🛒`);
     onClose();
   };
 

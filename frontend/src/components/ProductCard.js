@@ -52,7 +52,6 @@ export default function ProductCard({ product }) {
     }
     const defaultSize = product.sizes?.[0] || 'Standard';
     addToCart(product, defaultSize, 1);
-    toast.success(`Added ${name} to cart! 🛒`);
   };
 
   const handleWishlistToggle = (e) => {

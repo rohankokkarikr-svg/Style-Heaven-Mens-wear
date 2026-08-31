@@ -19,7 +19,6 @@ export default function Wishlist() {
     const defaultSize = product.sizes?.[0] || 'Standard';
     addToCart(product, defaultSize, 1);
     removeFromWishlist(product.id);
-    toast.success(`Moved ${product.name} to your Cart! 🛒`);
   };
 
   return (

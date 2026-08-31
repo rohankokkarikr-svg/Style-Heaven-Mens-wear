@@ -158,7 +158,6 @@ export default function ProductDetail() {
     }
     const defaultSize = product.sizes?.[0] || 'Standard';
     addToCart(product, defaultSize, quantity);
-    toast.success(`Added ${quantity} × ${product.name} to cart! 🛒`);
   };
 
   const tabs = [
