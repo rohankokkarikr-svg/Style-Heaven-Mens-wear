@@ -15,67 +15,67 @@ const HANDICRAFT_CATEGORIES = [
     name: 'Home Décor & Furnishings',
     slug: 'Home Décor & Furnishings',
     icon: '🏠',
-    shortDesc: 'Elevate your living space with artisanal wall hangings, rugs, decorative lamps, and Indian crafts.',
-    productCount: 12,
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&auto=format&fit=crop',
-    bannerImage: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1600&auto=format&fit=crop',
-    featuredTag: 'Artisanal Living'
+  shortDesc: 'Elevate your living space with artisanal wall hangings, rugs, decorative lamps, and Indian crafts.',
+  productCount: 12,
+  image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&auto=format&fit=crop',
+  bannerImage: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1600&auto=format&fit=crop',
+  featuredTag: 'Artisanal Living'
   },
-  {
-    id: 'handmade-jewelry',
+{
+  id: 'handmade-jewelry',
     name: 'Handmade Jewelry & Accessories',
-    slug: 'Handmade Jewelry & Accessories',
-    icon: '💎',
-    shortDesc: 'Adorn timeless silver, oxidized brass, Kundan, and terracotta handmade jewelry masterfully crafted by hand.',
-    productCount: 12,
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900&auto=format&fit=crop',
-    bannerImage: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1600&auto=format&fit=crop',
-    featuredTag: 'Timeless Adornments'
-  },
-  {
-    id: 'pottery-terracotta',
+      slug: 'Handmade Jewelry & Accessories',
+        icon: '💎',
+          shortDesc: 'Adorn timeless silver, oxidized brass, Kundan, and terracotta handmade jewelry masterfully crafted by hand.',
+            productCount: 12,
+              image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900&auto=format&fit=crop',
+                bannerImage: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1600&auto=format&fit=crop',
+                  featuredTag: 'Timeless Adornments'
+},
+{
+  id: 'pottery-terracotta',
     name: 'Pottery & Terracotta',
-    slug: 'Pottery & Terracotta',
-    icon: '🏺',
-    shortDesc: 'Handcrafted clay pots, blue pottery vases, terracotta diyas, and authentic artisanal ceramics.',
-    productCount: 12,
-    image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=900&auto=format&fit=crop',
-    bannerImage: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1600&auto=format&fit=crop',
-    featuredTag: 'Earth & Fire Crafts'
-  },
-  {
-    id: 'wooden-handicrafts',
+      slug: 'Pottery & Terracotta',
+        icon: '🏺',
+          shortDesc: 'Handcrafted clay pots, blue pottery vases, terracotta diyas, and authentic artisanal ceramics.',
+            productCount: 12,
+              image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=900&auto=format&fit=crop',
+                bannerImage: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1600&auto=format&fit=crop',
+                  featuredTag: 'Earth & Fire Crafts'
+},
+{
+  id: 'wooden-handicrafts',
     name: 'Wooden Handicrafts',
-    slug: 'Wooden Handicrafts',
-    icon: '🪵',
-    shortDesc: 'Channapatna lac-turnery toys, intricately hand-carved teak sculptures, wall art, and heritage woodwork.',
-    productCount: 12,
-    image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=900&auto=format&fit=crop',
-    bannerImage: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1600&auto=format&fit=crop',
-    featuredTag: 'Hand-Carved Heritage'
-  },
-  {
-    id: 'traditional-paintings',
+      slug: 'Wooden Handicrafts',
+        icon: '🪵',
+          shortDesc: 'Channapatna lac-turnery toys, intricately hand-carved teak sculptures, wall art, and heritage woodwork.',
+            productCount: 12,
+              image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=900&auto=format&fit=crop',
+                bannerImage: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1600&auto=format&fit=crop',
+                  featuredTag: 'Hand-Carved Heritage'
+},
+{
+  id: 'traditional-paintings',
     name: 'Traditional Paintings & Wall Art',
-    slug: 'Traditional Paintings & Wall Art',
-    icon: '🖼️',
-    shortDesc: 'Authentic Madhubani, Warli tribal art, Pattachitra, Gond, and Tanjore gold foil handmade paintings.',
-    productCount: 12,
-    image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=900&auto=format&fit=crop',
-    bannerImage: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1600&auto=format&fit=crop',
-    featuredTag: 'Folk & Tribal Arts'
-  },
-  {
-    id: 'eco-friendly',
+      slug: 'Traditional Paintings & Wall Art',
+        icon: '🖼️',
+          shortDesc: 'Authentic Madhubani, Warli tribal art, Pattachitra, Gond, and Tanjore gold foil handmade paintings.',
+            productCount: 12,
+              image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=900&auto=format&fit=crop',
+                bannerImage: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1600&auto=format&fit=crop',
+                  featuredTag: 'Folk & Tribal Arts'
+},
+{
+  id: 'eco-friendly',
     name: 'Eco-Friendly & Natural Products',
-    slug: 'Eco-Friendly & Natural Products',
-    icon: '🌿',
-    shortDesc: 'Sustainable natural fiber baskets, golden jute rugs, bamboo tableware, and conscious handcrafted living.',
-    productCount: 12,
-    image: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=900&auto=format&fit=crop',
-    bannerImage: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1600&auto=format&fit=crop',
-    featuredTag: 'Sustainable Living'
-  }
+      slug: 'Eco-Friendly & Natural Products',
+        icon: '🌿',
+          shortDesc: 'Sustainable natural fiber baskets, golden jute rugs, bamboo tableware, and conscious handcrafted living.',
+            productCount: 12,
+              image: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=900&auto=format&fit=crop',
+                bannerImage: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=1600&auto=format&fit=crop',
+                  featuredTag: 'Sustainable Living'
+}
 ];
 
 const HANDICRAFT_PRODUCTS = [
