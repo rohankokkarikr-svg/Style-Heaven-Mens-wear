@@ -8,6 +8,7 @@ import Maintenance from './pages/Maintenance';
 // Contexts
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import { SettingsProvider } from './context/SettingsContext';
 
 // Components
@@ -22,6 +23,7 @@ import Signup from './pages/Signup';
 import ProductList from './pages/ProductList';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
+import Wishlist from './pages/Wishlist';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Rewards from './pages/Rewards';
@@ -68,75 +70,79 @@ function App() {
     <SettingsProvider>
       <AuthProvider>
         <CartProvider>
-        <Router>
-          {/* Global Toast Notifications */}
-          <Toaster 
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: '#1a1a1a',
-                color: '#fff',
-                border: '1px solid #333',
-              },
-              success: { iconTheme: { primary: '#D4AF37', secondary: '#1a1a1a' } }
-            }}
-          />
-          
-          <Routes>
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-              <Route index element={<Dashboard />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="artisans" element={<AdminArtisans />} />
-              <Route path="hero-settings" element={<HeroSettings />} />
-              <Route path="discount-banner" element={<DiscountBanner />} />
-              <Route path="reviews" element={<AdminReviews />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+          <WishlistProvider>
+            <Router>
+              {/* Global Toast Notifications */}
+              <Toaster 
+                position="bottom-right"
+                toastOptions={{
+                  style: {
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    border: '1px solid #333',
+                  },
+                  success: { iconTheme: { primary: '#D4AF37', secondary: '#1a1a1a' } }
+                }}
+              />
+              
+              <Routes>
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="artisans" element={<AdminArtisans />} />
+                  <Route path="hero-settings" element={<HeroSettings />} />
+                  <Route path="discount-banner" element={<DiscountBanner />} />
+                  <Route path="reviews" element={<AdminReviews />} />
+                  <Route path="settings" element={<Settings />} />
+                </Route>
 
-            {/* Artisan Routes */}
-            <Route path="/artisan" element={<ArtisanRoute><ArtisanLayout /></ArtisanRoute>}>
-              <Route index element={<ArtisanDashboard />} />
-              <Route path="products" element={<ArtisanProducts />} />
-              <Route path="ai-studio" element={<AIProductStudio />} />
-              <Route path="orders" element={<ArtisanOrders />} />
-              <Route path="earnings" element={<ArtisanEarnings />} />
-              <Route path="profile" element={<ArtisanProfile />} />
-            </Route>
+                {/* Artisan Routes */}
+                <Route path="/artisan" element={<ArtisanRoute><ArtisanLayout /></ArtisanRoute>}>
+                  <Route index element={<ArtisanDashboard />} />
+                  <Route path="products" element={<ArtisanProducts />} />
+                  <Route path="ai-studio" element={<AIProductStudio />} />
+                  <Route path="orders" element={<ArtisanOrders />} />
+                  <Route path="earnings" element={<ArtisanEarnings />} />
+                  <Route path="profile" element={<ArtisanProfile />} />
+                </Route>
 
-            {/* Payment Gateway (No Navbar/Footer) */}
-            <Route path="/payment-gateway" element={<PrivateRoute><PaymentGateway /></PrivateRoute>} />
+                {/* Payment Gateway (No Navbar/Footer) */}
+                <Route path="/payment-gateway" element={<PrivateRoute><PaymentGateway /></PrivateRoute>} />
 
-            {/* Public/User Routes */}
-            <Route path="*" element={
-              <MaintenanceGuard>
-                <div className="flex flex-col min-h-screen">
-                <Navbar />
-                <SpinWheelPopup />
-                <main className="flex-1">
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/products" element={<ProductList />} />
-                    <Route path="/products/:id" element={<ProductDetail />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/artisans/:id" element={<ArtisanStore />} />
-                    
-                    {/* Protected User Routes */}
-                    <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
-                    <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
-                    <Route path="/rewards" element={<PrivateRoute><Rewards /></PrivateRoute>} />
-                    <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-                  </Routes>
+                {/* Public/User Routes */}
+                <Route path="*" element={
+                  <MaintenanceGuard>
+                    <div className="flex flex-col min-h-screen">
+                    <Navbar />
+                    <SpinWheelPopup />
+                    <main className="flex-1">
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/signup" element={<Signup />} />
+                        <Route path="/products" element={<ProductList />} />
+                        <Route path="/categories/:categorySlug" element={<ProductList />} />
+                        <Route path="/products/:id" element={<ProductDetail />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/wishlist" element={<Wishlist />} />
+                        <Route path="/artisans/:id" element={<ArtisanStore />} />
+                        
+                        {/* Protected User Routes */}
+                        <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
+                        <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
+                        <Route path="/rewards" element={<PrivateRoute><Rewards /></PrivateRoute>} />
+                        <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                      </Routes>
 
-                </main>
-              </div>
-            </MaintenanceGuard>
-            } />
-          </Routes>
-        </Router>
+                    </main>
+                  </div>
+                </MaintenanceGuard>
+                } />
+              </Routes>
+            </Router>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </SettingsProvider>

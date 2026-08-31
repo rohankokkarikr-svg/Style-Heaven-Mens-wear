@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HiTruck, HiShieldCheck, HiRefresh, HiArrowRight, HiTag } from 'react-icons/hi';
+import { HiTruck, HiShieldCheck, HiRefresh, HiArrowRight, HiTag, HiSparkles } from 'react-icons/hi';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
 import HeroSlider from '../components/HeroSlider';
+import IndianHandicraftsSection from '../components/IndianHandicraftsSection';
 import Testimonials from '../components/Testimonials';
 import Footer from '../components/Footer';
 import { productAPI, artisanAPI } from '../services/api';
+import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import toast from 'react-hot-toast';
 
 export default function Home() {
@@ -24,8 +26,20 @@ export default function Home() {
     const savedBannerStr = localStorage.getItem('discountBanner');
     if (savedBannerStr) setDiscountBanner(JSON.parse(savedBannerStr));
     const fetchData = async () => {
-      try { const { data } = await productAPI.getFeatured(); setFeatured(Array.isArray(data) ? data : []); } catch {}
-      try { const { data } = await artisanAPI.getAll(); setArtisans(Array.isArray(data) ? data.slice(0, 4) : []); } catch {}
+      try {
+        const { data } = await productAPI.getFeatured();
+        if (Array.isArray(data) && data.length > 0) {
+          setFeatured(data);
+        } else {
+          setFeatured(HANDICRAFT_PRODUCTS.slice(0, 8));
+        }
+      } catch {
+        setFeatured(HANDICRAFT_PRODUCTS.slice(0, 8));
+      }
+      try {
+        const { data } = await artisanAPI.getAll();
+        setArtisans(Array.isArray(data) ? data.slice(0, 4) : []);
+      } catch {}
       setLoading(false);
     };
     fetchData();
@@ -35,27 +49,6 @@ export default function Home() {
     { icon: HiTruck, title: 'Free Shipping', desc: 'On orders over Rs.1500' },
     { icon: HiShieldCheck, title: 'Authentic Handmade', desc: '100% artisan-crafted products' },
     { icon: HiRefresh, title: 'Easy Returns', desc: '7 days return policy' },
-  ];
-
-  const whyFeatures = [
-    { emoji: '🎨', title: 'Support Artisans', desc: 'Every purchase directly supports skilled Indian artisans.' },
-    { emoji: '🤖', title: 'AI-Powered Listings', desc: 'Artisans use our AI to list products instantly.' },
-    { emoji: '🧵', title: 'Authentic Craftsmanship', desc: 'Genuine handloom, handmade, and traditional products.' },
-    { emoji: '🇮🇳', title: 'Made in India', desc: "Celebrating India's rich textile and artisan heritage." },
-  ];
-
-  const topCategories = [
-    { name: 'Sarees', slug: 'Sarees', img: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop', desc: 'Handwoven · Traditional · Silk' },
-    { name: "Women's Fashion", slug: "Women's Fashion", img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop', desc: 'Kurtas · Dresses · Traditional' },
-  ];
-
-  const smallCategories = [
-    { name: 'Handloom', slug: 'Handloom', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&auto=format&fit=crop', desc: '12+ styles' },
-    { name: 'Kurtas', slug: 'Kurtas', img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=600&auto=format&fit=crop', desc: '14+ styles' },
-    { name: 'Handmade', slug: 'Handmade', img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600&auto=format&fit=crop', desc: '18+ styles' },
-    { name: "Men's Fashion", slug: "Men's Fashion", img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop', desc: '16+ styles' },
-    { name: 'Accessories', slug: 'Accessories', img: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&auto=format&fit=crop', desc: '14+ styles' },
-    { name: 'Traditional Wear', slug: 'Traditional Wear', img: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&auto=format&fit=crop', desc: '10+ styles' },
   ];
 
   return (
@@ -73,55 +66,36 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <section className="py-20 bg-dark-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-            <h2 className="section-title mb-4">Shop by Category</h2>
-            <div className="h-1 w-20 bg-gold-500 mx-auto rounded-full" />
-            <p className="text-gray-400 mt-4 text-sm">Explore handcrafted collections from India's finest artisans</p>
-          </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {topCategories.map((cat, i) => (
-              <motion.div key={cat.slug} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}>
-                <Link to={'/products?category=' + encodeURIComponent(cat.slug)} className="group relative h-80 overflow-hidden rounded-xl block">
-                  <div className="absolute inset-0 bg-gradient-to-t from-dark-900/80 via-dark-900/20 to-transparent group-hover:from-dark-900/60 transition-all duration-500 z-10" />
-                  <img src={cat.img} alt={cat.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  <div className="absolute bottom-6 left-6 z-20">
-                    <p className="text-gold-400 text-xs font-semibold uppercase tracking-widest mb-1">{cat.desc}</p>
-                    <h3 className="text-3xl font-serif font-bold text-white mb-2">{cat.name}</h3>
-                    <span className="text-gray-300 group-hover:text-gold-400 flex items-center gap-2 font-medium text-sm transition-colors">Explore Collection <HiArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-2" /></span>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {smallCategories.map((cat, i) => (
-              <motion.div key={cat.slug} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}>
-                <Link to={'/products?category=' + encodeURIComponent(cat.slug)} className="group relative h-52 overflow-hidden rounded-xl block">
-                  <div className="absolute inset-0 bg-gradient-to-t from-dark-900/85 via-dark-900/20 to-transparent group-hover:from-dark-900/60 transition-all duration-500 z-10" />
-                  <img src={cat.img} alt={cat.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  <div className="absolute bottom-4 left-4 z-20">
-                    <p className="text-gold-400 text-[10px] font-semibold uppercase tracking-widest mb-0.5">{cat.desc}</p>
-                    <h3 className="text-base font-serif font-bold text-white mb-1">{cat.name}</h3>
-                    <span className="text-gray-300 group-hover:text-gold-400 flex items-center gap-1 font-medium text-[11px] transition-colors">Shop Now <HiArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" /></span>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+
+      {/* 🇮🇳 Explore Indian Handicrafts - 7 Main Categories */}
+      <IndianHandicraftsSection />
+
       <section className="py-20 bg-dark-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex justify-between items-end mb-12">
-            <div><h2 className="section-title mb-4">New Arrivals</h2><div className="h-1 w-20 bg-gold-500 rounded-full" /></div>
-            <Link to="/products" className="text-gold-400 hover:text-gold-300 font-medium hidden md:block">View All Products</Link>
+            <div>
+              <span className="text-xs font-semibold text-gold-400 uppercase tracking-widest block mb-1">
+                Handcrafted Masterpieces
+              </span>
+              <h2 className="section-title mb-4">Featured Indian Handicrafts</h2>
+              <div className="h-1 w-20 bg-gold-500 rounded-full" />
+            </div>
+            <Link to="/products" className="text-gold-400 hover:text-gold-300 font-medium hidden md:block">
+              View All Handicrafts →
+            </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {loading ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />) : featured.length > 0 ? featured.map((p) => <ProductCard key={p.id} product={p} />) : <div className="col-span-full text-center text-gray-500 py-10">No products available yet.</div>}
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            ) : featured.length > 0 ? (
+              featured.map((p) => <ProductCard key={p.id} product={p} />)
+            ) : (
+              HANDICRAFT_PRODUCTS.slice(0, 8).map((p) => <ProductCard key={p.id} product={p} />)
+            )}
           </div>
-          <div className="mt-8 text-center md:hidden"><Link to="/products" className="btn-outline inline-block">View All Products</Link></div>
+          <div className="mt-8 text-center md:hidden">
+            <Link to="/products" className="btn-outline inline-block">View All Handicrafts</Link>
+          </div>
         </div>
       </section>
       {artisans.length > 0 && (

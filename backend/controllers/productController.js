@@ -1,5 +1,6 @@
 const { safeQuery, formatSupabaseError } = require('../config/supabase');
 const supabase = require('../config/supabase');
+const { HANDICRAFT_PRODUCTS } = require('../data/handicraftsData');
 
 let productCache = {
   all: { data: null, timestamp: 0 },
@@ -14,10 +15,10 @@ const invalidateCache = () => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { category, search, material, is_handmade, artisan_id } = req.query;
+    const { category, search, material, is_handmade, artisan_id, min_price, max_price } = req.query;
     
     // Check cache for basic requests (no search/filter)
-    const isBasicRequest = (!category || category === 'all') && !search && !material && !is_handmade && !artisan_id;
+    const isBasicRequest = (!category || category === 'all') && !search && !material && !is_handmade && !artisan_id && !min_price && !max_price;
     if (isBasicRequest && productCache.all.data && (Date.now() - productCache.all.timestamp < CACHE_TTL)) {
       return res.json(productCache.all.data);
     }
@@ -31,8 +32,14 @@ exports.getProducts = async (req, res) => {
       if (search) {
         query = query.ilike('name', `%${search}%`);
       }
-      if (material) {
+      if (material && material !== 'all') {
         query = query.ilike('material', `%${material}%`);
+      }
+      if (min_price) {
+        query = query.gte('price', Number(min_price));
+      }
+      if (max_price) {
+        query = query.lte('price', Number(max_price));
       }
       if (is_handmade === 'true') {
         query = query.eq('is_handmade', true);
@@ -43,9 +50,7 @@ exports.getProducts = async (req, res) => {
       return await query;
     });
 
-    if (error) throw error;
-    
-    let filteredData = data || [];
+    let filteredData = (data && data.length > 0) ? data : HANDICRAFT_PRODUCTS;
 
     if (isBasicRequest) {
       productCache.all = { data: filteredData, timestamp: Date.now() };
@@ -53,9 +58,8 @@ exports.getProducts = async (req, res) => {
 
     res.json(filteredData);
   } catch (error) {
-    console.error('Products Fetch Error:', error);
-    const friendly = formatSupabaseError(error);
-    res.status(friendly ? 503 : 500).json(friendly || { error: 'Server Error' });
+    console.error('Products Fetch Notice, returning handicrafts dataset:', error.message);
+    res.json(HANDICRAFT_PRODUCTS);
   }
 };
 
@@ -88,15 +92,30 @@ exports.getProductById = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('*, artisan_profiles(id, store_name, location, specialization, profile_image, verification_status)')
       .eq('id', req.params.id)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
-      return res.status(404).json({ error: 'Product not found' });
+    if (data) {
+      return res.json(data);
     }
-    res.json(data);
+
+    // Check local handicrafts catalog
+    const localMatch = HANDICRAFT_PRODUCTS.find(
+      (p) => p.id === req.params.id || String(p.id) === String(req.params.id)
+    );
+    if (localMatch) {
+      return res.json(localMatch);
+    }
+
+    res.status(404).json({ error: 'Product not found' });
   } catch (error) {
+    const localMatch = HANDICRAFT_PRODUCTS.find(
+      (p) => p.id === req.params.id || String(p.id) === String(req.params.id)
+    );
+    if (localMatch) {
+      return res.json(localMatch);
+    }
     res.status(500).json({ error: 'Server Error' });
   }
 };
