@@ -1,66 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { HiTag, HiSave, HiTrash, HiPencil } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import { useSettings, DEFAULT_DISCOUNT_BANNER } from '../../context/SettingsContext';
 
 export default function DiscountBanner() {
-  const [banner, setBanner] = useState({
-    title: 'Summer Sale Live',
-    description: 'Use this code and get upto 30% discount',
-    discount: '30%',
-    code: 'SUMMER30',
-    discountPercentage: 30,
-    buttonText: 'Grab the Deal',
-    buttonLink: '/products',
-    isActive: true
-  });
+  const { settings, updateSettings } = useSettings();
+  const [banner, setBanner] = useState(DEFAULT_DISCOUNT_BANNER);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Load banner from localStorage
-    const savedBannerStr = localStorage.getItem('discountBanner');
-    if (savedBannerStr) {
-      let savedBanner = JSON.parse(savedBannerStr);
-      if (savedBanner.description === 'Up to 30% Off on Premium Collection') {
-        savedBanner.description = 'Use this code and get upto 30% discount';
-        localStorage.setItem('discountBanner', JSON.stringify(savedBanner));
-      }
-      setBanner(savedBanner);
+    if (settings?.discountBanner) {
+      setBanner({ ...DEFAULT_DISCOUNT_BANNER, ...settings.discountBanner });
     }
-  }, []);
+  }, [settings?.discountBanner]);
 
   const saveBanner = async () => {
     setLoading(true);
     try {
-      localStorage.setItem('discountBanner', JSON.stringify(banner));
-      toast.success('Discount banner saved successfully');
+      await updateSettings({ discountBanner: banner });
+      toast.success('Discount banner updated & synced to all devices!');
       setIsEditing(false);
     } catch (err) {
-      toast.error('Failed to save discount banner');
+      console.error('Failed to save discount banner:', err);
+      toast.error('Failed to save discount banner to server.');
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteBanner = () => {
-    if (window.confirm('Are you sure you want to delete the discount banner?')) {
-      localStorage.removeItem('discountBanner');
-      setBanner({
-        title: 'Summer Sale Live',
-        description: 'Use this code and get upto 30% discount',
-        discount: '30%',
-        code: 'SUMMER30',
-        discountPercentage: 30,
-        buttonText: 'Grab the Deal',
-        buttonLink: '/products',
-        isActive: false
-      });
-      toast.success('Discount banner deleted');
+  const deleteBanner = async () => {
+    if (window.confirm('Are you sure you want to disable the discount banner on all devices?')) {
+      const disabledBanner = { ...banner, isActive: false };
+      setLoading(true);
+      try {
+        await updateSettings({ discountBanner: disabledBanner });
+        setBanner(disabledBanner);
+        toast.success('Discount banner disabled across all devices');
+      } catch (err) {
+        toast.error('Failed to disable discount banner on server');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   const handleChange = (field, value) => {
-    setBanner(prev => ({ ...prev, [field]: value }));
+    setBanner((prev) => ({ ...prev, [field]: value }));
   };
 
   return (

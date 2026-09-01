@@ -10,21 +10,18 @@ import Testimonials from '../components/Testimonials';
 import Footer from '../components/Footer';
 import { productAPI, artisanAPI } from '../services/api';
 import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
+import { useSettings, DEFAULT_DISCOUNT_BANNER } from '../context/SettingsContext';
 import toast from 'react-hot-toast';
 
 export default function Home() {
+  const { settings } = useSettings();
   const [featured, setFeatured] = useState([]);
   const [artisans, setArtisans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [discountBanner, setDiscountBanner] = useState({
-    title: 'Artisan Launch Sale', description: 'Use this code and get upto 30% off on handmade products',
-    discount: '30%', code: 'KALA30', discountPercentage: 30,
-    buttonText: 'Grab the Deal', buttonLink: '/products', isActive: true
-  });
+
+  const discountBanner = settings?.discountBanner || DEFAULT_DISCOUNT_BANNER;
 
   useEffect(() => {
-    const savedBannerStr = localStorage.getItem('discountBanner');
-    if (savedBannerStr) setDiscountBanner(JSON.parse(savedBannerStr));
     const fetchData = async () => {
       try {
         const { data } = await productAPI.getFeatured();
