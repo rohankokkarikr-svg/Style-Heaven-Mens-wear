@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { settingsAPI } from '../services/api';
+import { supabase } from '../lib/supabase';
+
+const SETTINGS_CACHE_KEY = 'sh_settings_v4_synced';
+
+// Clean up old legacy keys that cause stale data on mobile devices
+try {
+  localStorage.removeItem('heroSlides');
+  localStorage.removeItem('discountBanner');
+  localStorage.removeItem('sh_settings');
+  localStorage.removeItem('sh_settings_v2');
+  localStorage.removeItem('sh_settings_v3');
+} catch {}
 
 export const DEFAULT_HERO_SLIDES = [
   {
@@ -83,9 +95,9 @@ const SettingsContext = createContext({
 
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
-    // Seed from localStorage for instant paint (avoid flash)
+    // Seed from versioned localStorage for instant paint without stale data
     try {
-      const cached = localStorage.getItem('sh_settings');
+      const cached = localStorage.getItem(SETTINGS_CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         return {
@@ -100,20 +112,59 @@ export const SettingsProvider = ({ children }) => {
   });
 
   const refreshSettings = useCallback(async () => {
+    let loadedData = null;
+
+    // 1. Try Backend API first
     try {
       const { data } = await settingsAPI.get();
-      const merged = {
-        ...DEFAULT_SETTINGS,
-        ...data,
-        heroSlides: Array.isArray(data.heroSlides) && data.heroSlides.length > 0 ? data.heroSlides : (settings.heroSlides || DEFAULT_HERO_SLIDES),
-        discountBanner: data.discountBanner ? { ...DEFAULT_DISCOUNT_BANNER, ...data.discountBanner } : (settings.discountBanner || DEFAULT_DISCOUNT_BANNER),
-      };
-      setSettings(merged);
-      localStorage.setItem('sh_settings', JSON.stringify(merged));
+      if (data && typeof data === 'object') {
+        loadedData = data;
+      }
     } catch (err) {
-      console.warn('Could not load site settings:', err.message);
+      // Backend not reachable from mobile client or static hosting — proceed to Supabase fallback
     }
-  }, [settings.heroSlides, settings.discountBanner]);
+
+    // 2. Fallback to Supabase platform_settings / custom settings
+    if (!loadedData || !loadedData.heroSlides) {
+      try {
+        const { data: supaData } = await supabase
+          .from('platform_settings')
+          .select('*')
+          .eq('id', 'main')
+          .single();
+
+        if (supaData) {
+          loadedData = {
+            ...DEFAULT_SETTINGS,
+            ...loadedData,
+            ...supaData,
+            heroSlides: Array.isArray(supaData.hero_slides) && supaData.hero_slides.length > 0
+              ? supaData.hero_slides
+              : (Array.isArray(supaData.heroSlides) && supaData.heroSlides.length > 0 ? supaData.heroSlides : (loadedData?.heroSlides || DEFAULT_HERO_SLIDES)),
+            discountBanner: supaData.discount_banner || supaData.discountBanner || loadedData?.discountBanner || DEFAULT_DISCOUNT_BANNER,
+          };
+        }
+      } catch (e) {
+        // Silently use defaults if offline
+      }
+    }
+
+    const merged = {
+      ...DEFAULT_SETTINGS,
+      ...(loadedData || {}),
+      heroSlides: Array.isArray(loadedData?.heroSlides) && loadedData.heroSlides.length > 0
+        ? loadedData.heroSlides
+        : DEFAULT_HERO_SLIDES,
+      discountBanner: loadedData?.discountBanner
+        ? { ...DEFAULT_DISCOUNT_BANNER, ...loadedData.discountBanner }
+        : DEFAULT_DISCOUNT_BANNER,
+    };
+
+    setSettings(merged);
+    try {
+      localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(merged));
+    } catch {}
+  }, []);
 
   const updateSettings = useCallback(async (partialUpdates) => {
     try {
@@ -121,20 +172,34 @@ export const SettingsProvider = ({ children }) => {
         ...settings,
         ...partialUpdates,
       };
-      // Optimistic update
-      setSettings(updated);
-      localStorage.setItem('sh_settings', JSON.stringify(updated));
 
-      // Persist to backend server API
-      const res = await settingsAPI.update(partialUpdates);
-      if (res.data?.settings) {
-        const serverMerged = {
-          ...DEFAULT_SETTINGS,
-          ...res.data.settings,
-        };
-        setSettings(serverMerged);
-        localStorage.setItem('sh_settings', JSON.stringify(serverMerged));
+      // 1. Optimistic local update
+      setSettings(updated);
+      try {
+        localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(updated));
+      } catch {}
+
+      // 2. Persist to backend server API
+      try {
+        await settingsAPI.update(partialUpdates);
+      } catch (apiErr) {
+        console.warn('Backend API update failed, syncing with Supabase directly:', apiErr.message);
       }
+
+      // 3. Persist to Supabase platform_settings for direct mobile & global reach
+      try {
+        const supaPayload = {
+          id: 'main',
+          ...partialUpdates,
+          hero_slides: partialUpdates.heroSlides || updated.heroSlides,
+          discount_banner: partialUpdates.discountBanner || updated.discountBanner,
+          updated_at: new Date().toISOString(),
+        };
+        await supabase.from('platform_settings').upsert([supaPayload]);
+      } catch (supaErr) {
+        console.warn('Supabase platform_settings update warning:', supaErr.message);
+      }
+
       return { success: true };
     } catch (err) {
       console.error('Failed to update settings:', err);
@@ -142,10 +207,10 @@ export const SettingsProvider = ({ children }) => {
     }
   }, [settings]);
 
-  // Load on mount
+  // Load fresh settings on mount
   useEffect(() => {
     refreshSettings();
-  }, []);
+  }, [refreshSettings]);
 
   return (
     <SettingsContext.Provider value={{ settings, refreshSettings, updateSettings }}>

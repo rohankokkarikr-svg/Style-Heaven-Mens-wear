@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiArrowRight, HiChevronLeft, HiChevronRight } from 'react-icons/hi';
@@ -247,24 +247,24 @@ export default function HeroSlider() {
         <span className="text-gray-300 text-xs">{String(activeSlides.length).padStart(2, '0')}</span>
       </div>
 
-      {/* ── Navigation Arrows ── */}
+      {/* ── Navigation Arrows (Desktop / Tablet only to prevent mobile text overlap) ── */}
       <button
         onClick={prev}
         aria-label="Previous slide"
-        className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95"
+        className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/50 backdrop-blur-md hidden md:flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95"
       >
         <HiChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95"
+        className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/50 backdrop-blur-md hidden md:flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95"
       >
         <HiChevronRight className="w-5 h-5" />
       </button>
 
       {/* ── Dot Indicators ── */}
-      <div className="absolute bottom-14 sm:bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 sm:gap-3">
+      <div className="absolute bottom-10 sm:bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 sm:gap-3">
         {activeSlides.map((_, i) => (
           <button
             key={i}
@@ -295,8 +295,8 @@ export default function HeroSlider() {
         />
       </div>
 
-      {/* ── Scroll-down Indicator ── */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 hidden sm:flex flex-col items-center gap-1">
+      {/* ── Scroll-down Indicator (Desktop only to prevent mobile clutter) ── */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 hidden md:flex flex-col items-center gap-1">
         <span className="text-[9px] text-gray-400 uppercase tracking-[0.2em]">Scroll</span>
         <motion.div
           className="w-px h-6 bg-gradient-to-b from-amber-400 to-transparent"
