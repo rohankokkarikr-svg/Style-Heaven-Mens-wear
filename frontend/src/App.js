@@ -30,6 +30,7 @@ import Rewards from './pages/Rewards';
 import Profile from './pages/Profile';
 import PaymentGateway from './pages/PaymentGateway';
 import ArtisanStore from './pages/ArtisanStore';
+import MobileAppView from './pages/MobileAppView';
 
 // Artisan Pages
 import ArtisanLayout from './pages/artisan/ArtisanLayout';
@@ -153,6 +154,10 @@ function App() {
                         <Route path="/cart" element={<Cart />} />
                         <Route path="/wishlist" element={<Wishlist />} />
                         <Route path="/artisans/:id" element={<ArtisanStore />} />
+                        
+                        {/* Mobile App Simulator Routes */}
+                        <Route path="/mobile" element={<MobileAppView />} />
+                        <Route path="/app" element={<MobileAppView />} />
                         
                         {/* Protected User Routes */}
                         <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />

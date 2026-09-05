@@ -4,9 +4,9 @@ const supabase = require('../config/supabase');
 exports.getDashboardStats = async (req, res) => {
   try {
     const now = new Date();
-    const startOfToday = new Date(now); startOfToday.setHours(0,0,0,0);
-    const startOf7Days = new Date(now); startOf7Days.setDate(now.getDate() - 6); startOf7Days.setHours(0,0,0,0);
-    const startOf30Days = new Date(now); startOf30Days.setDate(now.getDate() - 29); startOf30Days.setHours(0,0,0,0);
+    const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+    const startOf7Days = new Date(now); startOf7Days.setDate(now.getDate() - 6); startOf7Days.setHours(0, 0, 0, 0);
+    const startOf30Days = new Date(now); startOf30Days.setDate(now.getDate() - 29); startOf30Days.setHours(0, 0, 0, 0);
     const startOfPrev30 = new Date(startOf30Days); startOfPrev30.setDate(startOfPrev30.getDate() - 30);
 
     // ── Run all queries in parallel with safety wrapper ──────────────────────────
@@ -47,7 +47,7 @@ exports.getDashboardStats = async (req, res) => {
 
     // ── KPI Calculations ─────────────────────────────────────────────────────
     const totalRevenue = allOrders.reduce((s, o) => s + Number(o.total_price || 0), 0);
-    const totalOrders  = allOrders.length;
+    const totalOrders = allOrders.length;
     const totalProducts = products.length;
 
     // Today's revenue
@@ -91,12 +91,12 @@ exports.getDashboardStats = async (req, res) => {
     const totalDiscounts = allOrders.reduce((s, o) => s + Number(o.discount_amount || 0), 0);
 
     // ── Revenue chart — last 7 days ──────────────────────────────────────────
-    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const revenueData = [];
     for (let i = 6; i >= 0; i--) {
       const day = new Date(now);
       day.setDate(now.getDate() - i);
-      day.setHours(0,0,0,0);
+      day.setHours(0, 0, 0, 0);
       const nextDay = new Date(day); nextDay.setDate(day.getDate() + 1);
       const dayRevenue = allOrders
         .filter(o => { const d = new Date(o.created_at); return d >= day && d < nextDay; })
@@ -117,7 +117,7 @@ exports.getDashboardStats = async (req, res) => {
       const cat = item.products?.category || 'Other';
       const capitalised = cat.charAt(0).toUpperCase() + cat.slice(1);
       if (!categoryMap[capitalised]) categoryMap[capitalised] = { count: 0, revenue: 0 };
-      categoryMap[capitalised].count  += Number(item.quantity || 1);
+      categoryMap[capitalised].count += Number(item.quantity || 1);
       categoryMap[capitalised].revenue += Number(item.price_at_time || 0) * Number(item.quantity || 1);
     });
     const salesData = Object.entries(categoryMap)
@@ -142,7 +142,7 @@ exports.getDashboardStats = async (req, res) => {
     orderItems.forEach(item => {
       const name = item.products?.name || 'Unknown';
       if (!productSalesMap[name]) productSalesMap[name] = { name, qty: 0, revenue: 0 };
-      productSalesMap[name].qty     += Number(item.quantity || 1);
+      productSalesMap[name].qty += Number(item.quantity || 1);
       productSalesMap[name].revenue += Number(item.price_at_time || 0) * Number(item.quantity || 1);
     });
     const topProducts = Object.values(productSalesMap)
@@ -153,10 +153,10 @@ exports.getDashboardStats = async (req, res) => {
     // ── Inventory / Stock Calculations ───────────────────────────────────────
     const outOfStock = [];
     const lowStock = [];
-    
+
     products.forEach(p => {
       const currentStock = p.stock_quantity !== undefined ? p.stock_quantity : 0;
-      
+
       if (currentStock === 0 || p.is_in_stock === false) {
         outOfStock.push({ name: p.name, stock: 0 });
       } else if (currentStock < 5) {
@@ -168,7 +168,7 @@ exports.getDashboardStats = async (req, res) => {
     lowStock.sort((a, b) => a.stock - b.stock);
 
     // ── Monthly revenue (last 6 months) ─────────────────────────────────────
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthlyData = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -188,7 +188,7 @@ exports.getDashboardStats = async (req, res) => {
     // ── Format recent orders ─────────────────────────────────────────────────
     const recentOrdersFmt = recentOrders.map(o => ({
       id: o.id,
-      shortId: o.id?.substring(0,8),
+      shortId: o.id?.substring(0, 8),
       customerName: o.users?.name || 'Guest',
       customerEmail: o.users?.email || '',
       total: Number(o.total_price || 0),

@@ -133,6 +133,16 @@ export default function Navbar() {
 
             {/* 3. Right: Search, Wishlist, Cart & Account */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Mobile App Simulator Button */}
+              <Link
+                to="/mobile"
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold-500/15 border border-gold-500/40 text-gold-400 text-xs font-bold hover:bg-gold-500 hover:text-dark-900 transition-all shadow-sm"
+                title="Open Mobile App View"
+              >
+                <span>📱</span>
+                <span>Mobile App</span>
+              </Link>
+
               {/* Search Toggle Button */}
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
