@@ -19,15 +19,17 @@ const { GoogleGenAI } = require('@google/genai');
 
 // ── Model Configuration ──────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+const DEFAULT_MODEL = 'gemini-flash-latest';
 const CANDIDATE_FLASH_MODELS = [
   'gemini-flash-latest',
-  'gemini-3.6-flash',
   'gemini-2.5-flash',
+  'gemini-3.6-flash',
   'gemini-2.0-flash',
   'gemini-1.5-flash',
   'gemini-1.5-flash-8b',
 ];
+
+let activeWorkingModel = 'gemini-flash-latest';
 
 const SEVEN_CATEGORIES = [
   'Handloom & Textiles',
@@ -50,7 +52,13 @@ function getApiKey() {
 }
 
 function getModelName() {
-  return (process.env.GEMINI_MODEL || DEFAULT_MODEL).trim();
+  return (activeWorkingModel || process.env.GEMINI_MODEL || DEFAULT_MODEL).trim();
+}
+
+function getModelsToTry() {
+  const preferred = getModelName();
+  const list = [preferred, ...CANDIDATE_FLASH_MODELS.filter(m => m !== preferred)];
+  return Array.from(new Set(list));
 }
 
 function isKeyConfigured() {
@@ -137,8 +145,7 @@ async function generateText(prompt, retries = 2) {
   }
 
   const ai = getClient();
-  const configuredModel = getModelName();
-  const modelsToTry = [configuredModel, ...CANDIDATE_FLASH_MODELS.filter(m => m !== configuredModel)];
+  const modelsToTry = getModelsToTry();
 
   let lastError = null;
 
@@ -214,8 +221,7 @@ async function analyzeImage(imageUrl, prompt) {
     return await generateText(prompt + '\n\n(Note: Image could not be loaded — analyze from description only)');
   }
 
-  const configuredModel = getModelName();
-  const modelsToTry = [configuredModel, ...CANDIDATE_FLASH_MODELS.filter(m => m !== configuredModel)];
+  const modelsToTry = getModelsToTry();
   let lastError = null;
 
   for (const model of modelsToTry) {
@@ -226,6 +232,7 @@ async function analyzeImage(imageUrl, prompt) {
           { role: 'user', parts: [imagePart, { text: prompt }] },
         ],
       });
+      activeWorkingModel = model;
       return (response.text || '').trim();
     } catch (err) {
       lastError = err;
@@ -240,6 +247,22 @@ async function analyzeImage(imageUrl, prompt) {
 }
 
 /**
+ * extractJSON(text)
+ * Safely extracts and parses JSON from Gemini responses, handling codeblocks and prose.
+ */
+function extractJSON(text) {
+  if (!text) throw new Error('Empty response from AI model');
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('Unable to parse JSON from AI response: ' + text.slice(0, 100));
+  }
+}
+
+/**
  * generateStructuredJSON(prompt, fallback)
  * Sends a prompt instructing Gemini to return clean JSON.
  * Returns { data, isAI: true } on success, { data: fallback, isAI: false, error } on failure.
@@ -248,14 +271,7 @@ async function generateStructuredJSON(prompt, fallback = {}) {
   let rawText = '';
   try {
     rawText = await generateText(prompt);
-
-    // Strip markdown code fences if present
-    const cleaned = rawText
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```\s*$/, '')
-      .trim();
-
-    const parsed = JSON.parse(cleaned);
+    const parsed = extractJSON(rawText);
     return { data: parsed, isAI: true };
   } catch (err) {
     const classified = classifyError(err);
