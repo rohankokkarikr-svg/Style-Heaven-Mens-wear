@@ -33,7 +33,8 @@ const protect = async (req, res, next) => {
 };
 
 const admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  const role = (req.user?.role || '').trim().toLowerCase();
+  if (role === 'admin') {
     next();
   } else {
     res.status(403).json({ error: 'Not authorized as an admin' });
@@ -41,7 +42,8 @@ const admin = (req, res, next) => {
 };
 
 const artisan = (req, res, next) => {
-  if (req.user && (req.user.role === 'artisan' || req.user.role === 'admin')) {
+  const role = (req.user?.role || '').trim().toLowerCase();
+  if (role === 'artisan' || role === 'admin') {
     next();
   } else {
     res.status(403).json({ error: 'Not authorized as an artisan' });

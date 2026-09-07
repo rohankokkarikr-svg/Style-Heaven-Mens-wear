@@ -154,6 +154,9 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials. Incorrect password.' });
     }
 
+    // Normalize role string to prevent whitespace issues
+    user.role = (user.role || 'user').trim().toLowerCase();
+
     // If artisan, fetch artisan profile
     let artisanProfile = null;
     if (user.role === 'artisan') {
@@ -182,8 +185,20 @@ exports.getMe = async (req, res) => {
   try {
     // req.user is set by auth middleware
     const user = { ...req.user };
+    user.role = (user.role || 'user').trim().toLowerCase();
     delete user.password;
-    res.json(user);
+
+    let artisanProfile = null;
+    if (user.role === 'artisan') {
+      const { data: profile } = await supabase
+        .from('artisan_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      artisanProfile = profile ? parseArtisanUpi(profile) : null;
+    }
+
+    res.json({ ...user, artisan_profile: artisanProfile });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }

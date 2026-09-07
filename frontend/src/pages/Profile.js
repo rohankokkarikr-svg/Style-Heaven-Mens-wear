@@ -5,6 +5,7 @@ import {
 } from 'react-icons/hi';
 import { FaTrophy } from 'react-icons/fa';
 import { authAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import UserAvatar from '../components/UserAvatar';
 import toast from 'react-hot-toast';
@@ -20,6 +21,7 @@ const LEVEL_COLORS = {
 const getLevelCfg = (name) => LEVEL_COLORS[name] || LEVEL_COLORS.Bronze;
 
 export default function Profile() {
+  const { user, isAdmin, isArtisan } = useAuth();
   const [rewardsData, setRewardsData] = useState(null);
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,8 +83,54 @@ export default function Profile() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
 
+          {/* ── User Account & Role Card ── */}
+          {user && (
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-dark-800/90 border border-dark-600 p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl backdrop-blur-md"
+            >
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <UserAvatar name={user.name} size={64} ring />
+                <div>
+                  <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
+                    <h2 className="text-xl font-bold text-white">{user.name}</h2>
+                    <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      isAdmin
+                        ? 'bg-gold-500/20 text-gold-300 border border-gold-500/50 shadow-gold'
+                        : isArtisan
+                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
+                        : 'bg-dark-700 text-gray-300 border border-dark-600'
+                    }`}>
+                      {isAdmin ? '👑 Administrator' : isArtisan ? '🎨 Master Artisan' : 'Member'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {user.phone ? `Phone: ${user.phone}` : ''} {user.email && user.email !== user.phone ? ` • Email: ${user.email}` : ''}
+                  </p>
+                </div>
+              </div>
 
-
+              <div className="flex items-center gap-3 shrink-0">
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="btn-primary px-5 py-2.5 text-xs font-bold shadow-gold flex items-center gap-2"
+                  >
+                    👑 Open Admin Control Center
+                  </Link>
+                )}
+                {isArtisan && (
+                  <Link
+                    to="/artisan"
+                    className="btn-primary px-5 py-2.5 text-xs font-bold shadow-gold flex items-center gap-2"
+                  >
+                    🎨 Artisan Studio
+                  </Link>
+                )}
+              </div>
+            </motion.div>
+          )}
 
           {/* ── Personal Leaderboard Rank Banner ── */}
           <motion.div

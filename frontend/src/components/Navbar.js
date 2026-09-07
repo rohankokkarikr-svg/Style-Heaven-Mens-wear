@@ -12,7 +12,8 @@ import {
   HiLogout,
   HiChartBar,
   HiStar,
-  HiChevronDown
+  HiChevronDown,
+  HiUser
 } from 'react-icons/hi';
 import { FaTrophy } from 'react-icons/fa';
 import UserAvatar from './UserAvatar';
@@ -187,6 +188,17 @@ export default function Navbar() {
                 )}
               </Link>
 
+              {/* Direct Admin Panel Button */}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-gold-500/20 to-amber-500/20 border border-gold-500/50 text-gold-300 hover:text-white hover:bg-gold-500/30 text-xs font-bold transition-all shadow-gold"
+                >
+                  <HiChartBar className="w-3.5 h-3.5 text-gold-400" />
+                  <span>Admin Panel</span>
+                </Link>
+              )}
+
               {/* User Avatar / Sign In */}
               {user ? (
                 <div className="relative group">
@@ -195,6 +207,11 @@ export default function Navbar() {
                     <span className="hidden lg:block text-xs font-semibold text-gray-200">
                       {user.name?.split(' ')[0]}
                     </span>
+                    {isAdmin && (
+                      <span className="hidden xl:inline-block px-1.5 py-0.2 bg-gold-500/20 text-gold-400 border border-gold-500/40 rounded text-[9px] font-bold">
+                        ADMIN
+                      </span>
+                    )}
                     <HiChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gold-400 transition-transform group-hover:rotate-180" />
                   </button>
 
@@ -203,12 +220,18 @@ export default function Navbar() {
                     <div className="px-3 py-2 border-b border-dark-700 mb-1">
                       <p className="text-xs font-bold text-white truncate">{user.name}</p>
                       <p className="text-[10px] text-gold-400 uppercase tracking-wider font-semibold">
-                        {isAdmin ? 'Administrator' : isArtisan ? 'Master Artisan' : 'Member'}
+                        {isAdmin ? '👑 Administrator' : isArtisan ? '🎨 Master Artisan' : 'Member'}
                       </p>
                     </div>
 
-                    <Link to="/profile" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-dark-800 text-xs text-gold-400 font-semibold">
-                      <FaTrophy className="w-3.5 h-3.5" /> Leaderboard
+                    {isAdmin && (
+                      <Link to="/admin" className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-gold-500/15 hover:bg-gold-500/25 text-xs text-gold-300 font-bold border border-gold-500/30 mb-1">
+                        <HiChartBar className="w-4 h-4 text-gold-400" /> Admin Control Center
+                      </Link>
+                    )}
+
+                    <Link to="/profile" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-dark-800 text-xs text-gray-300 hover:text-white">
+                      <HiUser className="w-3.5 h-3.5 text-gray-400" /> My Profile & Rank
                     </Link>
                     <Link to="/wishlist" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-dark-800 text-xs text-gray-300 hover:text-white">
                       <HiHeart className="w-3.5 h-3.5 text-red-400" /> My Wishlist
@@ -223,11 +246,6 @@ export default function Navbar() {
                     {isArtisan && (
                       <Link to="/artisan" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gold-500/20 text-xs text-gold-400 font-semibold border-t border-dark-700 mt-1 pt-2">
                         Artisan Studio
-                      </Link>
-                    )}
-                    {isAdmin && (
-                      <Link to="/admin" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gold-500/20 text-xs text-gold-400 font-semibold border-t border-dark-700 mt-1 pt-2">
-                        <HiChartBar className="w-3.5 h-3.5" /> Admin Panel
                       </Link>
                     )}
 
@@ -374,7 +392,17 @@ export default function Navbar() {
               </Link>
             ))}
 
-            <div className="pt-3 border-t border-dark-800 mt-3">
+            <div className="pt-3 border-t border-dark-800 mt-3 space-y-1">
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gold-500 text-dark-950 text-xs font-bold text-center shadow-gold mb-2"
+                >
+                  <HiChartBar className="w-4 h-4" /> Admin Control Center
+                </Link>
+              )}
+
               <Link
                 to="/artisan/ai-studio"
                 onClick={() => setMobileDrawerOpen(false)}
@@ -382,20 +410,50 @@ export default function Navbar() {
               >
                 AI Artisan Studio
               </Link>
+
+              {user && (
+                <>
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="flex items-center gap-2.5 py-2 px-3 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-dark-800"
+                  >
+                    <HiUser className="w-4 h-4 text-gold-400" /> My Profile & Rank
+                  </Link>
+                  <Link
+                    to="/orders"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="flex items-center gap-2.5 py-2 px-3 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-dark-800"
+                  >
+                    <HiShoppingCart className="w-4 h-4 text-gray-400" /> My Orders
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
           <div className="p-4 border-t border-dark-700 bg-dark-900">
             {user ? (
-              <button
-                onClick={() => {
-                  setMobileDrawerOpen(false);
-                  logout();
-                }}
-                className="w-full py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-colors flex items-center justify-center gap-2"
-              >
-                <HiLogout className="w-4 h-4" /> Sign Out
-              </button>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5 px-1">
+                  <UserAvatar name={user.name} size={32} ring />
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-gold-500/20 text-gold-400 border border-gold-500/30">
+                      {isAdmin ? '👑 Administrator' : isArtisan ? '🎨 Artisan' : 'Member'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileDrawerOpen(false);
+                    logout();
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <HiLogout className="w-4 h-4" /> Sign Out
+                </button>
+              </div>
             ) : (
               <Link
                 to="/login"
