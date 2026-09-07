@@ -19,17 +19,18 @@ const { GoogleGenAI } = require('@google/genai');
 
 // ── Model Configuration ──────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'gemini-flash-latest';
+const DEFAULT_MODEL = 'gemini-3.7-flash';
 const CANDIDATE_FLASH_MODELS = [
-  'gemini-flash-latest',
-  'gemini-2.5-flash',
+  'gemini-3.7-flash',
   'gemini-3.6-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
+  'gemini-3.5-flash',
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
 ];
 
-let activeWorkingModel = 'gemini-flash-latest';
+let activeWorkingModel = 'gemini-3.7-flash';
 
 const SEVEN_CATEGORIES = [
   'Handloom & Textiles',
@@ -161,22 +162,29 @@ async function generateText(prompt, retries = 2) {
       } catch (err) {
         lastError = err;
         const msg = err.message || '';
-        const isTransient = msg.includes('503') || msg.includes('429') || msg.includes('high demand') || err.status === 503 || err.status === 429;
-        
+
+        // For fatal auth errors, do not retry
+        const isAuthError = err.status === 401 || msg.includes('UNAUTHENTICATED') || msg.includes('API_KEY_INVALID') || msg.includes('PERMISSION_DENIED');
+        if (isAuthError) throw err;
+
+        const isRateLimitOrQuota = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota') || err.status === 429;
+        const isUnavailable = msg.includes('404') || msg.includes('not found') || msg.includes('is not supported') || msg.includes('no longer available') || msg.includes('NOT_FOUND');
+
+        if (isRateLimitOrQuota || isUnavailable) {
+          console.warn(`[geminiService] Model '${model}' quota or availability limit. Falling back to next candidate...`);
+          break;
+        }
+
+        const isTransient = (msg.includes('503') || msg.includes('high demand') || err.status === 503);
         if (isTransient && attempt < retries) {
-          console.warn(`[geminiService] Transient spike on ${model} (attempt ${attempt + 1}/${retries + 1}). Retrying in ${(attempt + 1) * 1000}ms...`);
+          console.warn(`[geminiService] Spike on ${model} (attempt ${attempt + 1}/${retries + 1}). Retrying in ${(attempt + 1) * 1000}ms...`);
           await new Promise(r => setTimeout(r, (attempt + 1) * 1000));
           continue;
         }
 
-        // If the model itself was not found, deprecated, or no longer available, try next candidate
-        if (msg.includes('404') || msg.includes('not found') || msg.includes('is not supported') || msg.includes('no longer available') || msg.includes('NOT_FOUND')) {
-          console.warn(`[geminiService] Model '${model}' unavailable or deprecated. Automatically switching to alternative flash model...`);
-          break;
-        }
-
-        // For auth errors or client errors, do not retry
-        throw err;
+        // On attempt exhaustion for this model, break out to try the next model
+        console.warn(`[geminiService] Model '${model}' exhausted attempts. Switching to next candidate model...`);
+        break;
       }
     }
   }
@@ -236,7 +244,8 @@ async function analyzeImage(imageUrl, prompt) {
       return (response.text || '').trim();
     } catch (err) {
       lastError = err;
-      if (err.message?.includes('not found') || err.message?.includes('is not supported')) {
+      const msg = err.message || '';
+      if (msg.includes('not found') || msg.includes('is not supported') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota') || msg.includes('429')) {
         continue;
       }
       throw err;
