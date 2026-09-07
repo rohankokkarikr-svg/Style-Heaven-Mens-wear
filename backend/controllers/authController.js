@@ -50,16 +50,18 @@ exports.register = async (req, res) => {
 
     const validRoles = ['user', 'artisan'];
     const userRole = validRoles.includes(role) ? role : 'user';
+    const cleanPhone = phone.replace(/\D/g, '');
+    const userEmail = (req.body.email || cleanPhone || phone).trim().toLowerCase();
 
-    // Check if user exists (phone stored in email column)
-    const { data: existingUser } = await supabase
+    // Check if user exists (by email OR phone)
+    const { data: existingUsers } = await supabase
       .from('users')
-      .select('*')
-      .eq('email', phone)
-      .single();
+      .select('id')
+      .or(`email.eq.${userEmail},phone.eq.${cleanPhone},email.eq.${cleanPhone}`)
+      .limit(1);
 
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+    if (existingUsers && existingUsers.length > 0) {
+      return res.status(400).json({ error: 'User already exists with this phone number or email' });
     }
 
     // Hash password
@@ -69,7 +71,14 @@ exports.register = async (req, res) => {
     // Create user
     const { data: user, error } = await supabase
       .from('users')
-      .insert([{ name, email: phone, password: hashedPassword, role: userRole }])
+      .insert([{
+        name,
+        email: userEmail,
+        phone: cleanPhone || phone,
+        password: hashedPassword,
+        role: userRole,
+        status: 'active'
+      }])
       .select()
       .single();
 
@@ -108,28 +117,41 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { phone, email, password } = req.body;
+    const identifier = (phone || email || '').trim();
 
-    if (!phone || !password) {
-      return res.status(400).json({ error: 'Please provide phone and password' });
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Please provide phone number or email and password' });
     }
 
-    // Find user by phone (stored in the email column)
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', phone)
-      .single();
+    // Find user by phone OR email
+    const isEmail = identifier.includes('@');
+    let userQuery = supabase.from('users').select('*');
+
+    if (isEmail) {
+      userQuery = userQuery.eq('email', identifier.toLowerCase());
+    } else {
+      const cleanPhone = identifier.replace(/\D/g, '');
+      userQuery = userQuery.or(`email.eq.${cleanPhone},phone.eq.${cleanPhone},email.eq.${identifier},phone.eq.${identifier}`);
+    }
+
+    const { data: users, error } = await userQuery.limit(1);
+    const user = users && users[0];
 
     if (error || !user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid credentials. Account not found.' });
+    }
+
+    // Check account status
+    if (user.status && user.status === 'blocked') {
+      return res.status(403).json({ error: 'Your account has been deactivated. Please contact support.' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid credentials. Incorrect password.' });
     }
 
     // If artisan, fetch artisan profile

@@ -12,15 +12,33 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      toast.error('Please enter a valid phone number');
+    const identifier = phone.trim();
+    if (!identifier) {
+      toast.error('Please enter your phone number or email');
       return;
     }
+
+    const isEmail = identifier.includes('@');
+    let valueToSubmit = identifier;
+    if (!isEmail) {
+      const cleanPhone = identifier.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        toast.error('Please enter a valid 10-digit phone number or email');
+        return;
+      }
+      valueToSubmit = cleanPhone;
+    }
+
     setLoading(true);
     try {
-      await login(cleanPhone, password);
-      navigate('/');
+      const user = await login(valueToSubmit, password);
+      if (user?.role === 'admin') {
+        navigate('/admin');
+      } else if (user?.role === 'artisan') {
+        navigate('/artisan');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to log in');
     } finally {
@@ -49,14 +67,14 @@ export default function Login() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="phone" className="sr-only">Phone Number</label>
+              <label htmlFor="phone" className="sr-only">Phone Number or Email</label>
               <input
                 id="phone"
                 name="phone"
-                type="tel"
+                type="text"
                 required
                 className="input-field"
-                placeholder="Phone Number (e.g. 7676558335)"
+                placeholder="Phone Number or Email"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
