@@ -21,13 +21,33 @@ export default function AIManagement() {
   const fetchAIData = async () => {
     setLoading(true);
     try {
-      const [contentRes, statsRes] = await Promise.all([
+      const [contentRes, statsRes] = await Promise.allSettled([
         adminAPI.getAIContent(),
         adminAPI.getAIStats()
       ]);
-      setAiProducts(contentRes.data || []);
-      setStats(statsRes.data || null);
-    } catch {
+      
+      let hasData = false;
+      if (contentRes.status === 'fulfilled') {
+        setAiProducts(contentRes.value.data || []);
+        hasData = true;
+      } else {
+        console.warn('AI content fetch rejected:', contentRes.reason);
+      }
+
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value.data || null);
+        hasData = true;
+      } else {
+        console.warn('AI stats fetch rejected:', statsRes.reason);
+      }
+
+      if (!hasData && contentRes.status === 'rejected') {
+        const err = contentRes.reason;
+        const msg = err.response?.data?.error || err.message || 'Failed to load AI operations data';
+        toast.error(msg);
+      }
+    } catch (err) {
+      console.error('Fetch AI Data error:', err);
       toast.error('Failed to load AI operations data');
     } finally {
       setLoading(false);
