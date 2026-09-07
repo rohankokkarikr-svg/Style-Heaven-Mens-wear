@@ -21,6 +21,9 @@ const { GoogleGenAI } = require('@google/genai');
 
 const DEFAULT_MODEL = 'gemini-2.0-flash';
 const CANDIDATE_FLASH_MODELS = [
+  'gemini-flash-latest',
+  'gemini-3.6-flash',
+  'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-1.5-flash',
   'gemini-1.5-flash-8b',
@@ -146,6 +149,7 @@ async function generateText(prompt, retries = 2) {
           model,
           contents: prompt,
         });
+        activeWorkingModel = model;
         return (response.text || '').trim();
       } catch (err) {
         lastError = err;
@@ -158,9 +162,9 @@ async function generateText(prompt, retries = 2) {
           continue;
         }
 
-        // If the model itself was not found or deprecated, break retry loop and try the next model
-        if (msg.includes('404') || msg.includes('not found') || msg.includes('is not supported')) {
-          console.warn(`[geminiService] Model '${model}' unavailable. Trying alternative flash model...`);
+        // If the model itself was not found, deprecated, or no longer available, try next candidate
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('is not supported') || msg.includes('no longer available') || msg.includes('NOT_FOUND')) {
+          console.warn(`[geminiService] Model '${model}' unavailable or deprecated. Automatically switching to alternative flash model...`);
           break;
         }
 
