@@ -7,12 +7,7 @@
     "frontend": "npm --prefix frontend start",
     "mobile": "npm --prefix mobile start",
     "mobile:android": "npm --prefix mobile run android",
-    "mobile:web": "npm --prefix mobile run web",
-    "flutter:run": "cd style_heaven_flutter && flutter run",
-    "flutter:web": "cd style_heaven_flutter && flutter run -d chrome",
-    "flutter:mobile": "cd style_heaven_flutter && flutter run -d android",
-    "flutter:windows": "cd style_heaven_flutter && flutter run -d windows",
-    "flutter:build:web": "cd style_heaven_flutter && flutter build web"
+    "mobile:web": "npm --prefix mobile run web"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
