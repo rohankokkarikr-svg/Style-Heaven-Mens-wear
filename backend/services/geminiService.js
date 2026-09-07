@@ -1,23 +1,30 @@
 /**
  * backend/services/geminiService.js
  * ─────────────────────────────────
- * Centralized Gemini AI service using the @google/genai SDK.
- * All AI controllers must use this service — never initialize
- * the Gemini client directly in controllers.
+ * Centralized Google Gemini AI service.
+ * All AI controllers route through this service — never initialize
+ * the Gemini client directly in controllers or client-side code.
  *
- * Key design decisions:
- *  - API key is read from process.env.GEMINI_API_KEY (never hardcoded)
- *  - Model is read from process.env.GEMINI_MODEL (configurable)
- *  - No prefix-based key validation (AQ., AIza., etc.)
- *  - Auth errors are caught and surfaced as clear server-side messages
- *  - Structured JSON responses are validated and sanitized
+ * Security & Design Rules:
+ *  - API key is read dynamically from process.env.GEMINI_API_KEY (never hardcoded)
+ *  - Treated strictly as an opaque secret string (no prefix checks or transformations)
+ *  - NEVER logs or returns the API key string
+ *  - Default model: gemini-2.0-flash (configurable via process.env.GEMINI_MODEL)
+ *  - Automatic fallback to supported flash models if a model is unavailable
+ *  - Robust error classification: missing key, auth failure, rate limit, model not found
+ *  - Native support for both base64 Data URIs and remote image URLs
  */
 
 const { GoogleGenAI } = require('@google/genai');
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Model Configuration ──────────────────────────────────────────────────────
 
-const FALLBACK_MODEL = 'gemini-3.6-flash';
+const DEFAULT_MODEL = 'gemini-2.0-flash';
+const CANDIDATE_FLASH_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+];
 
 const SEVEN_CATEGORIES = [
   'Handloom & Textiles',
@@ -29,88 +36,209 @@ const SEVEN_CATEGORIES = [
   'Eco-Friendly & Natural Products',
 ];
 
-// ── Client Factory ───────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getApiKey() {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key || typeof key !== 'string' || !key.trim()) {
+    return null;
+  }
+  return key.trim();
+}
+
+function getModelName() {
+  return (process.env.GEMINI_MODEL || DEFAULT_MODEL).trim();
+}
+
+function isKeyConfigured() {
+  return !!getApiKey();
+}
+
+function classifyError(err) {
+  const msg = err?.message || String(err);
+  const status = err?.status || err?.statusCode || (msg.includes('401') ? 401 : msg.includes('404') ? 404 : msg.includes('429') ? 429 : 500);
+
+  if (!isKeyConfigured()) {
+    return {
+      type: 'MISSING_API_KEY',
+      status: 400,
+      userMessage: 'Gemini API key is not configured in backend environment variables.',
+      details: 'Please set GEMINI_API_KEY in backend/.env or server environment.'
+    };
+  }
+
+  if (status === 401 || msg.includes('UNAUTHENTICATED') || msg.includes('API_KEY_INVALID') || msg.includes('PERMISSION_DENIED') || msg.includes('authentication credentials')) {
+    return {
+      type: 'AUTH_FAILED',
+      status: 401,
+      userMessage: 'Google Gemini authentication failed. Verify that GEMINI_API_KEY is active and authorized.',
+      details: msg
+    };
+  }
+
+  if (status === 404 || msg.includes('not found') || msg.includes('is not supported')) {
+    return {
+      type: 'MODEL_NOT_FOUND',
+      status: 404,
+      userMessage: `Model '${getModelName()}' is not supported or not found.`,
+      details: msg
+    };
+  }
+
+  if (status === 429 || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota') || msg.includes('high demand')) {
+    return {
+      type: 'RATE_LIMITED',
+      status: 429,
+      userMessage: 'Gemini API rate limit reached. Please try again shortly.',
+      details: msg
+    };
+  }
+
+  if (msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || msg.includes('fetch failed')) {
+    return {
+      type: 'NETWORK_ERROR',
+      status: 503,
+      userMessage: 'Unable to reach Google Gemini servers. Check server network connection.',
+      details: msg
+    };
+  }
+
+  return {
+    type: 'API_ERROR',
+    status: 500,
+    userMessage: 'An error occurred while communicating with Gemini AI.',
+    details: msg
+  };
+}
 
 function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not set in environment variables.');
+    const err = new Error('GEMINI_API_KEY is not set in environment variables.');
+    err.code = 'MISSING_KEY';
+    throw err;
   }
   return new GoogleGenAI({ apiKey });
 }
 
-function getModelName() {
-  return process.env.GEMINI_MODEL || FALLBACK_MODEL;
-}
-
-// ── Core: Generate Text ──────────────────────────────────────────────────────
+// ── Core Generation Methods ──────────────────────────────────────────────────
 
 /**
  * generateText(prompt, retries)
- * Sends a plain text prompt to Gemini with automatic retry on transient errors (503, 429)
- * and returns the response string.
+ * Sends prompt to Gemini with automatic retry for transient errors and fallback across models.
  */
 async function generateText(prompt, retries = 2) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured in backend environment variables.');
+  }
+
   const ai = getClient();
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  const configuredModel = getModelName();
+  const modelsToTry = [configuredModel, ...CANDIDATE_FLASH_MODELS.filter(m => m !== configuredModel)];
+
+  let lastError = null;
+
+  for (const model of modelsToTry) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+        });
+        return (response.text || '').trim();
+      } catch (err) {
+        lastError = err;
+        const msg = err.message || '';
+        const isTransient = msg.includes('503') || msg.includes('429') || msg.includes('high demand') || err.status === 503 || err.status === 429;
+        
+        if (isTransient && attempt < retries) {
+          console.warn(`[geminiService] Transient spike on ${model} (attempt ${attempt + 1}/${retries + 1}). Retrying in ${(attempt + 1) * 1000}ms...`);
+          await new Promise(r => setTimeout(r, (attempt + 1) * 1000));
+          continue;
+        }
+
+        // If the model itself was not found or deprecated, break retry loop and try the next model
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('is not supported')) {
+          console.warn(`[geminiService] Model '${model}' unavailable. Trying alternative flash model...`);
+          break;
+        }
+
+        // For auth errors or client errors, do not retry
+        throw err;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * analyzeImage(imageUrl, prompt)
+ * Parses base64 data URIs or fetches remote image URLs, then sends to Gemini Vision.
+ */
+async function analyzeImage(imageUrl, prompt) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured in backend environment variables.');
+  }
+
+  const ai = getClient();
+  let imagePart = null;
+
+  try {
+    if (imageUrl.startsWith('data:')) {
+      // Direct Base64 Data URI
+      const matches = imageUrl.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+      if (matches) {
+        imagePart = { inlineData: { mimeType: matches[1], data: matches[2] } };
+      } else {
+        throw new Error('Invalid base64 data URI format');
+      }
+    } else {
+      // Remote HTTP / HTTPS URL
+      const res = await fetch(imageUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status} fetching image`);
+      const buffer = await res.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      const mimeType = res.headers.get('content-type') || 'image/jpeg';
+      imagePart = { inlineData: { mimeType, data: base64 } };
+    }
+  } catch (imgErr) {
+    console.warn('[geminiService] Could not process image for analysis:', imgErr.message);
+    // Fall back to text-only analysis
+    return await generateText(prompt + '\n\n(Note: Image could not be loaded — analyze from description only)');
+  }
+
+  const configuredModel = getModelName();
+  const modelsToTry = [configuredModel, ...CANDIDATE_FLASH_MODELS.filter(m => m !== configuredModel)];
+  let lastError = null;
+
+  for (const model of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
-        model: getModelName(),
-        contents: prompt,
+        model,
+        contents: [
+          { role: 'user', parts: [imagePart, { text: prompt }] },
+        ],
       });
-      return response.text.trim();
+      return (response.text || '').trim();
     } catch (err) {
-      const isTransient = err.message?.includes('503') || err.message?.includes('429') || err.message?.includes('high demand') || err.status === 503 || err.status === 429;
-      if (isTransient && attempt < retries) {
-        console.warn(`[geminiService] Transient AI spike (attempt ${attempt + 1}/${retries + 1}). Retrying in ${(attempt + 1) * 1000}ms...`);
-        await new Promise(r => setTimeout(r, (attempt + 1) * 1000));
+      lastError = err;
+      if (err.message?.includes('not found') || err.message?.includes('is not supported')) {
         continue;
       }
       throw err;
     }
   }
+
+  throw lastError;
 }
 
-// ── Core: Analyze Image ──────────────────────────────────────────────────────
-
 /**
- * analyzeImage(imageUrl, prompt)
- * Sends an image URL + text prompt to Gemini vision and returns the response string.
- */
-async function analyzeImage(imageUrl, prompt) {
-  const ai = getClient();
-
-  // Fetch the image and convert to base64 for inline data
-  let imagePart;
-  try {
-    const res = await fetch(imageUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status} fetching image`);
-    const buffer = await res.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
-    const mimeType = res.headers.get('content-type') || 'image/jpeg';
-    imagePart = { inlineData: { mimeType, data: base64 } };
-  } catch (imgErr) {
-    console.warn('[geminiService] Could not fetch image for analysis:', imgErr.message);
-    // Fall back to text-only analysis
-    return await generateText(prompt + '\n\n(Note: Image could not be loaded — analyze from description only)');
-  }
-
-  const response = await ai.models.generateContent({
-    model: getModelName(),
-    contents: [
-      { role: 'user', parts: [imagePart, { text: prompt }] },
-    ],
-  });
-  return response.text.trim();
-}
-
-// ── Core: Generate Structured JSON ──────────────────────────────────────────
-
-/**
- * generateStructuredJSON(prompt, schema)
- * Sends a prompt instructing Gemini to return JSON.
- * Validates and sanitizes the response against the expected schema.
- * Returns { data, isAI: true } on success, { data: fallback, isAI: false } on failure.
+ * generateStructuredJSON(prompt, fallback)
+ * Sends a prompt instructing Gemini to return clean JSON.
+ * Returns { data, isAI: true } on success, { data: fallback, isAI: false, error } on failure.
  */
 async function generateStructuredJSON(prompt, fallback = {}) {
   let rawText = '';
@@ -126,25 +254,58 @@ async function generateStructuredJSON(prompt, fallback = {}) {
     const parsed = JSON.parse(cleaned);
     return { data: parsed, isAI: true };
   } catch (err) {
-    // Surface the actual error type for easier debugging
-    const isAuthError =
-      err.message?.includes('API_KEY_INVALID') ||
-      err.message?.includes('PERMISSION_DENIED') ||
-      err.message?.includes('401') ||
-      err.status === 401;
+    const classified = classifyError(err);
+    console.warn(`[geminiService] generateStructuredJSON (${classified.type}):`, classified.userMessage);
+    return { data: fallback, isAI: false, error: classified.userMessage, details: classified.details };
+  }
+}
 
-    if (isAuthError) {
-      console.error(
-        '[geminiService] Authentication failed. Check GEMINI_API_KEY in backend/.env\n' +
-        '  Error:', err.message
-      );
-    } else if (err instanceof SyntaxError) {
-      console.warn('[geminiService] JSON parse failed. Raw response:', rawText?.slice(0, 300));
-    } else {
-      console.error('[geminiService] generateStructuredJSON error:', err.message);
-    }
+/**
+ * checkHealth()
+ * Safe backend health check mechanism that verifies:
+ *  - GEMINI_API_KEY exists (boolean only, never the key itself)
+ *  - Gemini API can be reached
+ *  - Configured model is available
+ *  - A test generation request succeeds
+ */
+async function checkHealth() {
+  const configured = isKeyConfigured();
+  const model = getModelName();
 
-    return { data: fallback, isAI: false, error: err.message };
+  if (!configured) {
+    return {
+      status: 'error',
+      apiKeyConfigured: false,
+      model,
+      message: 'GEMINI_API_KEY is not configured in backend environment variables.'
+    };
+  }
+
+  try {
+    const startTime = Date.now();
+    const testResponse = await generateText(
+      'Respond with exactly: {"status":"ok","message":"pong"}'
+    );
+    const latencyMs = Date.now() - startTime;
+
+    return {
+      status: 'ok',
+      apiKeyConfigured: true,
+      model,
+      latencyMs,
+      testResponseSnippet: testResponse.slice(0, 100),
+      message: 'Gemini AI is connected and operational.'
+    };
+  } catch (err) {
+    const classified = classifyError(err);
+    return {
+      status: 'error',
+      apiKeyConfigured: true,
+      model,
+      errorType: classified.type,
+      message: classified.userMessage,
+      details: classified.details
+    };
   }
 }
 
@@ -152,9 +313,11 @@ async function generateStructuredJSON(prompt, fallback = {}) {
 
 module.exports = {
   getModelName,
-  getClient,
+  isKeyConfigured,
   generateText,
   analyzeImage,
   generateStructuredJSON,
+  checkHealth,
+  classifyError,
   SEVEN_CATEGORIES,
 };

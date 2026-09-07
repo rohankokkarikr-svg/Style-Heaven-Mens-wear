@@ -6,3 +6,7 @@ frontend/.git_old
 frontend/.env
 backend/.env
 .env
+.env.local
+.env.*.local
+*.env
+!.env.example

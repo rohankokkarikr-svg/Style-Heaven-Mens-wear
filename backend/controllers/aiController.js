@@ -594,3 +594,24 @@ Rules:
     res.status(500).json({ error: 'Smart search failed. Please try again.' });
   }
 };
+
+/**
+ * 10. getHealth — checks backend Gemini AI configuration & connectivity safely
+ * Never exposes the raw API key.
+ */
+exports.getHealth = async (req, res) => {
+  try {
+    const health = await gemini.checkHealth();
+    const statusCode = health.status === 'ok' ? 200 : (health.apiKeyConfigured ? 502 : 400);
+    return res.status(statusCode).json(health);
+  } catch (err) {
+    return res.status(500).json({
+      status: 'error',
+      apiKeyConfigured: gemini.isKeyConfigured(),
+      model: gemini.getModelName(),
+      message: 'AI health check encountered an unexpected error.',
+      details: err.message
+    });
+  }
+};
+

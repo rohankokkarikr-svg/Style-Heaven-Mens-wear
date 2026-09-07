@@ -84,7 +84,7 @@ export default function AIManagement() {
         <div className="card p-5 border-l-4 border-l-gold-500">
           <p className="text-xs font-semibold text-gray-400">Total AI Inferences</p>
           <p className="text-2xl font-bold text-white mt-1">{stats?.totalRequests || 0}</p>
-          <p className="text-[10px] text-gray-400 mt-1">Powered by {stats?.modelUsed || 'gemini-3.6-flash'}</p>
+          <p className="text-[10px] text-gray-400 mt-1">Powered by {stats?.modelUsed || 'gemini-2.0-flash'}</p>
         </div>
         <div className="card p-5 border-l-4 border-l-green-500">
           <p className="text-xs font-semibold text-gray-400">Smart Catalogs Created</p>

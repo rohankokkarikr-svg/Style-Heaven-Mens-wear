@@ -10,9 +10,11 @@ const {
   generateArtisanStory,
   getAIInsights,
   smartSearch,
+  getHealth,
 } = require('../controllers/aiController');
 
 // All AI endpoints — called server-side only, key never exposed to client
+router.get('/health',              getHealth);
 router.post('/analyze-product',    analyzeProduct);
 router.post('/generate-description', generateDescription);
 router.post('/full-catalog',       generateFullCatalog);

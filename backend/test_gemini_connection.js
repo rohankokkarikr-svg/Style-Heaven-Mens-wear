@@ -1,38 +1,31 @@
-const { GoogleGenAI } = require('@google/genai');
+const gemini = require('./services/geminiService');
 require('dotenv').config();
 
 async function testGemini() {
-  const key = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-
   console.log('=== Gemini Connection Test ===');
-  console.log('Key set:', key ? 'YES (prefix: ' + key.slice(0, 12) + '...)' : 'NOT SET');
-  console.log('Model:', model);
+  console.log('GEMINI_API_KEY configured:', gemini.isKeyConfigured());
+  console.log('Model:', gemini.getModelName());
 
-  if (!key) {
-    console.error('ERROR: GEMINI_API_KEY not found in .env');
+  if (!gemini.isKeyConfigured()) {
+    console.error('❌ ERROR: GEMINI_API_KEY not found in environment.');
     process.exit(1);
   }
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: key });
-    console.log('\nSending test prompt...');
+  console.log('\nSending test prompt to Gemini...');
+  const health = await gemini.checkHealth();
 
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: 'Reply with exactly this JSON and nothing else: {"status":"ok","model":"' + model + '","message":"Gemini AI is connected and working!"}',
-    });
-
+  if (health.status === 'ok') {
     console.log('\n✅ SUCCESS! Gemini responded:');
-    console.log(response.text.trim());
+    console.log(health.testResponseSnippet);
+    console.log('Latency:', health.latencyMs + 'ms');
     console.log('\n🎉 Your AI-powered handicrafts marketplace is fully operational!');
-  } catch (err) {
+  } else {
     console.error('\n❌ CONNECTION FAILED');
-    console.error('Error type:', err.constructor.name);
-    console.error('Message:', err.message);
-    if (err.message.includes('API_KEY_INVALID') || err.message.includes('PERMISSION_DENIED')) {
-      console.error('\n⚠️  The API key appears to be invalid or lacks permissions.');
-      console.error('   Please get a fresh key from: https://aistudio.google.com/app/apikey');
+    console.error('Status:', health.status);
+    console.error('Error Type:', health.errorType);
+    console.error('Message:', health.message);
+    if (health.details) {
+      console.error('Details:', health.details);
     }
   }
 }

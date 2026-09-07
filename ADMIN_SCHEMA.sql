@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS ai_usage_logs (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   feature VARCHAR(100) NOT NULL, -- 'catalog', 'image_analysis', 'price_suggestion', 'translation', 'story'
-  model VARCHAR(100) DEFAULT 'gemini-3.6-flash',
+  model VARCHAR(100) DEFAULT 'gemini-2.0-flash',
   status VARCHAR(50) DEFAULT 'success', -- 'success', 'failed'
   prompt_length INTEGER,
   response_length INTEGER,
