@@ -6,3 +6,6 @@ frontend/.git_old
 frontend/.env
 backend/.env
 .env
+style_heaven_flutter/build/
+style_heaven_flutter/.dart_tool/
+style_heaven_flutter/.flutter-plugins-dependencies
