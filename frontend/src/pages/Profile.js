@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  HiSparkles, HiSearch, HiChevronRight
+  HiSparkles, HiChevronRight, HiUser, HiShoppingBag,
+  HiHeart, HiStar, HiChartBar, HiLogout, HiOutlineClipboardCopy,
+  HiCheckCircle, HiTag, HiUsers, HiCurrencyRupee
 } from 'react-icons/hi';
 import { FaTrophy } from 'react-icons/fa';
 import { authAPI } from '../services/api';
@@ -21,11 +23,11 @@ const LEVEL_COLORS = {
 const getLevelCfg = (name) => LEVEL_COLORS[name] || LEVEL_COLORS.Bronze;
 
 export default function Profile() {
-  const { user, isAdmin, isArtisan } = useAuth();
+  const { user, isAdmin, isArtisan, logout } = useAuth();
   const [rewardsData, setRewardsData] = useState(null);
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchFilter, setSearchFilter] = useState('');
+  const [copiedCoupon, setCopiedCoupon] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -39,12 +41,7 @@ export default function Profile() {
         
         if (isMounted) {
           if (rewardsRes?.data) setRewardsData(rewardsRes.data);
-          if (leaderboardRes?.data) {
-            setLeaderboardData(leaderboardRes.data);
-          } else {
-            const retryRes = await authAPI.getLeaderboard().catch(() => ({ data: null }));
-            if (isMounted && retryRes?.data) setLeaderboardData(retryRes.data);
-          }
+          if (leaderboardRes?.data) setLeaderboardData(leaderboardRes.data);
         }
       } catch (err) {
         toast.error('Failed to load profile data');
@@ -57,6 +54,14 @@ export default function Profile() {
     return () => { isMounted = false; };
   }, []);
 
+  const handleCopyCoupon = (code) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedCoupon(true);
+    toast.success('Reward coupon copied to clipboard!');
+    setTimeout(() => setCopiedCoupon(false), 2500);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-dark-900">
@@ -66,336 +71,326 @@ export default function Profile() {
   }
 
   const currentUserRank = leaderboardData?.currentUserRank;
-  const leaderboardList = leaderboardData?.leaderboard || [];
-  const top3 = leaderboardList.slice(0, 3);
-  const filteredLeaderboard = leaderboardList.filter(u =>
-    u.name?.toLowerCase().includes(searchFilter.toLowerCase())
-  );
-
   const userRankNum = currentUserRank?.rank || 'N/A';
+  const levelName = rewardsData?.membershipLevel || 'Bronze';
+  const levelCfg = getLevelCfg(levelName);
+  const totalSpent = rewardsData?.totalSpent || currentUserRank?.totalSpent || 0;
+  const totalOrders = rewardsData?.history?.length || 0;
 
   return (
     <div className="min-h-screen bg-dark-900 text-white pb-24">
-      
-      {/* ── Background Glow ── */}
-      <div className="relative pt-10 pb-12 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-gold-500/10 via-purple-500/5 to-transparent blur-3xl pointer-events-none" />
+      {/* ── Background Ambient Glow ── */}
+      <div className="relative pt-8 pb-12 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-gold-500/10 via-amber-500/5 to-transparent blur-3xl pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
 
-          {/* ── User Account & Role Card ── */}
+          {/* ── Top Navigation Tabs (Separate Profile & Leaderboard) ── */}
+          <div className="flex items-center justify-between mb-8 pb-4 border-b border-dark-700 flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="px-5 py-2.5 rounded-xl text-sm font-bold bg-gold-500/20 text-gold-300 border border-gold-500/40 shadow-gold flex items-center gap-2">
+                <HiUser className="w-4 h-4 text-gold-400" /> My Profile
+              </div>
+              <Link
+                to="/leaderboard"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white hover:bg-dark-800 transition-colors flex items-center gap-2 border border-transparent hover:border-dark-600"
+              >
+                <FaTrophy className="w-4 h-4 text-gold-400" /> View Leaderboard
+              </Link>
+            </div>
+
+            <button
+              onClick={logout}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/30 transition-all flex items-center gap-1.5"
+            >
+              <HiLogout className="w-4 h-4" /> Sign Out
+            </button>
+          </div>
+
+          {/* ── User Profile Header Card ── */}
           {user && (
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl bg-dark-800/90 border border-dark-600 p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl backdrop-blur-md"
+              className="rounded-3xl bg-dark-800/90 border border-dark-600 p-6 sm:p-8 mb-8 shadow-2xl backdrop-blur-md relative overflow-hidden"
             >
-              <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                <UserAvatar name={user.name} size={64} ring />
-                <div>
-                  <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
-                    <h2 className="text-xl font-bold text-white">{user.name}</h2>
-                    <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                      isAdmin
-                        ? 'bg-gold-500/20 text-gold-300 border border-gold-500/50 shadow-gold'
-                        : isArtisan
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
-                        : 'bg-dark-700 text-gray-300 border border-dark-600'
-                    }`}>
-                      {isAdmin ? '👑 Administrator' : isArtisan ? '🎨 Master Artisan' : 'Member'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {user.phone ? `Phone: ${user.phone}` : ''} {user.email && user.email !== user.phone ? ` • Email: ${user.email}` : ''}
-                  </p>
-                </div>
-              </div>
+              <div className="absolute top-0 right-0 w-80 h-80 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="flex items-center gap-3 shrink-0">
-                {isAdmin && (
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                  <UserAvatar name={user.name} size={80} ring />
+                  <div>
+                    <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
+                      <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{user.name}</h1>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        isAdmin
+                          ? 'bg-gold-500/20 text-gold-300 border border-gold-500/50 shadow-gold'
+                          : isArtisan
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
+                          : 'bg-dark-700 text-gray-300 border border-dark-600'
+                      }`}>
+                        {isAdmin ? '👑 Administrator' : isArtisan ? '🎨 Master Artisan' : 'Member'}
+                      </span>
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-400 mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1">
+                      {user.phone && <span>📞 {user.phone}</span>}
+                      {user.email && user.email !== user.phone && <span>✉️ {user.email}</span>}
+                      <span className="text-gray-500 font-mono">ID: #{user.id?.slice(0, 8)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
                   <Link
-                    to="/admin"
-                    className="btn-primary px-5 py-2.5 text-xs font-bold shadow-gold flex items-center gap-2"
+                    to="/orders"
+                    className="px-4 py-2.5 rounded-xl bg-dark-700 hover:bg-dark-650 border border-dark-600 text-xs font-semibold text-gray-200 hover:text-white transition-all flex items-center gap-2"
                   >
-                    👑 Open Admin Control Center
+                    <HiShoppingBag className="w-4 h-4 text-gold-400" /> My Orders
                   </Link>
-                )}
-                {isArtisan && (
                   <Link
-                    to="/artisan"
-                    className="btn-primary px-5 py-2.5 text-xs font-bold shadow-gold flex items-center gap-2"
+                    to="/wishlist"
+                    className="px-4 py-2.5 rounded-xl bg-dark-700 hover:bg-dark-650 border border-dark-600 text-xs font-semibold text-gray-200 hover:text-white transition-all flex items-center gap-2"
                   >
-                    🎨 Artisan Studio
+                    <HiHeart className="w-4 h-4 text-red-400" /> Wishlist
                   </Link>
-                )}
+                </div>
               </div>
             </motion.div>
           )}
 
-          {/* ── Personal Leaderboard Rank Banner ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-gold-500/20 via-amber-600/10 to-dark-800 border border-gold-500/40 p-6 mb-12 shadow-xl"
-          >
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-              <div className="flex items-center gap-4 text-center sm:text-left">
-                <div className="w-14 h-14 rounded-2xl bg-gold-500/20 border border-gold-500/40 flex items-center justify-center text-3xl shadow-gold shrink-0">
-                  {userRankNum === 1 ? '👑' : userRankNum === 2 ? '🥈' : userRankNum === 3 ? '🥉' : '🏆'}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white flex items-center justify-center sm:justify-start gap-2">
-                    Your Leaderboard Standing: <span className="gold-text">Rank #{userRankNum}</span>
-                  </h3>
-                  <p className="text-sm text-gray-300">
-                    {userRankNum === 1 ? (
-                      <span className="text-gold-300 font-medium flex items-center gap-1">
-                        <HiSparkles className="w-4 h-4 text-gold-400" /> You are #1 Top Buyer on KalaStyle AI! Keep shining!
-                      </span>
-                    ) : currentUserRank?.nextRankAmountNeeded > 0 ? (
-                      <span>
-                        Spend <strong className="text-gold-400">₹{currentUserRank.nextRankAmountNeeded.toLocaleString()}</strong> more to overtake Rank #{userRankNum - 1}!
-                      </span>
-                    ) : (
-                      <span>Shop your favorite outfits to climb up the leaderboard ranks!</span>
-                    )}
-                  </p>
-                </div>
+          {/* ── Key Statistics / Tier Grid ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Membership Tier */}
+            <div className="card p-5 bg-dark-800/80 border border-dark-600 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Membership Tier</span>
+                <span className="text-xl">{levelCfg.emoji}</span>
               </div>
+              <p className={`text-xl font-bold ${levelCfg.text}`}>{levelName} Member</p>
+              <p className="text-[11px] text-gray-400 mt-1">Tier benefits unlocked</p>
+            </div>
 
+            {/* Total Spent */}
+            <div className="card p-5 bg-dark-800/80 border border-dark-600 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Purchases</span>
+                <HiCurrencyRupee className="w-5 h-5 text-gold-400" />
+              </div>
+              <p className="text-xl font-bold text-white">₹{totalSpent.toLocaleString()}</p>
+              <p className="text-[11px] text-gray-400 mt-1">Cumulative verified spend</p>
+            </div>
+
+            {/* Orders Delivered */}
+            <div className="card p-5 bg-dark-800/80 border border-dark-600 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Completed Orders</span>
+                <HiShoppingBag className="w-5 h-5 text-amber-400" />
+              </div>
+              <p className="text-xl font-bold text-white">{totalOrders} Orders</p>
+              <p className="text-[11px] text-gray-400 mt-1">Delivered to your address</p>
+            </div>
+
+            {/* Leaderboard Standing */}
+            <div className="card p-5 bg-dark-800/80 border border-gold-500/30 rounded-2xl relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-gold-400 uppercase tracking-wider">Leaderboard Rank</span>
+                <FaTrophy className="w-4 h-4 text-gold-400" />
+              </div>
+              <p className="text-xl font-bold gold-text">Rank #{userRankNum}</p>
               <Link
-                to="/products"
-                className="btn-primary px-6 py-2.5 text-sm font-semibold flex items-center gap-2 shadow-gold shrink-0"
+                to="/leaderboard"
+                className="text-[11px] text-gold-400 hover:text-gold-300 font-semibold mt-1 inline-flex items-center gap-1"
               >
-                Shop Now to Rank Up <HiChevronRight className="w-4 h-4" />
+                View Full Rankings &rarr;
               </Link>
             </div>
-          </motion.div>
-
-
-          {/* ── Leaderboard Section Header ── */}
-          <div className="text-center max-w-3xl mx-auto mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/20 mb-3">
-              <FaTrophy className="w-4 h-4 text-gold-400" />
-              <span className="text-gold-400 text-xs font-bold uppercase tracking-widest">Global Rankings</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-3">
-              KalaStyle AI <span className="gold-text">Leaderboard</span>
-            </h2>
-            <p className="text-gray-400 text-sm md:text-base">
-              Real-time rankings of our top spenders across all dress categories. The more you shop, the higher your rank!
-            </p>
           </div>
 
+          {/* ── Rewards Milestone Card ── */}
+          {rewardsData && (
+            <div className="card bg-dark-800/70 border border-dark-600 rounded-2xl p-6 mb-8">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <HiStar className="w-5 h-5 text-gold-400" /> Free Milestone Reward Progress
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Order {rewardsData.rewardThreshold || 10} items to earn a 100% Free Exclusive Style Heaven T-Shirt coupon!
+                  </p>
+                </div>
+                <span className="text-xs font-bold px-3 py-1 bg-gold-500/15 border border-gold-500/40 text-gold-300 rounded-full">
+                  {rewardsData.progress || 0} / {rewardsData.rewardThreshold || 10} Items
+                </span>
+              </div>
 
-          {/* ── Podium (Top 3 Users) ── */}
-          {top3.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 items-end max-w-5xl mx-auto">
-              
-              {/* 2nd Place */}
-              {top3[1] ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="card p-6 text-center relative overflow-hidden bg-dark-800/90 border border-slate-400/40 rounded-2xl md:order-1 order-2"
-                >
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-400 to-gray-500" />
-                  <div className="w-8 h-8 rounded-full bg-slate-400/20 border border-slate-400/40 text-slate-300 font-bold text-sm mx-auto mb-3 flex items-center justify-center">
-                    #2
-                  </div>
-                  <UserAvatar name={top3[1].name} size={72} ring className="mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white truncate">{top3[1].name}</h3>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-500/20 text-slate-300 font-semibold border border-slate-400/30 inline-block mb-3">
-                    🥈 {top3[1].membershipLevel}
-                  </span>
-                  <div className="pt-3 border-t border-dark-600">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">Total Purchased</p>
-                    <p className="text-xl font-bold text-slate-300">₹{top3[1].totalSpent?.toLocaleString()}</p>
-                  </div>
-                </motion.div>
-              ) : <div className="hidden md:block md:order-1" />}
+              {/* Progress bar */}
+              <div className="w-full h-3 bg-dark-950 rounded-full overflow-hidden border border-dark-700 mb-3">
+                <div
+                  className="h-full bg-gradient-to-r from-gold-500 to-amber-400 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, ((rewardsData.progress || 0) / (rewardsData.rewardThreshold || 10)) * 100)}%` }}
+                />
+              </div>
 
-              {/* 1st Place (Center / Champion) */}
-              {top3[0] && (
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="card p-8 text-center relative overflow-hidden bg-gradient-to-b from-amber-500/15 via-dark-800 to-dark-800 border-2 border-gold-500/60 rounded-2xl shadow-gold scale-105 z-10 md:order-2 order-1"
-                >
-                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600" />
-                  <div className="w-10 h-10 rounded-full bg-gold-500 text-dark-900 font-bold text-base mx-auto mb-3 flex items-center justify-center shadow-lg">
-                    👑 #1
+              {rewardsData.rewardCode ? (
+                <div className="mt-4 p-4 rounded-xl bg-gold-500/10 border border-gold-500/40 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs text-gold-400 uppercase font-bold tracking-wider">🎉 Milestone Unlocked: Free T-Shirt Coupon</span>
+                    <p className="font-mono text-lg font-extrabold text-white mt-0.5">{rewardsData.rewardCode}</p>
                   </div>
-                  <div className="relative inline-block mb-3">
-                    <UserAvatar name={top3[0].name} size={84} ring className="mx-auto shadow-2xl" />
-                    <span className="absolute -bottom-1 -right-1 text-2xl">🏆</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white truncate">{top3[0].name}</h3>
-                  <span className="text-xs px-3 py-1 rounded-full bg-gold-500/20 text-gold-400 font-bold border border-gold-500/40 inline-block mb-4">
-                    🥇 {top3[0].membershipLevel} VIP
-                  </span>
-                  <div className="pt-4 border-t border-gold-500/30">
-                    <p className="text-[11px] text-gold-400 uppercase font-semibold tracking-widest">Top Dress Buyer</p>
-                    <p className="text-2xl font-bold gold-text">₹{top3[0].totalSpent?.toLocaleString()}</p>
-                  </div>
-                </motion.div>
+                  <button
+                    onClick={() => handleCopyCoupon(rewardsData.rewardCode)}
+                    className="px-4 py-2 rounded-xl bg-gold-500 text-dark-950 font-bold text-xs hover:bg-gold-400 transition-colors flex items-center gap-1.5 shrink-0 shadow-gold"
+                  >
+                    {copiedCoupon ? <HiCheckCircle className="w-4 h-4" /> : <HiOutlineClipboardCopy className="w-4 h-4" />}
+                    {copiedCoupon ? 'Copied!' : 'Copy Code'}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">
+                  Order <strong className="text-gold-400">{rewardsData.needed || 10}</strong> more items to unlock your free reward code.
+                </p>
               )}
-
-              {/* 3rd Place */}
-              {top3[2] ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="card p-6 text-center relative overflow-hidden bg-dark-800/90 border border-orange-500/40 rounded-2xl md:order-3 order-3"
-                >
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-600 to-amber-700" />
-                  <div className="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 font-bold text-sm mx-auto mb-3 flex items-center justify-center">
-                    #3
-                  </div>
-                  <UserAvatar name={top3[2].name} size={72} ring className="mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white truncate">{top3[2].name}</h3>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-semibold border border-orange-500/30 inline-block mb-3">
-                    🥉 {top3[2].membershipLevel}
-                  </span>
-                  <div className="pt-3 border-t border-dark-600">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">Total Purchased</p>
-                    <p className="text-xl font-bold text-orange-400">₹{top3[2].totalSpent?.toLocaleString()}</p>
-                  </div>
-                </motion.div>
-              ) : <div className="hidden md:block md:order-3" />}
-
             </div>
           )}
 
+          {/* ── Quick Services & Navigation ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            <Link
+              to="/orders"
+              className="p-5 rounded-2xl bg-dark-800/60 border border-dark-600 hover:border-gold-500/50 hover:bg-dark-800 transition-all group"
+            >
+              <HiShoppingBag className="w-6 h-6 text-gold-400 mb-2 group-hover:scale-110 transition-transform" />
+              <h4 className="text-sm font-bold text-white">Order History</h4>
+              <p className="text-xs text-gray-400 mt-1">Track shipments and view past receipts</p>
+            </Link>
 
-          {/* ── Leaderboard Table Section ── */}
-          <div className="card bg-dark-800/80 backdrop-blur-md border border-dark-600 rounded-2xl p-4 sm:p-6 overflow-hidden">
-            
-            {/* Table Search & Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  All Spenders Leaderboard <span className="text-xs font-normal text-gray-400">({leaderboardList.length} users)</span>
-                </h3>
-                <p className="text-xs text-gray-400">Ranked by overall dress purchases</p>
-              </div>
+            <Link
+              to="/rewards"
+              className="p-5 rounded-2xl bg-dark-800/60 border border-dark-600 hover:border-gold-500/50 hover:bg-dark-800 transition-all group"
+            >
+              <HiStar className="w-6 h-6 text-gold-400 mb-2 group-hover:scale-110 transition-transform" />
+              <h4 className="text-sm font-bold text-white">Rewards Hub</h4>
+              <p className="text-xs text-gray-400 mt-1">Spin the prize wheel and unlock perks</p>
+            </Link>
 
-              <div className="relative w-full sm:w-64">
-                <HiSearch className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search user..."
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="input-field pl-9 py-2 text-xs w-full bg-dark-900 border-dark-600 focus:border-gold-500"
-                />
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-dark-600 text-xs text-gray-400 uppercase tracking-wider bg-dark-900/50">
-                    <th className="py-3 px-4 rounded-l-xl">Rank</th>
-                    <th className="py-3 px-4">User</th>
-                    <th className="py-3 px-4">Tier</th>
-                    <th className="py-3 px-4">Orders</th>
-                    <th className="py-3 px-4 text-right rounded-r-xl">Total Amount Spent</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dark-600/50">
-                  {filteredLeaderboard.map((item) => {
-                    const itemCfg = getLevelCfg(item.membershipLevel);
-                    const isSelf = item.isCurrentUser;
-
-                    return (
-                      <tr
-                        key={item.id}
-                        className={`transition-colors ${
-                          isSelf
-                            ? 'bg-gold-500/10 hover:bg-gold-500/15 border-l-4 border-l-gold-500'
-                            : 'hover:bg-dark-750'
-                        }`}
-                      >
-                        {/* Rank */}
-                        <td className="py-4 px-4 font-bold text-gray-300">
-                          <div className="flex items-center gap-2">
-                            {item.rank === 1 ? (
-                              <span className="w-7 h-7 rounded-full bg-gold-500/20 text-gold-400 border border-gold-500/40 flex items-center justify-center text-xs">
-                                👑 1
-                              </span>
-                            ) : item.rank === 2 ? (
-                              <span className="w-7 h-7 rounded-full bg-slate-400/20 text-slate-300 border border-slate-400/40 flex items-center justify-center text-xs">
-                                🥈 2
-                              </span>
-                            ) : item.rank === 3 ? (
-                              <span className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/40 flex items-center justify-center text-xs">
-                                🥉 3
-                              </span>
-                            ) : (
-                              <span className="w-7 h-7 rounded-full bg-dark-900 text-gray-400 border border-dark-600 flex items-center justify-center text-xs font-mono">
-                                #{item.rank}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* User info */}
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar name={item.name} size={36} ring={isSelf} />
-                            <div>
-                              <p className="font-semibold text-white flex items-center gap-2">
-                                {item.name}
-                                {isSelf && (
-                                  <span className="bg-gold-500 text-dark-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                    YOU
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Membership Tier */}
-                        <td className="py-4 px-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${itemCfg.bg} ${itemCfg.text} border ${itemCfg.border} inline-flex items-center gap-1`}>
-                            {itemCfg.emoji} {item.membershipLevel}
-                          </span>
-                        </td>
-
-                        {/* Total Orders */}
-                        <td className="py-4 px-4 text-gray-300 font-mono">
-                          {item.totalOrders || 0}
-                        </td>
-
-                        {/* Total Spent */}
-                        <td className="py-4 px-4 text-right font-bold font-mono text-base">
-                          <span className={isSelf ? 'gold-text font-extrabold' : 'text-gray-200'}>
-                            ₹{item.totalSpent?.toLocaleString()}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {filteredLeaderboard.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-400">
-                        No users found matching "{searchFilter}"
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
+            <Link
+              to="/leaderboard"
+              className="p-5 rounded-2xl bg-dark-800/60 border border-dark-600 hover:border-gold-500/50 hover:bg-dark-800 transition-all group"
+            >
+              <FaTrophy className="w-6 h-6 text-gold-400 mb-2 group-hover:scale-110 transition-transform" />
+              <h4 className="text-sm font-bold text-white">Leaderboard Rankings</h4>
+              <p className="text-xs text-gray-400 mt-1">See top buyers across all dress collections</p>
+            </Link>
           </div>
+
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {/* ── PROFILE DOWN SIDE: ADMIN PANEL SECTION (If Admin) ─────── */}
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-3xl bg-gradient-to-br from-dark-800 via-dark-850 to-dark-900 border-2 border-gold-500/50 p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-gold-500/20 relative z-10">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold-500 to-amber-600 text-dark-950 flex items-center justify-center text-2xl shadow-gold shrink-0">
+                    👑
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-2xl font-bold text-white">Administrator Control Panel</h2>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-gold-500 text-dark-950">
+                        ADMIN ACCESS
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-300 mt-1 max-w-2xl">
+                      Complete administrative management suite. Add and edit products, manage customer orders, track inventory stock, inspect activity logs, and view sales revenue.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Main Admin Launch Button */}
+                <Link
+                  to="/admin"
+                  className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-gold-500 via-amber-500 to-yellow-500 hover:from-gold-400 hover:to-amber-400 text-dark-950 font-extrabold text-sm shadow-gold transition-all flex items-center gap-2.5 shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <HiChartBar className="w-5 h-5 text-dark-950" />
+                  <span>Open Admin Control Center</span>
+                  <HiChevronRight className="w-4 h-4 text-dark-950" />
+                </Link>
+              </div>
+
+              {/* Direct Quick Shortcuts inside Admin Panel Section */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 relative z-10">
+                <Link
+                  to="/admin/products"
+                  className="p-3.5 rounded-xl bg-dark-900/80 hover:bg-gold-500/10 border border-dark-600 hover:border-gold-500/40 text-center transition-all group"
+                >
+                  <HiShoppingBag className="w-5 h-5 text-gold-400 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="block text-xs font-bold text-gray-200 group-hover:text-gold-300">Edit Products</span>
+                  <span className="block text-[10px] text-gray-400 mt-0.5">Manage catalog</span>
+                </Link>
+
+                <Link
+                  to="/admin/orders"
+                  className="p-3.5 rounded-xl bg-dark-900/80 hover:bg-gold-500/10 border border-dark-600 hover:border-gold-500/40 text-center transition-all group"
+                >
+                  <HiTag className="w-5 h-5 text-gold-400 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="block text-xs font-bold text-gray-200 group-hover:text-gold-300">All Orders</span>
+                  <span className="block text-[10px] text-gray-400 mt-0.5">Status & delivery</span>
+                </Link>
+
+                <Link
+                  to="/admin/customers"
+                  className="p-3.5 rounded-xl bg-dark-900/80 hover:bg-gold-500/10 border border-dark-600 hover:border-gold-500/40 text-center transition-all group"
+                >
+                  <HiUsers className="w-5 h-5 text-gold-400 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="block text-xs font-bold text-gray-200 group-hover:text-gold-300">Customers</span>
+                  <span className="block text-[10px] text-gray-400 mt-0.5">View user accounts</span>
+                </Link>
+
+                <Link
+                  to="/admin/analytics"
+                  className="p-3.5 rounded-xl bg-dark-900/80 hover:bg-gold-500/10 border border-dark-600 hover:border-gold-500/40 text-center transition-all group"
+                >
+                  <HiChartBar className="w-5 h-5 text-gold-400 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="block text-xs font-bold text-gray-200 group-hover:text-gold-300">Analytics</span>
+                  <span className="block text-[10px] text-gray-400 mt-0.5">Revenue & sales</span>
+                </Link>
+
+                <Link
+                  to="/admin/categories"
+                  className="p-3.5 rounded-xl bg-dark-900/80 hover:bg-gold-500/10 border border-dark-600 hover:border-gold-500/40 text-center transition-all group col-span-2 sm:col-span-1"
+                >
+                  <HiSparkles className="w-5 h-5 text-gold-400 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="block text-xs font-bold text-gray-200 group-hover:text-gold-300">Categories</span>
+                  <span className="block text-[10px] text-gray-400 mt-0.5">Collections setup</span>
+                </Link>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Master Artisan Studio (If Artisan) */}
+          {isArtisan && (
+            <div className="mt-8 rounded-2xl bg-purple-900/20 border border-purple-500/40 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🎨</span>
+                <div>
+                  <h3 className="text-base font-bold text-white">Master Artisan Studio</h3>
+                  <p className="text-xs text-gray-300 mt-0.5">Digitize handloom collections, AI photography, and audio pricing.</p>
+                </div>
+              </div>
+              <Link
+                to="/artisan"
+                className="btn-primary px-5 py-2.5 text-xs font-bold shadow-gold flex items-center gap-2 shrink-0"
+              >
+                Open Artisan Studio &rarr;
+              </Link>
+            </div>
+          )}
 
         </div>
       </div>

@@ -179,16 +179,6 @@ export default function Navbar() {
                 )}
               </Link>
 
-              {/* Direct Admin Panel Button */}
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-gold-500/20 to-amber-500/20 border border-gold-500/50 text-gold-300 hover:text-white hover:bg-gold-500/30 text-xs font-bold transition-all shadow-gold"
-                >
-                  <HiChartBar className="w-3.5 h-3.5 text-gold-400" />
-                  <span>Admin Panel</span>
-                </Link>
-              )}
 
               {/* User Avatar / Sign In */}
               {user ? (
@@ -222,7 +212,10 @@ export default function Navbar() {
                     )}
 
                     <Link to="/profile" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-dark-800 text-xs text-gray-300 hover:text-white">
-                      <HiUser className="w-3.5 h-3.5 text-gray-400" /> My Profile & Rank
+                      <HiUser className="w-3.5 h-3.5 text-gold-400" /> My Profile
+                    </Link>
+                    <Link to="/leaderboard" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-dark-800 text-xs text-gray-300 hover:text-white">
+                      <FaTrophy className="w-3.5 h-3.5 text-gold-400" /> Leaderboard
                     </Link>
                     <Link to="/wishlist" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-dark-800 text-xs text-gray-300 hover:text-white">
                       <HiHeart className="w-3.5 h-3.5 text-red-400" /> My Wishlist
@@ -384,22 +377,12 @@ export default function Navbar() {
             ))}
 
             <div className="pt-3 border-t border-dark-800 mt-3 space-y-1">
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gold-500 text-dark-950 text-xs font-bold text-center shadow-gold mb-2"
-                >
-                  <HiChartBar className="w-4 h-4" /> Admin Control Center
-                </Link>
-              )}
-
               <Link
-                to="/artisan/ai-studio"
+                to="/leaderboard"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="block py-2.5 px-3 rounded-xl bg-gold-500/10 border border-gold-500/30 text-gold-400 text-xs font-semibold text-center"
+                className="flex items-center gap-2.5 py-2 px-3 rounded-xl text-xs text-gold-400 hover:text-white hover:bg-dark-800"
               >
-                AI Artisan Studio
+                <FaTrophy className="w-4 h-4 text-gold-400" /> Leaderboard
               </Link>
 
               {user && (
@@ -409,7 +392,7 @@ export default function Navbar() {
                     onClick={() => setMobileDrawerOpen(false)}
                     className="flex items-center gap-2.5 py-2 px-3 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-dark-800"
                   >
-                    <HiUser className="w-4 h-4 text-gold-400" /> My Profile & Rank
+                    <HiUser className="w-4 h-4 text-gold-400" /> My Profile
                   </Link>
                   <Link
                     to="/orders"

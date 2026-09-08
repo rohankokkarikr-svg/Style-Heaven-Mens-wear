@@ -28,6 +28,7 @@ import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Rewards from './pages/Rewards';
 import Profile from './pages/Profile';
+import Leaderboard from './pages/Leaderboard';
 import PaymentGateway from './pages/PaymentGateway';
 import ArtisanStore from './pages/ArtisanStore';
 
@@ -159,6 +160,7 @@ function App() {
                         <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
                         <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
                         <Route path="/rewards" element={<PrivateRoute><Rewards /></PrivateRoute>} />
+                        <Route path="/leaderboard" element={<Leaderboard />} />
                         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                       </Routes>
 
