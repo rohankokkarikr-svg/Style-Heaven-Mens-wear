@@ -19,7 +19,7 @@ import {
 } from 'react-icons/hi';
 import { adminAPI, productAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size'];
 
@@ -46,6 +46,8 @@ export default function Products() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editQueryId = searchParams.get('edit');
   
   // Rejection modal state
   const [rejectModal, setRejectModal] = useState(null);
@@ -157,6 +159,24 @@ export default function Products() {
     }
   };
 
+  useEffect(() => {
+    if (editQueryId && products.length > 0) {
+      const target = products.find(p => String(p.id) === String(editQueryId));
+      if (target) {
+        handleOpenEdit(target);
+      }
+    }
+  }, [editQueryId, products]);
+
+  const handleCloseEdit = () => {
+    setEditProduct(null);
+    if (searchParams.get('edit')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('edit');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
   const handleOpenEdit = (p) => {
     setEditProduct(p);
     setEditFormData({
@@ -263,7 +283,7 @@ export default function Products() {
         setPreviewProduct(prev => ({ ...prev, ...updated }));
       }
       toast.success('Product updated and synced live!');
-      setEditProduct(null);
+      handleCloseEdit();
     } catch (err) {
       console.error('Failed to update product:', err);
       toast.error(err?.response?.data?.error || 'Failed to update product');
@@ -303,6 +323,16 @@ export default function Products() {
           <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh List
         </button>
+      </div>
+
+      {/* Visual Indicator Banner */}
+      <div className="card p-3.5 bg-gradient-to-r from-gold-500/15 via-gold-500/5 to-transparent border border-gold-500/30 flex items-center justify-between text-xs text-gold-400">
+        <div className="flex items-center gap-2.5">
+          <span className="p-1 rounded bg-gold-500 text-dark-950 font-black text-[10px] tracking-wider uppercase">HOW TO EDIT</span>
+          <span className="text-gray-200">
+            Click the <strong className="text-gold-400 font-bold bg-gold-500/20 px-1.5 py-0.5 rounded border border-gold-500/30">✏️ Edit Product</strong> button under any product name, or the gold <strong className="text-gold-400 font-bold bg-gold-500/20 px-1.5 py-0.5 rounded border border-gold-500/30">Edit</strong> button on the right to edit prices, stock, images, or descriptions.
+          </span>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -357,7 +387,7 @@ export default function Products() {
                   <th className="py-3 px-4">Artisan Store</th>
                   <th className="py-3 px-4">Price & Stock</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 text-right sticky right-0 bg-dark-800 shadow-[-8px_0_12px_-2px_rgba(0,0,0,0.5)] z-10 border-l border-dark-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-600/50">
@@ -368,7 +398,7 @@ export default function Products() {
                         <img
                           src={p.image_url || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=120&auto=format&fit=crop'}
                           alt={p.name}
-                          className="w-11 h-11 rounded-lg object-cover ring-1 ring-dark-500 shrink-0 cursor-pointer"
+                          className="w-12 h-12 rounded-lg object-cover ring-1 ring-dark-500 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => handleOpenEdit(p)}
                           onError={(e) => {
                             e.target.onerror = null;
@@ -391,6 +421,16 @@ export default function Products() {
                           {p.rejection_reason && (
                             <p className="text-red-400 text-[10px] truncate font-medium">⚠️ {p.rejection_reason}</p>
                           )}
+                          {/* Direct, unmissable Edit button right here in Product Info column */}
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(p)}
+                              className="px-2.5 py-1 rounded bg-gold-500/20 hover:bg-gold-500/35 border border-gold-500/50 text-gold-400 hover:text-gold-300 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+                            >
+                              <HiPencilAlt className="w-3.5 h-3.5" /> Edit Product
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -409,18 +449,21 @@ export default function Products() {
                     <td className="py-3 px-4">
                       {getStatusBadge(p)}
                     </td>
-                    <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-                      {/* Edit Product Action */}
+                    <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap sticky right-0 bg-dark-900/95 backdrop-blur-md shadow-[-8px_0_12px_-2px_rgba(0,0,0,0.5)] z-10 border-l border-dark-700/60">
+                      {/* Prominent High-Contrast Gold Edit Button with Text */}
                       <button
+                        type="button"
                         onClick={() => handleOpenEdit(p)}
-                        className="p-1.5 text-gold-400 hover:text-gold-300 rounded bg-gold-500/10 hover:bg-gold-500/25 border border-gold-500/30 transition-all inline-block"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-dark-950 font-black text-xs shadow-md shadow-gold-500/20 transition-all cursor-pointer ring-1 ring-gold-400/60"
                         title="Edit Product Details"
                       >
-                        <HiPencilAlt className="w-4 h-4" />
+                        <HiPencilAlt className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>Edit</span>
                       </button>
 
                       {/* Quick View Action */}
                       <button
+                        type="button"
                         onClick={() => setPreviewProduct(p)}
                         className="p-1.5 text-gray-400 hover:text-white rounded bg-dark-700 hover:bg-dark-600"
                         title="Quick View Details"
@@ -515,7 +558,7 @@ export default function Products() {
                 </div>
               </div>
               <button
-                onClick={() => setEditProduct(null)}
+                onClick={handleCloseEdit}
                 className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-dark-700 transition-colors"
               >
                 <HiX className="w-5 h-5" />
@@ -845,7 +888,7 @@ export default function Products() {
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   <button
                     type="button"
-                    onClick={() => setEditProduct(null)}
+                    onClick={handleCloseEdit}
                     className="btn-secondary text-xs py-2 px-4"
                   >
                     Cancel

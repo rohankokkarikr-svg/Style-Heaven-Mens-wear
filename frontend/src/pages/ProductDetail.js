@@ -17,7 +17,8 @@ import {
   HiHeart,
   HiChevronRight,
   HiCheckCircle,
-  HiBadgeCheck
+  HiBadgeCheck,
+  HiPencilAlt
 } from 'react-icons/hi';
 
 export default function ProductDetail() {
@@ -25,7 +26,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -217,6 +218,26 @@ export default function ProductDetail() {
         </div>
       </div>
 
+      {/* Admin Floating / Prominent Action Bar */}
+      {isAdmin && (
+        <div className="bg-gradient-to-r from-gold-500/25 via-dark-800 to-dark-900 border-b border-gold-500/40 py-3.5 px-4 sm:px-6 shadow-xl sticky top-16 z-30 backdrop-blur-md">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="px-2 py-0.5 rounded bg-gold-500 text-dark-950 font-black text-[11px] tracking-wider uppercase">👑 ADMIN MODE</span>
+              <p className="text-xs text-white font-medium">
+                You have administrative access to edit this product's price, stock, imagery, or description.
+              </p>
+            </div>
+            <Link
+              to={`/admin/products?edit=${product.id}`}
+              className="btn-primary text-xs py-1.5 px-4 font-bold flex items-center gap-2 shadow-lg shadow-gold-500/20 shrink-0"
+            >
+              <HiPencilAlt className="w-4 h-4" /> Edit Product in Admin Panel
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Main Product Showcase Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -317,10 +338,21 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              {/* Title */}
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-white leading-tight">
-                {product.name}
-              </h1>
+              {/* Title & Admin Edit Action */}
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-white leading-tight">
+                  {product.name}
+                </h1>
+                {isAdmin && (
+                  <Link
+                    to={`/admin/products?edit=${product.id}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500/15 hover:bg-gold-500/25 border border-gold-500/40 text-gold-400 hover:text-gold-300 text-xs font-bold shrink-0 shadow-sm transition-all"
+                    title="Edit in Admin Panel"
+                  >
+                    <HiPencilAlt className="w-3.5 h-3.5" /> Edit
+                  </Link>
+                )}
+              </div>
 
               {/* Rating & Reviews Summary */}
               <div className="flex items-center gap-3 mt-3">
