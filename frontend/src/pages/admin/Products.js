@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { 
   HiSearch, 
-  HiFilter, 
   HiCheckCircle, 
   HiXCircle, 
   HiEye, 
   HiEyeOff, 
   HiTrash, 
   HiRefresh,
-  HiSparkles,
   HiX,
   HiExternalLink,
   HiPencilAlt,
   HiUpload,
-  HiPhotograph,
   HiTag,
   HiCheck
 } from 'react-icons/hi';
@@ -99,6 +96,7 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFilter, statusFilter]);
 
   const handleSearchSubmit = (e) => {
@@ -166,6 +164,7 @@ export default function Products() {
         handleOpenEdit(target);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editQueryId, products]);
 
   const handleCloseEdit = () => {
@@ -352,8 +351,19 @@ export default function Products() {
             <button type="submit" className="btn-primary text-xs py-2 px-3">Search</button>
           </form>
 
-          {/* Status Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
+          {/* Category & Status Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto">
+            <select
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              className="bg-dark-700 border border-dark-600 rounded-lg px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-gold-500"
+            >
+              <option value="all">All Categories</option>
+              {COMMON_CATEGORIES.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
             {['all', 'pending', 'approved', 'rejected'].map(st => (
               <button
                 key={st}

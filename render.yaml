@@ -46,6 +46,8 @@ services:
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmxuanN3bGVicHZhcG9sZmZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODAzMjQsImV4cCI6MjA5MzU1NjMyNH0.TyziKPzjkZzhZK68rNl9Zzj-21uVrIhFSIuKuQdHkHY
       - key: REACT_APP_LOCATIONIQ_API_KEY
         value: pk.f2bad577bd835e11c81ffd571d5c353b
+      - key: CI
+        value: "false"
       # Managed in the dashboard so you can customize the backend URL if name changes
       - key: REACT_APP_API_URL
         sync: false
