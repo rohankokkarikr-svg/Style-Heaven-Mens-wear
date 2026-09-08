@@ -5,7 +5,6 @@ import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { productAPI, reviewAPI } from '../services/api';
 import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
-import { motion, AnimatePresence } from 'framer-motion';
 import ReviewModal from '../components/ReviewModal';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
@@ -16,12 +15,8 @@ import {
   HiTruck,
   HiShieldCheck,
   HiHeart,
-  HiRefresh,
-  HiSparkles,
   HiChevronRight,
   HiCheckCircle,
-  HiGlobeAlt,
-  HiInformationCircle,
   HiBadgeCheck
 } from 'react-icons/hi';
 
@@ -114,17 +109,44 @@ export default function ProductDetail() {
 
     fetchRelated();
 
-    // Fetch Reviews
-    reviewAPI
-      .getApproved()
-      .then((res) => {
-        const filtered = (res.data || []).filter(
-          (r) => r.product_name?.trim().toLowerCase() === product.name?.trim().toLowerCase()
-        );
-        setProductReviews(filtered);
-      })
-      .catch(() => {});
+    // Fetch Real Reviews for this specific product
+    if (product?.name) {
+      reviewAPI
+        .getApproved({ product_name: product.name })
+        .then((res) => {
+          const list = res.data || [];
+          const filtered = list.filter(
+            (r) => r.product_name?.trim().toLowerCase() === product.name?.trim().toLowerCase()
+          );
+          setProductReviews(filtered.length > 0 ? filtered : list);
+        })
+        .catch(() => {});
+    }
   }, [product]);
+
+  const totalReviewsCount = productReviews.length;
+  const avgRating = totalReviewsCount > 0
+    ? (productReviews.reduce((sum, r) => sum + Number(r.rating || 5), 0) / totalReviewsCount).toFixed(1)
+    : (product?.rating ? Number(product.rating).toFixed(1) : '5.0');
+
+  const ratingCounts = useMemo(() => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    productReviews.forEach(r => {
+      const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
+      counts[star] = (counts[star] || 0) + 1;
+    });
+    return counts;
+  }, [productReviews]);
+
+  const ratingBars = [5, 4, 3, 2, 1].map(stars => {
+    const count = ratingCounts[stars] || 0;
+    const pct = totalReviewsCount > 0 ? Math.round((count / totalReviewsCount) * 100) : (stars === 5 ? 100 : 0);
+    return { stars, pct, count };
+  });
+
+  const handleReviewSubmitted = (newReview) => {
+    setProductReviews(prev => [newReview, ...prev.filter(r => r.id !== newReview.id)]);
+  };
 
   if (loading || !product) {
     return (
@@ -298,24 +320,24 @@ export default function ProductDetail() {
 
               {/* Rating & Reviews Summary */}
               <div className="flex items-center gap-3 mt-3">
-                <div className="flex items-center text-gold-400">
+                <div className="flex items-center text-gold-400 gap-0.5">
                   {[...Array(5)].map((_, i) => (
                     <HiStar
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(product.rating || 4.8) ? 'text-gold-400' : 'text-gray-600'
+                        i < Math.floor(Number(avgRating)) ? 'text-gold-400' : 'text-gray-600'
                       }`}
                     />
                   ))}
                 </div>
                 <span className="text-sm font-bold text-white">
-                  {product.rating ? Number(product.rating).toFixed(1) : '4.8'}
+                  {avgRating}
                 </span>
                 <span className="text-xs text-gray-400">
-                  ({product.review_count || 56} Verified Reviews)
+                  ({totalReviewsCount} Verified Review{totalReviewsCount === 1 ? '' : 's'})
                 </span>
                 <span className="text-gray-600">•</span>
-                <span className="text-xs text-emerald-400 font-medium">98% Recommended</span>
+                <span className="text-xs text-emerald-400 font-medium">100% Authentic Handcraft</span>
               </div>
 
               {/* Price Box */}
@@ -612,21 +634,15 @@ export default function ProductDetail() {
             <div>
               <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white">Customer Reviews & Ratings</h2>
               <p className="text-gray-400 text-xs sm:text-sm mt-1">
-                Real feedback from customers celebrating Indian artisanal handicrafts
+                Real feedback from verified buyers celebrating Indian artisanal handicrafts
               </p>
             </div>
             <button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  toast.error('Please log in to write a review');
-                  navigate('/login');
-                  return;
-                }
-                setReviewModalOpen(true);
-              }}
-              className="btn-outline px-6 py-2.5 text-xs font-semibold self-start md:self-auto"
+              onClick={() => setReviewModalOpen(true)}
+              className="btn-outline px-6 py-2.5 text-xs font-semibold self-start md:self-auto hover:bg-gold-500/10 hover:text-gold-400 hover:border-gold-500/50 flex items-center gap-1.5"
             >
-              ✍️ Write a Review
+              <span>✍️</span>
+              <span>Write a Review</span>
             </button>
           </div>
 
@@ -634,33 +650,30 @@ export default function ProductDetail() {
             {/* Rating Breakdown Bars (4 cols) */}
             <div className="md:col-span-4 p-6 rounded-2xl bg-dark-900/60 border border-dark-700 text-center md:text-left flex flex-col justify-center">
               <div className="text-4xl sm:text-5xl font-bold text-white mb-2">
-                {product.rating ? Number(product.rating).toFixed(1) : '4.8'}
+                {avgRating}
               </div>
               <div className="flex items-center justify-center md:justify-start text-gold-400 gap-1 mb-1">
                 {[...Array(5)].map((_, i) => (
-                  <HiStar key={i} className="w-5 h-5 text-gold-400" />
+                  <HiStar
+                    key={i}
+                    className={`w-5 h-5 ${i < Math.floor(Number(avgRating)) ? 'text-gold-400' : 'text-gray-600'}`}
+                  />
                 ))}
               </div>
               <p className="text-xs text-gray-400 mb-6">
-                Based on {product.review_count || 56} verified customer ratings
+                Based on {totalReviewsCount} verified customer rating{totalReviewsCount === 1 ? '' : 's'}
               </p>
 
               {/* Bar Distributions */}
               <div className="space-y-2 text-xs">
-                {[
-                  { stars: 5, pct: 80 },
-                  { stars: 4, pct: 15 },
-                  { stars: 3, pct: 5 },
-                  { stars: 2, pct: 0 },
-                  { stars: 1, pct: 0 },
-                ].map((b) => (
+                {ratingBars.map((b) => (
                   <div key={b.stars} className="flex items-center gap-3">
                     <span className="w-12 text-gray-400 flex items-center gap-0.5">
                       {b.stars} <HiStar className="text-gold-400 w-3 h-3" />
                     </span>
                     <div className="flex-1 h-2 rounded-full bg-dark-700 overflow-hidden">
                       <div
-                        className="h-full bg-gold-500 rounded-full"
+                        className="h-full bg-gold-500 rounded-full transition-all duration-500"
                         style={{ width: `${b.pct}%` }}
                       />
                     </div>
@@ -670,51 +683,50 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Sample Reviews List (8 cols) */}
+            {/* Real Reviews List (8 cols) */}
             <div className="md:col-span-8 space-y-4">
-              {[
-                {
-                  name: 'Priya Sundaram',
-                  rating: 5,
-                  date: '2 days ago',
-                  verified: true,
-                  comment:
-                    'Extremely authentic and luxurious craftsmanship. The texture and attention to detail reflect true Indian heritage. Delivered in secure packaging.',
-                },
-                {
-                  name: 'Aditya Deshmukh',
-                  rating: 5,
-                  date: '1 week ago',
-                  verified: true,
-                  comment:
-                    'Ordered this for our living room, and it exceeded expectations! Knowing it directly supports Indian master artisans makes it even more special.',
-                },
-              ].map((rev, idx) => (
-                <div key={idx} className="p-5 rounded-2xl bg-dark-900/40 border border-dark-700 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gold-500/20 text-gold-400 font-bold text-xs flex items-center justify-center">
-                        {rev.name[0]}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-white text-xs sm:text-sm">{rev.name}</h4>
-                        {rev.verified && (
+              {productReviews.length > 0 ? (
+                productReviews.map((rev, idx) => (
+                  <div key={rev.id || idx} className="p-5 rounded-2xl bg-dark-900/50 border border-dark-700 space-y-2 hover:border-gold-500/30 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gold-500/20 text-gold-400 font-bold text-xs flex items-center justify-center border border-gold-500/30 uppercase">
+                          {(rev.customer_name || 'C')[0]}
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-white text-xs sm:text-sm">{rev.customer_name || 'Verified Customer'}</h4>
                           <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
                             <HiCheckCircle className="w-3 h-3" /> Verified Buyer
                           </span>
-                        )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 text-gold-400">
+                        {[...Array(Math.min(5, Math.max(1, Number(rev.rating) || 5)))].map((_, i) => (
+                          <HiStar key={i} className="w-3.5 h-3.5 text-gold-400" />
+                        ))}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-gold-400">
-                      {[...Array(rev.rating)].map((_, i) => (
-                        <HiStar key={i} className="w-3.5 h-3.5" />
-                      ))}
-                    </div>
+                    <p className="text-xs sm:text-sm text-gray-200 leading-relaxed pt-1">{rev.review_text}</p>
+                    <span className="text-[10px] text-gray-500 block pt-1">
+                      {rev.created_at ? new Date(rev.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Verified Review'}
+                    </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">{rev.comment}</p>
-                  <span className="text-[10px] text-gray-500 block pt-1">{rev.date}</span>
+                ))
+              ) : (
+                <div className="p-8 rounded-2xl bg-dark-900/40 border border-dashed border-dark-700 text-center flex flex-col items-center justify-center space-y-3 py-10">
+                  <div className="text-4xl">🌟</div>
+                  <h4 className="text-sm font-semibold text-white">No reviews yet for this masterpiece</h4>
+                  <p className="text-xs text-gray-400 max-w-md">
+                    Be the first buyer to review this authentic handicraft and support the artisan!
+                  </p>
+                  <button
+                    onClick={() => setReviewModalOpen(true)}
+                    className="btn-primary text-xs py-2 px-4 mt-2"
+                  >
+                    ✍️ Write the First Review
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -753,7 +765,9 @@ export default function ProductDetail() {
       <ReviewModal
         isOpen={reviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
+        product={product}
         productName={product.name}
+        onReviewSubmitted={handleReviewSubmitted}
       />
     </div>
   );

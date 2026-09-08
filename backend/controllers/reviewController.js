@@ -46,45 +46,62 @@ let cachedReviews = [];
 
 exports.getApprovedReviews = async (req, res) => {
   try {
-    const { data, error } = await safeQuery(() => 
-      supabase
+    const { product_name } = req.query;
+
+    const { data, error } = await safeQuery(async () => {
+      let query = supabase
         .from('reviews')
         .select('*')
         .eq('is_approved', true)
-        .order('created_at', { ascending: false })
-        .limit(20)
-    );
-      
+        .order('created_at', { ascending: false });
+
+      if (product_name) {
+        query = query.ilike('product_name', `%${product_name.trim()}%`);
+      } else {
+        query = query.limit(30);
+      }
+      return await query;
+    });
+
     if (error) {
       if (error.code === '42P01') {
-        return res.json([...cachedReviews.filter(r => r.is_approved), ...FALLBACK_REVIEWS].slice(0, 10));
+        let fallback = [...cachedReviews.filter(r => r.is_approved), ...FALLBACK_REVIEWS];
+        if (product_name) {
+          fallback = fallback.filter(r => r.product_name?.toLowerCase().includes(product_name.toLowerCase()));
+        }
+        return res.json(fallback);
       }
       throw error;
     }
-    
+
+    if (product_name) {
+      return res.json(data || []);
+    }
+
     res.json(data && data.length > 0 ? data : FALLBACK_REVIEWS);
   } catch (error) {
     console.error('Error fetching reviews:', error);
-    res.json(FALLBACK_REVIEWS);
+    res.json(req.query.product_name ? [] : FALLBACK_REVIEWS);
   }
 };
 
-
 exports.getAllReviews = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
+    const { data, error } = await safeQuery(() =>
+      supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false })
+    );
+
     if (error) {
       if (error.code === '42P01') {
         return res.json([...cachedReviews, ...FALLBACK_REVIEWS]);
       }
       throw error;
     }
-    
-    res.json(data);
+
+    res.json(data || []);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
@@ -93,25 +110,29 @@ exports.getAllReviews = async (req, res) => {
 exports.submitReview = async (req, res) => {
   try {
     const { customer_name, product_name, rating, review_text, image_url } = req.body;
-    
-    if (!customer_name || !product_name || !rating || !review_text) {
-      return res.status(400).json({ error: 'Missing required fields' });
+
+    const finalCustomerName = (customer_name || req.user?.name || 'Verified Buyer').trim();
+    const finalProductName = (product_name || 'Authentic Handcraft').trim();
+
+    if (!finalCustomerName || !finalProductName || !rating || !review_text) {
+      return res.status(400).json({ error: 'Please provide rating, review text, and your name.' });
     }
 
     const newReview = {
       user_id: req.user ? req.user.id : null,
-      customer_name,
-      product_name,
-      rating: Number(rating),
-      review_text,
+      customer_name: finalCustomerName,
+      product_name: finalProductName,
+      rating: Math.max(1, Math.min(5, Number(rating) || 5)),
+      review_text: review_text.trim(),
       image_url: image_url || null,
-      is_approved: true // Auto-approve for demo/dev purposes
+      is_approved: true // Live immediately on product page and in admin moderation
     };
 
     const { data, error } = await supabase
       .from('reviews')
       .insert([newReview])
-      .select();
+      .select()
+      .single();
 
     if (error) {
       if (error.code === '42P01') {
@@ -122,7 +143,7 @@ exports.submitReview = async (req, res) => {
       throw error;
     }
 
-    res.status(201).json(data[0]);
+    res.status(201).json(data);
   } catch (error) {
     console.error('Error submitting review:', error);
     res.status(500).json({ error: 'Failed to submit review' });

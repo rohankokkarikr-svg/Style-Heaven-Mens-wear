@@ -54,4 +54,20 @@ const artisan = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin, artisan };
+const optionalProtect = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer')) {
+    return next();
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+    const { data: user } = await supabase.from('users').select('*').eq('id', decoded.id).single();
+    if (user && user.status !== 'blocked' && user.status !== 'suspended') {
+      req.user = user;
+    }
+  } catch {}
+  next();
+};
+
+module.exports = { protect, admin, artisan, optionalProtect };

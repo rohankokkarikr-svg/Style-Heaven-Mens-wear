@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const reviewController = require('../controllers/reviewController');
-const { protect, admin } = require('../middleware/auth');
+const { protect, admin, optionalProtect } = require('../middleware/auth');
 
 // Public
 router.get('/', reviewController.getApprovedReviews);
 
-// Authenticated User
-router.post('/', protect, reviewController.submitReview);
+// Review submission (authenticated or guest with name)
+router.post('/', optionalProtect, reviewController.submitReview);
 
 // Admin
 router.get('/admin', protect, admin, reviewController.getAllReviews);
