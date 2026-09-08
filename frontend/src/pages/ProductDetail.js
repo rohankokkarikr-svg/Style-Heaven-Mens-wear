@@ -114,13 +114,11 @@ export default function ProductDetail() {
       reviewAPI
         .getApproved({ product_name: product.name })
         .then((res) => {
-          const list = res.data || [];
-          const filtered = list.filter(
-            (r) => r.product_name?.trim().toLowerCase() === product.name?.trim().toLowerCase()
-          );
-          setProductReviews(filtered.length > 0 ? filtered : list);
+          setProductReviews(res.data || []);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error('Failed to fetch reviews for product:', err);
+        });
     }
   }, [product]);
 
@@ -145,7 +143,12 @@ export default function ProductDetail() {
   });
 
   const handleReviewSubmitted = (newReview) => {
+    if (!newReview) return;
     setProductReviews(prev => [newReview, ...prev.filter(r => r.id !== newReview.id)]);
+    setActiveTab('reviews');
+    setTimeout(() => {
+      document.getElementById('product-information-tabs')?.scrollIntoView({ behavior: 'smooth' });
+    }, 150);
   };
 
   if (loading || !product) {
@@ -184,6 +187,7 @@ export default function ProductDetail() {
 
   const tabs = [
     { id: 'description', label: 'Description' },
+    { id: 'reviews', label: `Customer Reviews (${totalReviewsCount})` },
     { id: 'craftsmanship', label: 'Craftsmanship & Process' },
     { id: 'artisan', label: 'About the Artisan' },
     { id: 'dimensions', label: 'Dimensions & Specs' },
@@ -333,9 +337,16 @@ export default function ProductDetail() {
                 <span className="text-sm font-bold text-white">
                   {avgRating}
                 </span>
-                <span className="text-xs text-gray-400">
-                  ({totalReviewsCount} Verified Review{totalReviewsCount === 1 ? '' : 's'})
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('reviews');
+                    document.getElementById('product-information-tabs')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="text-xs text-gold-400 hover:text-gold-300 underline cursor-pointer"
+                >
+                  ({totalReviewsCount} Customer Review{totalReviewsCount === 1 ? '' : 's'})
+                </button>
                 <span className="text-gray-600">•</span>
                 <span className="text-xs text-emerald-400 font-medium">100% Authentic Handcraft</span>
               </div>
@@ -495,7 +506,7 @@ export default function ProductDetail() {
         </div>
 
         {/* Product Information Tabs */}
-        <div className="mt-16 bg-dark-800 rounded-3xl border border-dark-700 overflow-hidden shadow-xl">
+        <div id="product-information-tabs" className="mt-16 bg-dark-800 rounded-3xl border border-dark-700 overflow-hidden shadow-xl scroll-mt-24">
           {/* Tab Headers */}
           <div className="flex overflow-x-auto border-b border-dark-700 bg-dark-850/70 p-2 gap-2">
             {tabs.map((tab) => (
@@ -531,6 +542,87 @@ export default function ProductDetail() {
                     <p className="text-xs text-gray-400">
                       Your purchase directly supports rural Indian artisan families and ensures fair, transparent compensation without middleman markups.
                     </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'reviews' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-dark-700">
+                  <div>
+                    <h3 className="text-xl font-serif font-bold text-white">Customer Reviews & Ratings</h3>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Genuine ratings & verified feedback for {product.name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setReviewModalOpen(true)}
+                    className="btn-primary text-xs py-2 px-4 self-start sm:self-auto flex items-center gap-1.5"
+                  >
+                    <span>✍️</span>
+                    <span>Write a Review</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  {/* Rating Breakdown */}
+                  <div className="md:col-span-4 p-5 rounded-2xl bg-dark-900/60 border border-dark-700 text-center flex flex-col justify-center">
+                    <div className="text-4xl font-bold text-white mb-1">{avgRating}</div>
+                    <div className="flex items-center justify-center text-gold-400 gap-1 mb-1">
+                      {[...Array(5)].map((_, i) => (
+                        <HiStar
+                          key={i}
+                          className={`w-4 h-4 ${i < Math.floor(Number(avgRating)) ? 'text-gold-400' : 'text-gray-600'}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      Based on {totalReviewsCount} verified review{totalReviewsCount === 1 ? '' : 's'}
+                    </p>
+                  </div>
+
+                  {/* Reviews List */}
+                  <div className="md:col-span-8 space-y-3">
+                    {productReviews.length > 0 ? (
+                      productReviews.map((rev, idx) => (
+                        <div key={rev.id || idx} className="p-4 rounded-xl bg-dark-900/60 border border-dark-700 space-y-2 hover:border-gold-500/30 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-gold-500/20 text-gold-400 font-bold text-xs flex items-center justify-center border border-gold-500/30 uppercase">
+                                {(rev.customer_name || 'C')[0]}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-white text-xs">{rev.customer_name || 'Verified Customer'}</h4>
+                                <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
+                                  <HiCheckCircle className="w-3 h-3" /> Verified Buyer
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-0.5 text-gold-400">
+                              {[...Array(Math.min(5, Math.max(1, Number(rev.rating) || 5)))].map((_, i) => (
+                                <HiStar key={i} className="w-3.5 h-3.5 text-gold-400" />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-200 leading-relaxed">{rev.review_text}</p>
+                          <span className="text-[10px] text-gray-500 block">
+                            {rev.created_at ? new Date(rev.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Verified Review'}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 rounded-xl bg-dark-900/40 border border-dashed border-dark-700 text-center space-y-2">
+                        <p className="text-sm font-semibold text-white">No reviews yet for this product</p>
+                        <p className="text-xs text-gray-400">Be the first to share your experience!</p>
+                        <button
+                          onClick={() => setReviewModalOpen(true)}
+                          className="btn-primary text-xs py-1.5 px-3 mt-2"
+                        >
+                          ✍️ Write the First Review
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -629,7 +721,7 @@ export default function ProductDetail() {
         </div>
 
         {/* Customer Reviews & Rating Breakdown */}
-        <div className="mt-16 bg-dark-800 rounded-3xl border border-dark-700 p-6 sm:p-10 shadow-xl">
+        <div id="customer-reviews-section" className="mt-16 bg-dark-800 rounded-3xl border border-dark-700 p-6 sm:p-10 shadow-xl scroll-mt-24">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-dark-700">
             <div>
               <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white">Customer Reviews & Ratings</h2>

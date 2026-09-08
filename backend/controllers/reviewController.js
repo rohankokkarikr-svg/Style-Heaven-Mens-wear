@@ -48,34 +48,55 @@ exports.getApprovedReviews = async (req, res) => {
   try {
     const { product_name } = req.query;
 
+    if (product_name && product_name.trim()) {
+      const cleanName = product_name.trim();
+
+      // Query for matches by product_name
+      let { data, error } = await safeQuery(async () => {
+        return await supabase
+          .from('reviews')
+          .select('*')
+          .eq('is_approved', true)
+          .ilike('product_name', `%${cleanName}%`)
+          .order('created_at', { ascending: false });
+      });
+
+      // If no match and query has multiple words, search with first few keywords
+      if ((!data || data.length === 0) && cleanName.length > 8) {
+        const words = cleanName.split(/\s+/).filter(w => w.length > 2).slice(0, 3).join(' ');
+        if (words && words !== cleanName) {
+          const fallbackRes = await safeQuery(async () => {
+            return await supabase
+              .from('reviews')
+              .select('*')
+              .eq('is_approved', true)
+              .ilike('product_name', `%${words}%`)
+              .order('created_at', { ascending: false });
+          });
+          if (fallbackRes.data && fallbackRes.data.length > 0) {
+            data = fallbackRes.data;
+          }
+        }
+      }
+
+      return res.json(data || []);
+    }
+
+    // If no product_name specified, return recent approved reviews
     const { data, error } = await safeQuery(async () => {
-      let query = supabase
+      return await supabase
         .from('reviews')
         .select('*')
         .eq('is_approved', true)
-        .order('created_at', { ascending: false });
-
-      if (product_name) {
-        query = query.ilike('product_name', `%${product_name.trim()}%`);
-      } else {
-        query = query.limit(30);
-      }
-      return await query;
+        .order('created_at', { ascending: false })
+        .limit(30);
     });
 
     if (error) {
       if (error.code === '42P01') {
-        let fallback = [...cachedReviews.filter(r => r.is_approved), ...FALLBACK_REVIEWS];
-        if (product_name) {
-          fallback = fallback.filter(r => r.product_name?.toLowerCase().includes(product_name.toLowerCase()));
-        }
-        return res.json(fallback);
+        return res.json([...cachedReviews.filter(r => r.is_approved), ...FALLBACK_REVIEWS]);
       }
       throw error;
-    }
-
-    if (product_name) {
-      return res.json(data || []);
     }
 
     res.json(data && data.length > 0 ? data : FALLBACK_REVIEWS);

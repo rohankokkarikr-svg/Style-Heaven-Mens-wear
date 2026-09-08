@@ -176,7 +176,7 @@ export default function Orders() {
                       Size: {item.size} • Qty: {item.quantity}
                     </p>
                     <button
-                      onClick={() => setReviewProduct(item.product || { name: item.product?.name || 'KalaStyle AI Product' })}
+                      onClick={() => setReviewProduct(item.product || { name: item.name || item.product_name || 'Handcrafted Artisan Product' })}
                       className="mt-2 inline-flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300 font-semibold border border-gold-500/30 hover:border-gold-500/60 px-2.5 py-1.5 rounded-md bg-gold-500/5 hover:bg-gold-500/10 transition-all cursor-pointer"
                     >
                       <HiPencilAlt className="w-3.5 h-3.5" />
@@ -258,6 +258,7 @@ export default function Orders() {
         isOpen={!!reviewProduct} 
         onClose={() => setReviewProduct(null)} 
         product={reviewProduct} 
+        productName={reviewProduct?.name}
       />
 
       <EditOrderModal

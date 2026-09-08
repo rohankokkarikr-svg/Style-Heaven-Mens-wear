@@ -104,8 +104,8 @@ export const dashboardAPI = {
 
 // ─── Reviews ─────────────────────────────────────
 export const reviewAPI = {
-  getApproved: () => api.get('/reviews'),
-  getAll: () => api.get('/reviews/admin'),
+  getApproved: (params) => api.get('/reviews', { params }),
+  getAll: (params) => api.get('/reviews/admin', { params }),
   submit: (data) => api.post('/reviews', data),
   approve: (id) => api.patch(`/reviews/${id}/approve`),
   delete: (id) => api.delete(`/reviews/${id}`),
