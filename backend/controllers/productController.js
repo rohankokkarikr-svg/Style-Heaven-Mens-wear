@@ -12,6 +12,39 @@ const invalidateCache = () => {
   productCache.all = { data: null, timestamp: 0 };
   productCache.featured = { data: null, timestamp: 0 };
 };
+exports.invalidateCache = invalidateCache;
+
+exports.getCategories = async (req, res) => {
+  try {
+    const { data, error } = await safeQuery(() =>
+      supabase.from('categories').select('*').order('name')
+    );
+
+    if (data && data.length > 0) {
+      return res.json(data);
+    }
+    return res.json(HANDICRAFT_CATEGORIES.map((c, i) => ({
+      id: String(i + 1),
+      name: c.name,
+      slug: c.id,
+      description: c.description,
+      image_url: c.image,
+      subcategories: c.subcategories || [],
+      is_active: true
+    })));
+  } catch (err) {
+    console.error('getCategories error, returning static fallback:', err.message);
+    res.json(HANDICRAFT_CATEGORIES.map((c, i) => ({
+      id: String(i + 1),
+      name: c.name,
+      slug: c.id,
+      description: c.description,
+      image_url: c.image,
+      subcategories: c.subcategories || [],
+      is_active: true
+    })));
+  }
+};
 
 exports.getProducts = async (req, res) => {
   try {
@@ -25,6 +58,12 @@ exports.getProducts = async (req, res) => {
 
     const { data, error } = await safeQuery(async () => {
       let query = supabase.from('products').select('*, artisan_profiles(id, store_name, location, specialization, verification_status)').order('created_at', { ascending: false });
+
+      // For public shoppers (no specific artisan query), only show approved, non-hidden products
+      if (!artisan_id) {
+        query = query.neq('is_hidden', true);
+        query = query.neq('status', 'rejected');
+      }
 
       if (category && category !== 'all') {
         query = query.eq('category', category);
@@ -52,6 +91,11 @@ exports.getProducts = async (req, res) => {
 
     let filteredData = (data && data.length > 0) ? data : HANDICRAFT_PRODUCTS;
 
+    // Further sanitize fallback or raw data
+    if (!artisan_id) {
+      filteredData = filteredData.filter(p => !p.is_hidden && p.status !== 'rejected');
+    }
+
     if (isBasicRequest) {
       productCache.all = { data: filteredData, timestamp: Date.now() };
     }
@@ -59,23 +103,32 @@ exports.getProducts = async (req, res) => {
     res.json(filteredData);
   } catch (error) {
     console.error('Products Fetch Notice, returning handicrafts dataset:', error.message);
-    res.json(HANDICRAFT_PRODUCTS);
+    res.json(HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && p.status !== 'rejected'));
   }
 };
 
 exports.getFeaturedProducts = async (req, res) => {
   try {
+    if (productCache.featured.data && (Date.now() - productCache.featured.timestamp < CACHE_TTL)) {
+      return res.json(productCache.featured.data);
+    }
+
     const { data, error } = await safeQuery(() => 
       supabase
         .from('products')
         .select('*, artisan_profiles(id, store_name, location, specialization)')
+        .neq('is_hidden', true)
+        .neq('status', 'rejected')
         .order('created_at', { ascending: false })
         .limit(9)
     );
 
     if (error) throw error;
     
-    const filteredData = (data || []).slice(0, 8);
+    let filteredData = (data || []).filter(p => !p.is_hidden && p.status !== 'rejected').slice(0, 8);
+    if (filteredData.length === 0) {
+      filteredData = HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && p.status !== 'rejected').slice(0, 8);
+    }
     
     productCache.featured = { data: filteredData, timestamp: Date.now() };
     

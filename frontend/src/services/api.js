@@ -118,6 +118,11 @@ export const couponAPI = {
   getMy:    ()     => api.get('/coupons/my-coupons'),
 };
 
+// ─── Categories ──────────────────────────────────
+export const categoryAPI = {
+  getAll: () => api.get('/products/categories'),
+};
+
 // ─── Settings ─────────────────────────────────────
 export const settingsAPI = {
   get:    ()       => api.get('/settings'),

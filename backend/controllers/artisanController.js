@@ -99,7 +99,7 @@ exports.getMyStats = async (req, res) => {
   try {
     const { data: profile } = await supabase
       .from('artisan_profiles')
-      .select('id, earnings_total')
+      .select('id, earnings_total, verification_status, store_name')
       .eq('user_id', req.user.id)
       .single();
 
@@ -107,7 +107,7 @@ exports.getMyStats = async (req, res) => {
 
     const { data: products } = await supabase
       .from('products')
-      .select('id, name, price, stock_quantity, is_in_stock, image_url, ai_generated, category, created_at')
+      .select('id, name, price, original_price, stock_quantity, is_in_stock, image_url, ai_generated, category, subcategory, status, rejection_reason, is_hidden, created_at')
       .eq('artisan_id', profile.id)
       .order('created_at', { ascending: false });
 
@@ -131,6 +131,8 @@ exports.getMyStats = async (req, res) => {
     }
 
     res.json({
+      verificationStatus: profile.verification_status,
+      storeName: profile.store_name,
       totalProducts: (products || []).length,
       totalOrders,
       totalRevenue,

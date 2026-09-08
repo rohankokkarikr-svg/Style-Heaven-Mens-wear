@@ -78,6 +78,9 @@ const DEFAULT_SETTINGS = {
   discountBanner: DEFAULT_DISCOUNT_BANNER,
 };
 
+const supabase = require('../config/supabase');
+const { safeQuery } = require('../config/supabase');
+
 function readSettings() {
   try {
     if (fs.existsSync(SETTINGS_FILE)) {
@@ -97,33 +100,94 @@ function readSettings() {
 }
 
 function writeSettings(settings) {
-  const dir = path.dirname(SETTINGS_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  try {
+    const dir = path.dirname(SETTINGS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  } catch (e) {
+    console.warn('Could not write local settings file:', e.message);
+  }
 }
 
 /**
  * GET /api/settings — public, no auth needed
  */
-exports.getSettings = (req, res) => {
+exports.getSettings = async (req, res) => {
   try {
-    const settings = readSettings();
-    // Never expose internal flags in public response
-    res.json(settings);
+    const local = readSettings();
+
+    // Query Supabase platform_settings for persistent cloud data
+    const { data: supaData } = await safeQuery(() =>
+      supabase.from('platform_settings').select('*').eq('id', 'main').single()
+    );
+
+    const merged = {
+      ...DEFAULT_SETTINGS,
+      ...local,
+      ...(supaData || {}),
+      storeName: supaData?.storeName || supaData?.platform_name || local.storeName || DEFAULT_SETTINGS.storeName,
+      platform_name: supaData?.platform_name || supaData?.storeName || local.platform_name || DEFAULT_SETTINGS.storeName,
+      supportEmail: supaData?.supportEmail || supaData?.contact_email || local.supportEmail || DEFAULT_SETTINGS.supportEmail,
+      contact_email: supaData?.contact_email || supaData?.supportEmail || local.contact_email || DEFAULT_SETTINGS.supportEmail,
+      supportPhone: supaData?.supportPhone || supaData?.contact_phone || local.supportPhone || DEFAULT_SETTINGS.supportPhone,
+      contact_phone: supaData?.contact_phone || supaData?.supportPhone || local.contact_phone || DEFAULT_SETTINGS.supportPhone,
+      taxRate: supaData?.taxRate !== undefined ? String(supaData.taxRate) : (supaData?.tax_rate !== undefined ? String(supaData.tax_rate) : local.taxRate),
+      tax_rate: supaData?.tax_rate !== undefined ? Number(supaData.tax_rate) : (supaData?.taxRate !== undefined ? Number(supaData.taxRate) : Number(local.taxRate)),
+      maintenanceMode: supaData?.maintenanceMode !== undefined ? supaData.maintenanceMode : (supaData?.maintenance_mode !== undefined ? supaData.maintenance_mode : local.maintenanceMode),
+      maintenance_mode: supaData?.maintenance_mode !== undefined ? supaData.maintenance_mode : (supaData?.maintenanceMode !== undefined ? supaData.maintenanceMode : local.maintenanceMode),
+      heroSlides: (Array.isArray(supaData?.hero_slides) && supaData.hero_slides.length > 0)
+        ? supaData.hero_slides
+        : ((Array.isArray(supaData?.heroSlides) && supaData.heroSlides.length > 0)
+            ? supaData.heroSlides
+            : local.heroSlides),
+      discountBanner: supaData?.discount_banner || supaData?.discountBanner || local.discountBanner || DEFAULT_DISCOUNT_BANNER,
+    };
+
+    res.json(merged);
   } catch (err) {
     console.error('getSettings error:', err);
-    res.json({ ...DEFAULT_SETTINGS });
+    res.json(readSettings());
   }
 };
 
 /**
  * PUT /api/settings — admin only
  */
-exports.updateSettings = (req, res) => {
+exports.updateSettings = async (req, res) => {
   try {
     const current = readSettings();
-    const updated = { ...current, ...req.body };
+    const updates = req.body;
+
+    const normalizedUpdates = {
+      ...updates,
+      ...(updates.platform_name ? { platform_name: updates.platform_name, storeName: updates.platform_name } : {}),
+      ...(updates.storeName ? { storeName: updates.storeName, platform_name: updates.storeName } : {}),
+      ...(updates.contact_email ? { contact_email: updates.contact_email, supportEmail: updates.contact_email } : {}),
+      ...(updates.supportEmail ? { supportEmail: updates.supportEmail, contact_email: updates.supportEmail } : {}),
+      ...(updates.contact_phone ? { contact_phone: updates.contact_phone, supportPhone: updates.contact_phone } : {}),
+      ...(updates.supportPhone ? { supportPhone: updates.supportPhone, contact_phone: updates.supportPhone } : {}),
+      ...(updates.tax_rate !== undefined ? { tax_rate: updates.tax_rate, taxRate: String(updates.tax_rate) } : {}),
+      ...(updates.taxRate !== undefined ? { taxRate: updates.taxRate, tax_rate: Number(updates.taxRate) || 0 } : {}),
+      ...(updates.maintenance_mode !== undefined ? { maintenance_mode: updates.maintenance_mode, maintenanceMode: updates.maintenance_mode } : {}),
+      ...(updates.maintenanceMode !== undefined ? { maintenanceMode: updates.maintenanceMode, maintenance_mode: updates.maintenanceMode } : {}),
+      ...(updates.heroSlides ? { heroSlides: updates.heroSlides, hero_slides: updates.heroSlides } : {}),
+      ...(updates.hero_slides ? { hero_slides: updates.hero_slides, heroSlides: updates.hero_slides } : {}),
+      ...(updates.discountBanner ? { discountBanner: updates.discountBanner, discount_banner: updates.discountBanner } : {}),
+      ...(updates.discount_banner ? { discount_banner: updates.discount_banner, discountBanner: updates.discount_banner } : {}),
+    };
+
+    const updated = { ...current, ...normalizedUpdates };
     writeSettings(updated);
+
+    // Also persist to Supabase platform_settings
+    try {
+      await supabase
+        .from('platform_settings')
+        .upsert([{ id: 'main', ...normalizedUpdates, updated_at: new Date().toISOString() }]);
+    } catch (e) {
+      console.warn('Failed to upsert to Supabase platform_settings:', e.message);
+    }
+
     res.json({ success: true, settings: updated });
   } catch (err) {
     console.error('updateSettings error:', err);

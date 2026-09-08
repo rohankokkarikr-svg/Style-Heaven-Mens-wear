@@ -8,6 +8,7 @@
 const supabase = require('../config/supabase');
 const { safeQuery } = require('../config/supabase');
 const { HANDICRAFT_CATEGORIES, HANDICRAFT_PRODUCTS } = require('../data/handicraftsData');
+const { invalidateCache } = require('./productController');
 
 // ── In-Memory Activity & AI Log Fallbacks ────────────────────────────────────
 let inMemoryActivityLogs = [
@@ -322,6 +323,7 @@ exports.approveProduct = async (req, res) => {
       .single();
 
     if (error) throw error;
+    invalidateCache();
     await logActivity(req, 'Approved Product', 'Product', id);
     res.json({ message: 'Product approved successfully', product: data });
   } catch (err) {
@@ -343,6 +345,7 @@ exports.rejectProduct = async (req, res) => {
       .single();
 
     if (error) throw error;
+    invalidateCache();
     await logActivity(req, `Rejected Product (${reason || 'No reason specified'})`, 'Product', id);
     res.json({ message: 'Product rejected', product: data });
   } catch (err) {
@@ -364,6 +367,7 @@ exports.hideProduct = async (req, res) => {
       .single();
 
     if (error) throw error;
+    invalidateCache();
     await logActivity(req, is_hidden ? 'Hidden Product' : 'Unhidden Product', 'Product', id);
     res.json({ message: 'Product visibility updated', product: data });
   } catch (err) {
@@ -378,6 +382,7 @@ exports.deleteProduct = async (req, res) => {
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) throw error;
 
+    invalidateCache();
     await logActivity(req, 'Deleted Product', 'Product', id);
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {
@@ -897,17 +902,50 @@ exports.updateSettings = async (req, res) => {
     delete updates.GEMINI_API_KEY;
     delete updates.gemini_api_key;
 
+    const normalizedUpdates = {
+      ...updates,
+      ...(updates.platform_name ? { platform_name: updates.platform_name, storeName: updates.platform_name } : {}),
+      ...(updates.storeName ? { storeName: updates.storeName, platform_name: updates.storeName } : {}),
+      ...(updates.contact_email ? { contact_email: updates.contact_email, supportEmail: updates.contact_email } : {}),
+      ...(updates.supportEmail ? { supportEmail: updates.supportEmail, contact_email: updates.supportEmail } : {}),
+      ...(updates.contact_phone ? { contact_phone: updates.contact_phone, supportPhone: updates.contact_phone } : {}),
+      ...(updates.supportPhone ? { supportPhone: updates.supportPhone, contact_phone: updates.supportPhone } : {}),
+      ...(updates.tax_rate !== undefined ? { tax_rate: updates.tax_rate, taxRate: String(updates.tax_rate) } : {}),
+      ...(updates.taxRate !== undefined ? { taxRate: updates.taxRate, tax_rate: Number(updates.taxRate) || 0 } : {}),
+      ...(updates.maintenance_mode !== undefined ? { maintenance_mode: updates.maintenance_mode, maintenanceMode: updates.maintenance_mode } : {}),
+      ...(updates.maintenanceMode !== undefined ? { maintenanceMode: updates.maintenanceMode, maintenance_mode: updates.maintenanceMode } : {}),
+      ...(updates.heroSlides ? { heroSlides: updates.heroSlides, hero_slides: updates.heroSlides } : {}),
+      ...(updates.hero_slides ? { hero_slides: updates.hero_slides, heroSlides: updates.hero_slides } : {}),
+      ...(updates.discountBanner ? { discountBanner: updates.discountBanner, discount_banner: updates.discountBanner } : {}),
+      ...(updates.discount_banner ? { discount_banner: updates.discount_banner, discountBanner: updates.discount_banner } : {}),
+    };
+
+    // Also sync to local JSON backup if available
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const settingsFile = path.join(__dirname, '../data/site_settings.json');
+      let currentFileSettings = {};
+      if (fs.existsSync(settingsFile)) {
+        currentFileSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8') || '{}');
+      }
+      fs.writeFileSync(settingsFile, JSON.stringify({ ...currentFileSettings, ...normalizedUpdates }, null, 2), 'utf8');
+    } catch (e) {
+      // Ignore local file error
+    }
+
     try {
       const { data, error } = await supabase
         .from('platform_settings')
-        .upsert([{ id: 'main', ...updates, updated_at: new Date().toISOString() }])
+        .upsert([{ id: 'main', ...normalizedUpdates, updated_at: new Date().toISOString() }])
         .select()
         .single();
       if (error) throw error;
+      inMemorySettings = { ...inMemorySettings, ...normalizedUpdates };
       await logActivity(req, 'Updated Platform Settings', 'Settings', 'main');
       return res.json(data);
     } catch {
-      inMemorySettings = { ...inMemorySettings, ...updates };
+      inMemorySettings = { ...inMemorySettings, ...normalizedUpdates };
       await logActivity(req, 'Updated Platform Settings', 'Settings', 'main');
       return res.json(inMemorySettings);
     }

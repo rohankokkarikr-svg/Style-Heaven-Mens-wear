@@ -152,11 +152,17 @@ export const SettingsProvider = ({ children }) => {
     const merged = {
       ...DEFAULT_SETTINGS,
       ...(loadedData || {}),
+      storeName: loadedData?.storeName || loadedData?.platform_name || DEFAULT_SETTINGS.storeName,
+      platform_name: loadedData?.platform_name || loadedData?.storeName || DEFAULT_SETTINGS.storeName,
+      supportEmail: loadedData?.supportEmail || loadedData?.contact_email || DEFAULT_SETTINGS.supportEmail,
+      contact_email: loadedData?.contact_email || loadedData?.supportEmail || DEFAULT_SETTINGS.supportEmail,
+      supportPhone: loadedData?.supportPhone || loadedData?.contact_phone || DEFAULT_SETTINGS.supportPhone,
+      contact_phone: loadedData?.contact_phone || loadedData?.supportPhone || DEFAULT_SETTINGS.supportPhone,
       heroSlides: Array.isArray(loadedData?.heroSlides) && loadedData.heroSlides.length > 0
         ? loadedData.heroSlides
-        : DEFAULT_HERO_SLIDES,
-      discountBanner: loadedData?.discountBanner
-        ? { ...DEFAULT_DISCOUNT_BANNER, ...loadedData.discountBanner }
+        : (Array.isArray(loadedData?.hero_slides) && loadedData.hero_slides.length > 0 ? loadedData.hero_slides : DEFAULT_HERO_SLIDES),
+      discountBanner: loadedData?.discountBanner || loadedData?.discount_banner
+        ? { ...DEFAULT_DISCOUNT_BANNER, ...(loadedData?.discountBanner || loadedData?.discount_banner) }
         : DEFAULT_DISCOUNT_BANNER,
     };
 

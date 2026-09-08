@@ -143,8 +143,8 @@ exports.login = async (req, res) => {
     }
 
     // Check account status
-    if (user.status && user.status === 'blocked') {
-      return res.status(403).json({ error: 'Your account has been deactivated. Please contact support.' });
+    if (user.status && (user.status === 'blocked' || user.status === 'suspended')) {
+      return res.status(403).json({ error: 'Your account has been deactivated or suspended by the administrator.' });
     }
 
     // Check password
@@ -157,14 +157,14 @@ exports.login = async (req, res) => {
     // Normalize role string to prevent whitespace issues
     user.role = (user.role || 'user').trim().toLowerCase();
 
-    // If artisan, fetch artisan profile
+    // If artisan or admin, fetch artisan profile if one exists
     let artisanProfile = null;
-    if (user.role === 'artisan') {
+    if (user.role === 'artisan' || user.role === 'admin') {
       const { data: profile } = await supabase
         .from('artisan_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       artisanProfile = profile ? parseArtisanUpi(profile) : null;
     }
 
@@ -189,12 +189,12 @@ exports.getMe = async (req, res) => {
     delete user.password;
 
     let artisanProfile = null;
-    if (user.role === 'artisan') {
+    if (user.role === 'artisan' || user.role === 'admin') {
       const { data: profile } = await supabase
         .from('artisan_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       artisanProfile = profile ? parseArtisanUpi(profile) : null;
     }
 

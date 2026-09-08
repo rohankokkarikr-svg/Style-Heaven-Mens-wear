@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { HiMicrophone, HiSparkles, HiCheck, HiX, HiRefresh, HiChevronRight, HiChevronLeft, HiGlobe, HiCurrencyRupee, HiPhotograph } from 'react-icons/hi';
-import { aiAPI, productAPI } from '../../services/api';
+import { aiAPI, productAPI, categoryAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -105,6 +105,17 @@ export default function AIProductStudio() {
 
   // Step 7 — Publish
   const [isPublishing, setIsPublishing] = useState(false);
+
+  // Dynamic Categories from Admin updates
+  const [availableCategories, setAvailableCategories] = useState(SEVEN_CATEGORIES);
+
+  useEffect(() => {
+    categoryAPI.getAll().then(({ data }) => {
+      if (data && data.length > 0) {
+        setAvailableCategories(data.map(c => c.name));
+      }
+    }).catch(() => {});
+  }, []);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -548,7 +559,7 @@ export default function AIProductStudio() {
                 onChange={e => updateCatalogField('category', e.target.value)}
                 className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-500/60"
               >
-                {SEVEN_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
             <Field label="Subcategory">

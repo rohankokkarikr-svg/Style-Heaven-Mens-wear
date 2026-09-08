@@ -6,6 +6,7 @@ const {
   getProducts,
   getFeaturedProducts,
   getProductById,
+  getCategories,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -16,6 +17,7 @@ const {
 // Public routes
 router.get('/', getProducts);
 router.get('/featured', getFeaturedProducts);
+router.get('/categories', getCategories);
 router.get('/:id', getProductById);
 
 const uploadMiddleware = (req, res, next) => {
@@ -33,7 +35,7 @@ router.post('/upload', uploadMiddleware, uploadDirect);
 
 // Admin + Artisan routes
 router.post('/', protect, artisan, createProduct);
-router.put('/:id', protect, admin, updateProduct);
+router.put('/:id', protect, artisan, updateProduct);
 router.delete('/:id', protect, artisan, deleteProduct);
 router.post('/:id/image', protect, artisan, uploadMiddleware, uploadProductImage);
 

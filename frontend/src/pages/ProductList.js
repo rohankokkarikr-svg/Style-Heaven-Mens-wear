@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
-import { productAPI } from '../services/api';
+import { productAPI, categoryAPI } from '../services/api';
 import { HANDICRAFT_CATEGORIES, HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import {
   HiFilter,
@@ -16,12 +16,31 @@ import {
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(HANDICRAFT_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
+
+  // Fetch dynamic categories from Admin updates
+  useEffect(() => {
+    categoryAPI.getAll().then(({ data }) => {
+      if (data && data.length > 0) {
+        const formatted = data.map((c, i) => ({
+          id: c.id || String(i + 1),
+          name: c.name,
+          slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+          description: c.description,
+          image: c.image_url || c.image,
+          subcategories: c.subcategories || [],
+          productCount: c.productCount || ''
+        }));
+        setCategories(formatted);
+      }
+    }).catch(() => {});
+  }, []);
 
   const activeCategory = searchParams.get('category') || 'all';
   const searchQuery = searchParams.get('search') || '';
@@ -69,13 +88,13 @@ export default function ProductList() {
   // Find active category details for Banner
   const currentCategoryInfo = useMemo(() => {
     return (
-      HANDICRAFT_CATEGORIES.find(
+      categories.find(
         (c) =>
-          c.slug.toLowerCase() === activeCategory.toLowerCase() ||
-          c.name.toLowerCase() === activeCategory.toLowerCase()
+          c.slug?.toLowerCase() === activeCategory.toLowerCase() ||
+          c.name?.toLowerCase() === activeCategory.toLowerCase()
       ) || null
     );
-  }, [activeCategory]);
+  }, [activeCategory, categories]);
 
   // Comprehensive Filtering & Sorting Logic
   const filteredAndSortedProducts = useMemo(() => {
@@ -379,18 +398,18 @@ export default function ProductList() {
                       All Categories
                     </button>
                   </li>
-                  {HANDICRAFT_CATEGORIES.map((cat) => (
-                    <li key={cat.id}>
+                  {categories.map((cat) => (
+                    <li key={cat.id || cat.slug || cat.name}>
                       <button
-                        onClick={() => handleCategorySelect(cat.slug)}
+                        onClick={() => handleCategorySelect(cat.slug || cat.name)}
                         className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-all ${
-                          activeCategory.toLowerCase() === cat.slug.toLowerCase()
+                          activeCategory.toLowerCase() === (cat.slug || cat.name).toLowerCase()
                             ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40'
                             : 'text-gray-300 hover:bg-dark-700/60'
                         }`}
                       >
                         <span className="truncate">{cat.name}</span>
-                        <span className="text-[10px] text-gray-500">({cat.productCount})</span>
+                        {cat.productCount ? <span className="text-[10px] text-gray-500">({cat.productCount})</span> : null}
                       </button>
                     </li>
                   ))}

@@ -24,7 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useSettings, DEFAULT_HERO_SLIDES, DEFAULT_DISCOUNT_BANNER } from '../context/SettingsContext';
-import { productAPI, orderAPI, couponAPI, artisanAPI } from '../services/api';
+import { productAPI, orderAPI, couponAPI, artisanAPI, categoryAPI } from '../services/api';
 import { HANDICRAFT_CATEGORIES, HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import toast from 'react-hot-toast';
 
@@ -55,6 +55,7 @@ export default function MobileAppView() {
 
   // Products & Artisans Data
   const [products, setProducts] = useState(HANDICRAFT_PRODUCTS);
+  const [categories, setCategories] = useState(HANDICRAFT_CATEGORIES);
   const [featured, setFeatured] = useState([]);
   const [artisans, setArtisans] = useState([]);
   const [myOrders, setMyOrders] = useState([]);
@@ -92,6 +93,21 @@ export default function MobileAppView() {
       try {
         const { data: prods } = await productAPI.getAll();
         if (Array.isArray(prods) && prods.length > 0) setProducts(prods);
+      } catch {}
+
+      try {
+        const { data: cats } = await categoryAPI.getAll();
+        if (Array.isArray(cats) && cats.length > 0) {
+          setCategories(cats.map((c, i) => ({
+            id: c.id || String(i + 1),
+            name: c.name,
+            slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+            description: c.description,
+            image: c.image_url || c.image || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop',
+            subcategories: c.subcategories || [],
+            productCount: c.productCount || ''
+          })));
+        }
       } catch {}
 
       try {
@@ -344,10 +360,10 @@ export default function MobileAppView() {
                 >
                   ✨ All Crafts
                 </button>
-                {HANDICRAFT_CATEGORIES.map((cat) => (
+                {categories.map((cat) => (
                   <button
-                    key={cat.id}
-                    onClick={() => { setActiveCategory(cat.slug); setActiveTab('categories'); }}
+                    key={cat.id || cat.slug || cat.name}
+                    onClick={() => { setActiveCategory(cat.slug || cat.name); setActiveTab('categories'); }}
                     className="px-3 py-1.5 rounded-full text-xs font-medium bg-dark-850 border border-dark-700 text-gray-300 whitespace-nowrap hover:border-gold-500/50"
                   >
                     {cat.icon || '🧵'} {cat.name}
@@ -461,12 +477,12 @@ export default function MobileAppView() {
                 >
                   All ({products.length})
                 </button>
-                {HANDICRAFT_CATEGORIES.map((cat) => (
+                {categories.map((cat) => (
                   <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.slug)}
+                    key={cat.id || cat.slug || cat.name}
+                    onClick={() => setActiveCategory(cat.slug || cat.name)}
                     className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                      activeCategory === cat.slug ? 'bg-gold-500 text-dark-900' : 'bg-dark-850 text-gray-400'
+                      activeCategory.toLowerCase() === (cat.slug || cat.name).toLowerCase() ? 'bg-gold-500 text-dark-900' : 'bg-dark-850 text-gray-400'
                     }`}
                   >
                     {cat.name}

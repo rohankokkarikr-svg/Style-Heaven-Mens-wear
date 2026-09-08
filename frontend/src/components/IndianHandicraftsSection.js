@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiArrowRight, HiSparkles } from 'react-icons/hi';
+import { categoryAPI } from '../services/api';
 import { HANDICRAFT_CATEGORIES } from '../constants/handicraftsData';
 
 export default function IndianHandicraftsSection() {
+  const [categories, setCategories] = useState(HANDICRAFT_CATEGORIES);
+
+  useEffect(() => {
+    categoryAPI.getAll().then(({ data }) => {
+      if (data && data.length > 0) {
+        setCategories(data.map((c, i) => ({
+          id: c.id || String(i + 1),
+          name: c.name,
+          slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+          description: c.description,
+          image: c.image_url || c.image || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop',
+          subcategories: c.subcategories || [],
+          featuredTag: c.featuredTag || 'Authentic Craft',
+          productCount: c.productCount || ''
+        })));
+      }
+    }).catch(() => {});
+  }, []);
+
   return (
     <section className="py-20 bg-dark-900 relative overflow-hidden border-b border-dark-700">
       {/* Subtle Background Glow */}
@@ -33,9 +53,9 @@ export default function IndianHandicraftsSection() {
           </p>
         </motion.div>
 
-        {/* 7 Category Cards Grid */}
+        {/* Category Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {HANDICRAFT_CATEGORIES.map((cat, index) => {
+          {categories.map((cat, index) => {
             const isFeatured = index === 0; // Feature the primary Handloom category with double span on larger screens if needed
             return (
               <motion.div

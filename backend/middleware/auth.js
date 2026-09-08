@@ -24,6 +24,10 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ error: 'Not authorized, user not found' });
     }
 
+    if (user.status && (user.status === 'blocked' || user.status === 'suspended')) {
+      return res.status(403).json({ error: 'Your account has been suspended by the administrator.' });
+    }
+
     req.user = user;
     next();
   } catch (error) {
