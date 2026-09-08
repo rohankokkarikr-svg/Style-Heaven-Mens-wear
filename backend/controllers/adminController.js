@@ -312,6 +312,88 @@ exports.getProducts = async (req, res) => {
   }
 };
 
+exports.updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      description,
+      price,
+      original_price,
+      category,
+      subcategory,
+      stock_quantity,
+      is_in_stock,
+      image_url,
+      status,
+      rejection_reason,
+      material,
+      style,
+      sizes,
+      tags,
+      is_handmade,
+      barcode,
+    } = req.body;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (price !== undefined) updateData.price = Number(price);
+    if (original_price !== undefined) {
+      updateData.original_price = original_price ? Number(original_price) : null;
+    }
+    if (category !== undefined) updateData.category = category;
+    if (subcategory !== undefined) updateData.subcategory = subcategory;
+    if (stock_quantity !== undefined) updateData.stock_quantity = Number(stock_quantity);
+    if (is_in_stock !== undefined) updateData.is_in_stock = Boolean(is_in_stock);
+    if (image_url !== undefined) updateData.image_url = image_url;
+    if (status !== undefined) {
+      updateData.status = status;
+      if (status === 'approved') updateData.rejection_reason = null;
+    }
+    if (rejection_reason !== undefined) updateData.rejection_reason = rejection_reason;
+    if (material !== undefined) updateData.material = material;
+    if (style !== undefined) updateData.style = style;
+    if (sizes !== undefined) {
+      updateData.sizes = Array.isArray(sizes)
+        ? sizes
+        : typeof sizes === 'string'
+        ? sizes.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+    }
+    if (tags !== undefined) {
+      updateData.tags = Array.isArray(tags)
+        ? tags
+        : typeof tags === 'string'
+        ? tags.split(',').map(t => t.trim()).filter(Boolean)
+        : [];
+    }
+    if (is_handmade !== undefined) updateData.is_handmade = Boolean(is_handmade);
+    if (barcode !== undefined) updateData.barcode = barcode ? barcode.trim() : null;
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(updateData)
+      .eq('id', id)
+      .select('*, artisan_profiles(id, store_name, location)')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(400).json({ error: 'Barcode already exists. Please use a unique barcode.' });
+      }
+      throw error;
+    }
+
+    invalidateCache();
+    await logActivity(req, `Edited Product Details: ${data?.name || id}`, 'Product', id, updateData);
+    res.json({ message: 'Product updated successfully', product: data });
+  } catch (err) {
+    console.error('admin updateProduct error:', err);
+    res.status(500).json({ error: err.message || 'Failed to update product' });
+  }
+};
+
 exports.approveProduct = async (req, res) => {
   try {
     const { id } = req.params;

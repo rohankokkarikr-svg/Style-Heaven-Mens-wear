@@ -10,11 +10,35 @@ import {
   HiRefresh,
   HiSparkles,
   HiX,
-  HiExternalLink
+  HiExternalLink,
+  HiPencilAlt,
+  HiUpload,
+  HiPhotograph,
+  HiTag,
+  HiCheck
 } from 'react-icons/hi';
-import { adminAPI } from '../../services/api';
+import { adminAPI, productAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+
+const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size'];
+
+const COMMON_CATEGORIES = [
+  'Handloom & Textiles',
+  'Home Décor & Furnishings',
+  'Handmade Jewelry & Accessories',
+  'Pottery & Terracotta',
+  'Wooden Crafts & Carvings',
+  'Metal Crafts & Brassware',
+  'Folk & Tribal Art',
+  'Kurtas & Ethnic Wear',
+  'Suits & Blazers',
+  'Shirts',
+  'T-Shirts',
+  'Pants & Trousers',
+  'Jackets',
+  'Accessories'
+];
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -30,6 +54,30 @@ export default function Products() {
 
   // View modal state
   const [previewProduct, setPreviewProduct] = useState(null);
+
+  // Edit modal state
+  const [editProduct, setEditProduct] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    price: '',
+    original_price: '',
+    category: '',
+    subcategory: '',
+    stock_quantity: 0,
+    is_in_stock: true,
+    status: 'approved',
+    rejection_reason: '',
+    material: '',
+    style: '',
+    sizes: [],
+    image_url: '',
+    description: '',
+    tags: '',
+    is_handmade: true,
+    barcode: ''
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -102,8 +150,125 @@ export default function Products() {
       await adminAPI.deleteProduct(id);
       toast.success('Product deleted');
       setProducts(prev => prev.filter(p => p.id !== id));
+      if (previewProduct?.id === id) setPreviewProduct(null);
+      if (editProduct?.id === id) setEditProduct(null);
     } catch {
       toast.error('Failed to delete product');
+    }
+  };
+
+  const handleOpenEdit = (p) => {
+    setEditProduct(p);
+    setEditFormData({
+      name: p.name || '',
+      price: p.price ?? '',
+      original_price: p.original_price ?? '',
+      category: p.category || '',
+      subcategory: p.subcategory || '',
+      stock_quantity: p.stock_quantity ?? 0,
+      is_in_stock: p.is_in_stock !== false,
+      status: p.status || 'approved',
+      rejection_reason: p.rejection_reason || '',
+      material: p.material || '',
+      style: p.style || '',
+      sizes: Array.isArray(p.sizes)
+        ? p.sizes
+        : (typeof p.sizes === 'string' && p.sizes.trim() ? p.sizes.split(',').map(s => s.trim()).filter(Boolean) : []),
+      image_url: p.image_url || '',
+      description: p.description || '',
+      tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || ''),
+      is_handmade: p.is_handmade !== false,
+      barcode: p.barcode || ''
+    });
+  };
+
+  const handleToggleSize = (sizeStr) => {
+    setEditFormData(prev => {
+      const currentSizes = Array.isArray(prev.sizes) ? prev.sizes : [];
+      if (currentSizes.includes(sizeStr)) {
+        return { ...prev, sizes: currentSizes.filter(s => s !== sizeStr) };
+      } else {
+        return { ...prev, sizes: [...currentSizes, sizeStr] };
+      }
+    });
+  };
+
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image file size must be less than 10MB');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploadingImage(true);
+    try {
+      const { data } = await productAPI.uploadDirect(formData);
+      if (data?.imageUrl) {
+        setEditFormData(prev => ({ ...prev, image_url: data.imageUrl }));
+        toast.success('Image uploaded successfully!');
+      }
+    } catch (err) {
+      console.error('Direct upload failed:', err);
+      toast.error(err?.response?.data?.error || 'Direct upload failed. You can also paste an image URL.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleSaveEdit = async (e) => {
+    e?.preventDefault();
+    if (!editFormData.name.trim()) {
+      toast.error('Product title is required');
+      return;
+    }
+    if (editFormData.price === '' || isNaN(Number(editFormData.price)) || Number(editFormData.price) < 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const payload = {
+        name: editFormData.name.trim(),
+        price: Number(editFormData.price),
+        original_price: editFormData.original_price ? Number(editFormData.original_price) : null,
+        category: editFormData.category.trim(),
+        subcategory: editFormData.subcategory.trim(),
+        stock_quantity: Number(editFormData.stock_quantity) || 0,
+        is_in_stock: Boolean(editFormData.is_in_stock),
+        status: editFormData.status,
+        rejection_reason: editFormData.status === 'rejected' ? editFormData.rejection_reason : null,
+        material: editFormData.material.trim(),
+        style: editFormData.style.trim(),
+        sizes: editFormData.sizes,
+        image_url: editFormData.image_url.trim(),
+        description: editFormData.description.trim(),
+        tags: typeof editFormData.tags === 'string'
+          ? editFormData.tags.split(',').map(t => t.trim()).filter(Boolean)
+          : editFormData.tags,
+        is_handmade: Boolean(editFormData.is_handmade),
+        barcode: editFormData.barcode ? editFormData.barcode.trim() : null
+      };
+
+      const { data } = await adminAPI.updateProduct(editProduct.id, payload);
+      const updated = data?.product || { ...editProduct, ...payload };
+
+      setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, ...updated } : p));
+      if (previewProduct?.id === editProduct.id) {
+        setPreviewProduct(prev => ({ ...prev, ...updated }));
+      }
+      toast.success('Product updated and synced live!');
+      setEditProduct(null);
+    } catch (err) {
+      console.error('Failed to update product:', err);
+      toast.error(err?.response?.data?.error || 'Failed to update product');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -128,7 +293,7 @@ export default function Products() {
         <div>
           <h1 className="text-2xl font-serif font-bold text-white">Product Management & Quality Assurance</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Review artisan submissions, approve handcrafted products, and monitor catalog compliance.
+            Review artisan submissions, edit catalog listings, approve handcrafted products, and monitor compliance.
           </p>
         </div>
         <button
@@ -203,14 +368,18 @@ export default function Products() {
                         <img
                           src={p.image_url || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=120&auto=format&fit=crop'}
                           alt={p.name}
-                          className="w-11 h-11 rounded-lg object-cover ring-1 ring-dark-500 shrink-0"
+                          className="w-11 h-11 rounded-lg object-cover ring-1 ring-dark-500 shrink-0 cursor-pointer"
+                          onClick={() => handleOpenEdit(p)}
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=120&auto=format&fit=crop';
                           }}
                         />
                         <div className="overflow-hidden max-w-xs">
-                          <p className="font-semibold text-white truncate flex items-center gap-1.5">
+                          <p 
+                            className="font-semibold text-white truncate flex items-center gap-1.5 cursor-pointer hover:text-gold-400 transition-colors"
+                            onClick={() => handleOpenEdit(p)}
+                          >
                             {p.name}
                             {p.ai_generated && (
                               <span className="text-[9px] font-bold px-1.5 py-0.2 bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded">
@@ -235,12 +404,22 @@ export default function Products() {
                     </td>
                     <td className="py-3 px-4">
                       <p className="font-bold text-gold-400">₹{(p.price || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-[10px] text-gray-400">Stock: {p.stock_quantity || 0}</p>
+                      <p className="text-[10px] text-gray-400">Stock: {p.stock_quantity ?? 0}</p>
                     </td>
                     <td className="py-3 px-4">
                       {getStatusBadge(p)}
                     </td>
-                    <td className="py-3 px-4 text-right space-x-1.5">
+                    <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                      {/* Edit Product Action */}
+                      <button
+                        onClick={() => handleOpenEdit(p)}
+                        className="p-1.5 text-gold-400 hover:text-gold-300 rounded bg-gold-500/10 hover:bg-gold-500/25 border border-gold-500/30 transition-all inline-block"
+                        title="Edit Product Details"
+                      >
+                        <HiPencilAlt className="w-4 h-4" />
+                      </button>
+
+                      {/* Quick View Action */}
                       <button
                         onClick={() => setPreviewProduct(p)}
                         className="p-1.5 text-gray-400 hover:text-white rounded bg-dark-700 hover:bg-dark-600"
@@ -248,6 +427,8 @@ export default function Products() {
                       >
                         <HiEye className="w-4 h-4" />
                       </button>
+
+                      {/* View Live Store Page */}
                       <Link
                         to={`/products/${p.id}`}
                         target="_blank"
@@ -256,6 +437,8 @@ export default function Products() {
                       >
                         <HiExternalLink className="w-4 h-4" />
                       </Link>
+
+                      {/* Approve Listing */}
                       {p.status !== 'approved' && (
                         <button
                           onClick={() => handleApprove(p.id)}
@@ -265,6 +448,8 @@ export default function Products() {
                           <HiCheckCircle className="w-4 h-4" />
                         </button>
                       )}
+
+                      {/* Reject Listing */}
                       {p.status !== 'rejected' && (
                         <button
                           onClick={() => setRejectModal(p)}
@@ -274,6 +459,8 @@ export default function Products() {
                           <HiXCircle className="w-4 h-4" />
                         </button>
                       )}
+
+                      {/* Hide/Unhide Listing */}
                       <button
                         onClick={() => handleHideToggle(p.id, p.is_hidden)}
                         className={`p-1.5 rounded transition-colors ${
@@ -285,6 +472,8 @@ export default function Products() {
                       >
                         {p.is_hidden ? <HiEye className="w-4 h-4" /> : <HiEyeOff className="w-4 h-4" />}
                       </button>
+
+                      {/* Delete Listing */}
                       <button
                         onClick={() => handleDelete(p.id)}
                         className="p-1.5 text-red-400 hover:text-red-300 rounded bg-red-500/10 hover:bg-red-500/20"
@@ -304,6 +493,386 @@ export default function Products() {
           </div>
         )}
       </div>
+
+      {/* Modal: Edit Product (Comprehensive Admin Editor) */}
+      {editProduct && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-dark-850 border border-dark-600 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-fadeIn">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-dark-700 bg-dark-800/80">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-gold-500/15 border border-gold-500/30 text-gold-400">
+                  <HiPencilAlt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    Edit Product: <span className="text-gold-400 truncate max-w-md">{editFormData.name || 'Untitled'}</span>
+                  </h2>
+                  <p className="text-[11px] text-gray-400">
+                    Artisan Store: <span className="text-gray-300 font-medium">{editProduct.artisan_profiles?.store_name || editProduct.artisan_name || 'Independent Artisan'}</span>
+                    {' '}&bull; ID: <span className="font-mono text-gray-500">{editProduct.id}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditProduct(null)}
+                className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-dark-700 transition-colors"
+              >
+                <HiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto flex-1 space-y-6 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                {/* Left Column: Imagery, Status & Flags (5 cols) */}
+                <div className="md:col-span-5 space-y-5">
+                  {/* Image Preview & Upload Card */}
+                  <div className="card p-4 space-y-3 border-dark-600 bg-dark-800/60">
+                    <label className="font-bold text-gray-300 block text-xs flex items-center justify-between">
+                      <span>Product Image</span>
+                      {uploadingImage && <span className="text-gold-400 animate-pulse text-[10px]">Uploading...</span>}
+                    </label>
+
+                    <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-dark-900 border border-dark-600 group">
+                      <img
+                        src={editFormData.image_url || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&auto=format&fit=crop'}
+                        alt="Product preview"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&auto=format&fit=crop';
+                        }}
+                      />
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <HiRefresh className="w-8 h-8 text-gold-400 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <label className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-1.5 cursor-pointer flex-1 justify-center">
+                          <HiUpload className="w-4 h-4 text-gold-400" />
+                          <span>Upload New File</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileChange}
+                            disabled={uploadingImage}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] text-gray-400 block mb-1">Or paste direct image URL:</span>
+                        <input
+                          type="url"
+                          value={editFormData.image_url}
+                          onChange={e => setEditFormData({ ...editFormData, image_url: e.target.value })}
+                          placeholder="https://images.unsplash.com/..."
+                          className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-gold-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Moderation Status Card */}
+                  <div className="card p-4 space-y-3 border-dark-600 bg-dark-800/60">
+                    <label className="font-bold text-gray-300 block text-xs">Catalog Moderation Status</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'approved', label: 'Approved', color: 'border-green-500/50 bg-green-500/15 text-green-400' },
+                        { id: 'pending', label: 'Pending', color: 'border-yellow-500/50 bg-yellow-500/15 text-yellow-400' },
+                        { id: 'rejected', label: 'Rejected', color: 'border-red-500/50 bg-red-500/15 text-red-400' },
+                      ].map(st => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setEditFormData({ ...editFormData, status: st.id })}
+                          className={`py-2 px-2 text-center rounded-lg font-semibold border transition-all text-xs capitalize ${
+                            editFormData.status === st.id
+                              ? st.color + ' ring-1 ring-gold-500/40 shadow-sm'
+                              : 'border-dark-600 bg-dark-700/50 text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {editFormData.status === 'rejected' && (
+                      <div className="space-y-1.5 pt-2 border-t border-dark-700">
+                        <label className="text-[11px] text-red-400 font-semibold block">Rejection Feedback:</label>
+                        <textarea
+                          rows={2}
+                          value={editFormData.rejection_reason}
+                          onChange={e => setEditFormData({ ...editFormData, rejection_reason: e.target.value })}
+                          placeholder="State what needs correction..."
+                          className="w-full bg-dark-700 border border-red-500/40 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-red-500 resize-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Badges / Toggles */}
+                  <div className="card p-4 space-y-3 border-dark-600 bg-dark-800/60">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="font-semibold text-white text-xs">In Stock</p>
+                        <p className="text-[10px] text-gray-400">Available for customer checkout</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={editFormData.is_in_stock}
+                        onChange={e => setEditFormData({ ...editFormData, is_in_stock: e.target.checked })}
+                        className="w-4 h-4 rounded text-gold-500 focus:ring-0 cursor-pointer"
+                      />
+                    </label>
+
+                    <label className="flex items-center justify-between cursor-pointer pt-2 border-t border-dark-700">
+                      <div>
+                        <p className="font-semibold text-white text-xs">Authentic Handicraft</p>
+                        <p className="text-[10px] text-gray-400">Mark as verified handmade artisan craft</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={editFormData.is_handmade}
+                        onChange={e => setEditFormData({ ...editFormData, is_handmade: e.target.checked })}
+                        className="w-4 h-4 rounded text-gold-500 focus:ring-0 cursor-pointer"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Right Column: Details & Pricing (7 cols) */}
+                <div className="md:col-span-7 space-y-4">
+                  {/* Title */}
+                  <div>
+                    <label className="font-bold text-gray-300 block mb-1">Product Title *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.name}
+                      onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
+                      placeholder="e.g., Banarasi Royal Silk Sherwani"
+                      className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500 font-medium"
+                    />
+                  </div>
+
+                  {/* Category & Subcategory */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-gray-300 block mb-1">Category *</label>
+                      <input
+                        list="categories-list"
+                        required
+                        value={editFormData.category}
+                        onChange={e => setEditFormData({ ...editFormData, category: e.target.value })}
+                        placeholder="Select or enter category..."
+                        className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
+                      />
+                      <datalist id="categories-list">
+                        {COMMON_CATEGORIES.map(c => <option key={c} value={c} />)}
+                      </datalist>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-gray-300 block mb-1">Subcategory</label>
+                      <input
+                        type="text"
+                        value={editFormData.subcategory}
+                        onChange={e => setEditFormData({ ...editFormData, subcategory: e.target.value })}
+                        placeholder="e.g. Sarees, Waistcoats, Kurtas"
+                        className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Price & Original Price (MRP) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-gray-300 block mb-1">Selling Price (₹) *</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gold-400 font-bold">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          required
+                          value={editFormData.price}
+                          onChange={e => setEditFormData({ ...editFormData, price: e.target.value })}
+                          placeholder="2499"
+                          className="w-full bg-dark-700 border border-dark-500 rounded-lg pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-gold-500 font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-gray-300">Original MRP (₹)</label>
+                        {Number(editFormData.original_price) > Number(editFormData.price) && (
+                          <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-1.5 py-0.2 rounded border border-green-500/30">
+                            {Math.round(((editFormData.original_price - editFormData.price) / editFormData.original_price) * 100)}% OFF
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={editFormData.original_price}
+                          onChange={e => setEditFormData({ ...editFormData, original_price: e.target.value })}
+                          placeholder="Optional strikethrough MRP"
+                          className="w-full bg-dark-700 border border-dark-500 rounded-lg pl-7 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stock Quantity & Barcode */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-gray-300 block mb-1">Stock Units</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editFormData.stock_quantity}
+                        onChange={e => setEditFormData({ ...editFormData, stock_quantity: e.target.value })}
+                        className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-gray-300 block mb-1">Barcode / SKU</label>
+                      <input
+                        type="text"
+                        value={editFormData.barcode}
+                        onChange={e => setEditFormData({ ...editFormData, barcode: e.target.value })}
+                        placeholder="Optional SKU or barcode"
+                        className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500 font-mono text-[11px]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Material & Style */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-gray-300 block mb-1">Material / Fabric</label>
+                      <input
+                        type="text"
+                        value={editFormData.material}
+                        onChange={e => setEditFormData({ ...editFormData, material: e.target.value })}
+                        placeholder="e.g. Mulberry Silk, Pure Linen"
+                        className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-gray-300 block mb-1">Style / Craft Pattern</label>
+                      <input
+                        type="text"
+                        value={editFormData.style}
+                        onChange={e => setEditFormData({ ...editFormData, style: e.target.value })}
+                        placeholder="e.g. Traditional, Hand-embroidered"
+                        className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Available Sizes */}
+                  <div>
+                    <label className="font-bold text-gray-300 block mb-1.5">Available Sizes</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {AVAILABLE_SIZES.map(sz => {
+                        const isSelected = Array.isArray(editFormData.sizes) && editFormData.sizes.includes(sz);
+                        return (
+                          <button
+                            type="button"
+                            key={sz}
+                            onClick={() => handleToggleSize(sz)}
+                            className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all ${
+                              isSelected
+                                ? 'bg-gold-500/20 text-gold-400 border-gold-500/60 shadow-sm'
+                                : 'bg-dark-700 border-dark-600 text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            {sz}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="font-bold text-gray-300 block mb-1">Product Description</label>
+                    <textarea
+                      rows={4}
+                      value={editFormData.description}
+                      onChange={e => setEditFormData({ ...editFormData, description: e.target.value })}
+                      placeholder="Detailed product story, craftsmanship details, care instructions..."
+                      className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500 leading-relaxed resize-none"
+                    />
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label className="font-bold text-gray-300 block mb-1">Tags (Comma-separated)</label>
+                    <div className="relative">
+                      <HiTag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        value={editFormData.tags}
+                        onChange={e => setEditFormData({ ...editFormData, tags: e.target.value })}
+                        placeholder="handcrafted, wedding, silk, premium"
+                        className="w-full bg-dark-700 border border-dark-500 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-between pt-4 border-t border-dark-700">
+                <p className="text-[11px] text-gray-500 hidden sm:block">
+                  Updates sync across the live storefront and customer app immediately.
+                </p>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setEditProduct(null)}
+                    className="btn-secondary text-xs py-2 px-4"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEdit}
+                    className="btn-primary text-xs py-2 px-6 flex items-center gap-2"
+                  >
+                    {savingEdit ? (
+                      <>
+                        <HiRefresh className="w-4 h-4 animate-spin" />
+                        Saving Changes...
+                      </>
+                    ) : (
+                      <>
+                        <HiCheck className="w-4 h-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Rejection Reason */}
       {rejectModal && (
@@ -387,6 +956,19 @@ export default function Products() {
               <div className="p-3 bg-dark-750 rounded-lg text-gray-300 leading-relaxed border border-dark-600">
                 {previewProduct.description || 'No description provided.'}
               </div>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  const target = previewProduct;
+                  setPreviewProduct(null);
+                  handleOpenEdit(target);
+                }}
+                className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5"
+              >
+                <HiPencilAlt className="w-4 h-4" /> Edit This Product
+              </button>
             </div>
           </div>
         </div>

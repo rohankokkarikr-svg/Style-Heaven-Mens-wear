@@ -161,6 +161,7 @@ export const adminAPI = {
   getCustomers:         (params)   => api.get('/admin/customers', { params }),
   updateCustomerStatus: (id, data) => api.put(`/admin/customers/${id}/status`, data),
   getProducts:          (params)   => api.get('/admin/products', { params }),
+  updateProduct:        (id, data) => api.put(`/admin/products/${id}`, data),
   approveProduct:       (id)       => api.put(`/admin/products/${id}/approve`),
   rejectProduct:        (id, data) => api.put(`/admin/products/${id}/reject`, data),
   hideProduct:          (id, data) => api.put(`/admin/products/${id}/hide`, data),

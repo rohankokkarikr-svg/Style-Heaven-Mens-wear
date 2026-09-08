@@ -20,6 +20,7 @@ router.put('/customers/:id/status', adminController.updateCustomerStatus);
 
 // 4. Products
 router.get('/products', adminController.getProducts);
+router.put('/products/:id', adminController.updateProduct);
 router.put('/products/:id/approve', adminController.approveProduct);
 router.put('/products/:id/reject', adminController.rejectProduct);
 router.put('/products/:id/hide', adminController.hideProduct);
