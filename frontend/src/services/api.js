@@ -157,10 +157,12 @@ export const artisanAPI = {
   getById:      (id)     => cachedGet(`/artisans/${id}`, {}, 60000),
   getMyProfile: ()       => api.get('/artisans/me'),
   getMyStats:   ()       => api.get('/artisans/me/stats'),
+  getMyOrders:  ()       => api.get('/artisans/me/orders'),
   updateProfile:(data)   => api.put('/artisans/me', data),
   verify:       (id, d)  => api.patch(`/artisans/${id}/verify`, d),
   getAllAdmin:   ()       => api.get('/artisans/admin/all'),
 };
+
 
 // ─── AI ──────────────────────────────────────────
 export const aiAPI = {

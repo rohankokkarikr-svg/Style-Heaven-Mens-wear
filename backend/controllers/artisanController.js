@@ -171,10 +171,25 @@ exports.getMyStats = async (req, res) => {
     if (productIds.length > 0) {
       const { data: orderItems } = await supabase
         .from('order_items')
-        .select('*, orders(id, status, created_at, user_id), products(name, price)')
+        .select(`
+          *,
+          orders(
+            id,
+            status,
+            created_at,
+            user_id,
+            total_price,
+            shipping_address,
+            phone,
+            payment_method,
+            payment_status,
+            users(name, email, phone)
+          ),
+          products(id, name, price, image_url, category)
+        `)
         .in('product_id', productIds)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(100);
 
       recentOrders = orderItems || [];
       totalOrders = recentOrders.length;
@@ -194,9 +209,58 @@ exports.getMyStats = async (req, res) => {
   } catch (err) {
     console.error('getMyStats error:', err);
     res.status(500).json({ error: 'Failed to fetch stats' });
-
   }
 };
+
+// GET /api/artisans/me/orders - complete customer details and delivery addresses for artisan
+exports.getMyOrders = async (req, res) => {
+  try {
+    let { data: profile } = await supabase
+      .from('artisan_profiles')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (!profile) return res.json([]);
+
+    const orCondition = `artisan_id.eq.${profile.id},artisan_id.eq.${req.user.id}`;
+    const { data: products } = await supabase
+      .from('products')
+      .select('id')
+      .or(orCondition);
+
+    const productIds = (products || []).map(p => p.id);
+    if (productIds.length === 0) return res.json([]);
+
+    const { data: orderItems, error } = await supabase
+      .from('order_items')
+      .select(`
+        *,
+        orders(
+          id,
+          status,
+          created_at,
+          user_id,
+          total_price,
+          shipping_address,
+          phone,
+          payment_method,
+          payment_status,
+          users(id, name, email, phone)
+        ),
+        products(id, name, price, image_url, category)
+      `)
+      .in('product_id', productIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(orderItems || []);
+  } catch (err) {
+    console.error('getMyOrders error:', err);
+    res.status(500).json({ error: 'Failed to fetch artisan orders' });
+  }
+};
+
 
 // PATCH /api/artisans/:id/verify - admin: set verification status
 exports.verifyArtisan = async (req, res) => {

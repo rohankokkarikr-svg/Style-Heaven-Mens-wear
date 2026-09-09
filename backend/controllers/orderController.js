@@ -242,12 +242,66 @@ exports.createOrder = async (req, res) => {
       console.error('Failed to trigger WhatsApp notification:', wsErr.message);
     }
 
+    // 5. Send complete customer & delivery details directly to each related artisan
+    try {
+      const prodIds = orderItems.map(i => i.product_id).filter(Boolean);
+      if (prodIds.length > 0) {
+        const { data: dbProducts } = await supabase
+          .from('products')
+          .select('id, name, price, artisan_id')
+          .in('id', prodIds);
+
+        const artisanItemsMap = {};
+        for (const item of orderItems) {
+          const prod = (dbProducts || []).find(p => p.id === item.product_id);
+          const artId = prod?.artisan_id;
+          if (artId) {
+            if (!artisanItemsMap[artId]) artisanItemsMap[artId] = [];
+            artisanItemsMap[artId].push({ ...item, product: prod });
+          }
+        }
+
+        const { sendArtisanOrderNotification } = require('../utils/whatsapp');
+
+        for (const [artisanId, artItems] of Object.entries(artisanItemsMap)) {
+          const { data: artProfile } = await supabase
+            .from('artisan_profiles')
+            .select('id, store_name, user_id, users(name, phone, email)')
+            .or(`id.eq.${artisanId},user_id.eq.${artisanId}`)
+            .maybeSingle();
+
+          const artisanPhone = artProfile?.users?.phone;
+          const artisanStore = artProfile?.store_name || artProfile?.users?.name || 'Artisan';
+          const customerInfo = {
+            name: req.user?.name || 'Valued Customer',
+            phone: order.phone || req.user?.phone,
+            email: req.user?.email
+          };
+
+          if (artisanPhone) {
+            await sendArtisanOrderNotification(artisanPhone, artisanStore, order, artItems, customerInfo);
+          }
+        }
+      }
+    } catch (artisanNotifyErr) {
+      console.error('Artisan order notification notice:', artisanNotifyErr.message);
+    }
+
+    // 6. Realtime sync broadcast so all artisan and admin panels update immediately
+    try {
+      const { broadcastSync } = require('../utils/realtime');
+      broadcastSync('ORDERS_UPDATED', { action: 'create', orderId: order.id, order });
+    } catch (syncErr) {
+      console.warn('Realtime order broadcast notice:', syncErr.message);
+    }
+
     res.status(201).json({ ...order, whatsappLink, whatsappMessage });
   } catch (error) {
     console.error('Create Order Error:', error);
     res.status(500).json({ error: error.message || 'Failed to create order' });
   }
 };
+
 
 exports.getMyOrders = async (req, res) => {
   try {

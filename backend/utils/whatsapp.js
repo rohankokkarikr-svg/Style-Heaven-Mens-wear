@@ -294,3 +294,39 @@ ${itemsText || 'No items listed'}
 
   return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
 };
+
+/**
+ * Sends a detailed WhatsApp notification directly to an artisan when a customer orders their product.
+ * Contains customer name, contact phone, complete shipping/delivery address, and items to pack.
+ */
+exports.sendArtisanOrderNotification = async (artisanPhone, artisanStoreName, order, artisanItems, customer) => {
+  const itemsText = (artisanItems || [])
+    .map(item => `• ${item.product?.name || item.name || 'Craft Item'} (Qty: ${item.quantity || 1}, Size: ${item.size || 'Free Size'}) - ₹${((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString('en-IN')}`)
+    .join('\n');
+
+  const totalArtisanAmount = (artisanItems || []).reduce((sum, item) => sum + ((item.price_at_time || item.price || 0) * (item.quantity || 1)), 0);
+
+  const messageBody = `🎉 *New Customer Order for ${artisanStoreName || 'Your Craft Studio'}!*
+========================================
+📦 *Order ID:* #${order.id?.substring(0, 8)}
+📅 *Date:* ${new Date().toLocaleDateString('en-IN')}
+
+👤 *CUSTOMER DETAILS:*
+• *Name:* ${customer?.name || 'Valued Customer'}
+• *Phone:* +91 ${order.phone || customer?.phone || 'N/A'}
+• *Email:* ${customer?.email || 'N/A'}
+
+📍 *DELIVERY / SHIPPING ADDRESS:*
+${order.shipping_address || 'Address provided at checkout'}
+
+🛒 *YOUR PRODUCTS ORDERED:*
+${itemsText || 'Craft item'}
+💰 *Total Amount:* ₹${totalArtisanAmount.toLocaleString('en-IN')}
+
+💳 *Payment Mode:* ${getEffectivePaymentMethod(order)} (${order.payment_status || 'Pending'})
+========================================
+⚡ *Action:* Please prepare this order for packing and delivery!`;
+
+  return await sendWhatsappToRecipients([artisanPhone], messageBody);
+};
+

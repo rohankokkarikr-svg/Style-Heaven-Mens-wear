@@ -59,10 +59,10 @@ exports.getProducts = async (req, res) => {
     const { data, error } = await safeQuery(async () => {
       let query = supabase.from('products').select('*, artisan_profiles(id, store_name, location, specialization, verification_status)').order('created_at', { ascending: false });
 
-      // For public shoppers (no specific artisan query), only show approved, non-hidden products
+      // For public shoppers (no specific artisan query), strictly show approved, non-hidden products only
       if (!artisan_id) {
         query = query.neq('is_hidden', true);
-        query = query.neq('status', 'rejected');
+        query = query.eq('status', 'approved');
       }
 
       if (category && category !== 'all') {
@@ -91,9 +91,9 @@ exports.getProducts = async (req, res) => {
 
     let filteredData = (data && data.length > 0) ? data : HANDICRAFT_PRODUCTS;
 
-    // Further sanitize fallback or raw data
+    // Further sanitize fallback or raw data: shoppers only see approved, visible products
     if (!artisan_id) {
-      filteredData = filteredData.filter(p => !p.is_hidden && p.status !== 'rejected');
+      filteredData = filteredData.filter(p => !p.is_hidden && (p.status === 'approved' || (!p.status && p.is_in_stock)));
     }
 
     if (isBasicRequest) {
@@ -103,7 +103,7 @@ exports.getProducts = async (req, res) => {
     res.json(filteredData);
   } catch (error) {
     console.error('Products Fetch Notice, returning handicrafts dataset:', error.message);
-    res.json(HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && p.status !== 'rejected'));
+    res.json(HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && (p.status === 'approved' || !p.status)));
   }
 };
 
@@ -118,16 +118,16 @@ exports.getFeaturedProducts = async (req, res) => {
         .from('products')
         .select('*, artisan_profiles(id, store_name, location, specialization)')
         .neq('is_hidden', true)
-        .neq('status', 'rejected')
+        .eq('status', 'approved')
         .order('created_at', { ascending: false })
         .limit(9)
     );
 
     if (error) throw error;
     
-    let filteredData = (data || []).filter(p => !p.is_hidden && p.status !== 'rejected').slice(0, 8);
+    let filteredData = (data || []).filter(p => !p.is_hidden && (p.status === 'approved' || !p.status)).slice(0, 8);
     if (filteredData.length === 0) {
-      filteredData = HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && p.status !== 'rejected').slice(0, 8);
+      filteredData = HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && (p.status === 'approved' || !p.status)).slice(0, 8);
     }
     
     productCache.featured = { data: filteredData, timestamp: Date.now() };
@@ -150,6 +150,15 @@ exports.getProductById = async (req, res) => {
       .maybeSingle();
 
     if (data) {
+      if (data.is_hidden) {
+        return res.status(404).json({ error: 'This product is currently hidden.' });
+      }
+      if (data.status && data.status !== 'approved') {
+        const isPrivileged = req.user && (req.user.role === 'admin' || req.user.role === 'artisan');
+        if (!isPrivileged) {
+          return res.status(403).json({ error: 'This product is currently under admin review and awaiting approval.' });
+        }
+      }
       return res.json(data);
     }
 
@@ -172,6 +181,7 @@ exports.getProductById = async (req, res) => {
     res.status(500).json({ error: 'Server Error' });
   }
 };
+
 
 exports.createProduct = async (req, res) => {
   try {
