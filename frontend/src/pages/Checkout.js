@@ -312,18 +312,12 @@ export default function Checkout() {
 
   const shipping = totalPrice > 2000 || (isCouponApplied && discountType === 'free_shipping') ? 0 : 150;
   let discountAmount = 0;
-  const isFreeShirtApplied = isCouponApplied && couponCode.trim().toUpperCase().startsWith('FREESHIRT');
 
   if (isCouponApplied) {
-    if (isFreeShirtApplied) {
-      const customTshirt = items.find(item => item.product.name === 'Style Heaven Customized T-Shirt');
-      if (customTshirt) {
-        // Discount exactly one customized T-shirt price
-        discountAmount = customTshirt.product.price;
-      }
-    } else {
-      if (discountType === 'percentage') discountAmount = (totalPrice * appliedDiscount) / 100;
-      else if (discountType === 'fixed') discountAmount = appliedDiscount;
+    if (discountType === 'percentage') {
+      discountAmount = (totalPrice * appliedDiscount) / 100;
+    } else if (discountType === 'fixed') {
+      discountAmount = Math.min(totalPrice, appliedDiscount);
     }
   }
   const finalTotal = Math.max(0, totalPrice + shipping - discountAmount);
@@ -421,16 +415,6 @@ export default function Checkout() {
     setCouponError('');
     const codeUpper = couponCode.trim().toUpperCase();
     if (!codeUpper) { setCouponError('Please enter a coupon code'); return; }
-
-    // Validation for FREESHIRT coupon: check if cart has the customized T-shirt
-    if (codeUpper.startsWith('FREESHIRT')) {
-      const hasCustomTshirt = items.some(item => item.product.name === 'Style Heaven Customized T-Shirt');
-      if (!hasCustomTshirt) {
-        setCouponError("This coupon is only valid for the KalaStyle AI Exclusive Gift. Add it to your cart first.");
-        setIsCouponApplied(false);
-        return;
-      }
-    }
 
     setCouponApplying(true);
     try {

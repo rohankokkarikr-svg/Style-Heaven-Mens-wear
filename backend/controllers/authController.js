@@ -240,39 +240,39 @@ exports.getRewards = async (req, res) => {
       totalSpent = deliveredOrders.reduce((sum, o) => sum + Number(o.total_price), 0);
     }
 
-    // 3. Reward milestone: 10 items delivered = 1 free T-shirt (one-time cap)
+    // 3. Reward milestone: 10 items delivered = 90% OFF Super Voucher
     const progress         = Math.min(totalItemsOrdered, REWARD_THRESHOLD);
     const rewardsEarned    = totalItemsOrdered >= REWARD_THRESHOLD ? 1 : 0;
     const needed           = REWARD_THRESHOLD - progress;
 
-    // 4. Auto-provision unique reward coupon if milestone reached
+    // 4. Auto-provision unique 90% discount reward coupon if milestone reached
     let rewardCode = null;
     let rewardClaimed = false; // true once the coupon has been used at checkout
     let couponCreatedAt = null;
 
     if (rewardsEarned > 0) {
-      // Check if user already has a FREESHIRT10 coupon code in database
+      // Check if user already has a KALA90 (or legacy) coupon code in database
       const { data: existingCoupons, error: couponFindError } = await supabase
         .from('coupons')
         .select('code, is_used, created_at')
         .eq('user_id', userId)
-        .like('code', 'FREESHIRT10%');
+        .or('code.like.KALA90%,code.like.FREESHIRT10%');
 
       if (couponFindError) {
         console.error('Error finding existing coupon:', couponFindError);
       }
 
       if (!existingCoupons || existingCoupons.length === 0) {
-        // First time reaching the milestone — generate a unique code and provision the coupon
+        // First time reaching milestone: generate unique KALA90 code and provision 90% discount
         const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-        rewardCode = `FREESHIRT10-${randomStr}`;
+        rewardCode = `KALA90-${randomStr}`;
 
         const { data: newCoupon, error: couponInsertError } = await supabase
           .from('coupons')
           .insert({
             code: rewardCode,
             discount_type: 'percentage',
-            discount_value: 100,
+            discount_value: 90,
             user_id: userId,
             expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             is_used: false
@@ -312,11 +312,11 @@ exports.getRewards = async (req, res) => {
       points: Math.floor(totalSpent / 10),
       rewardThreshold: REWARD_THRESHOLD,
       history: [
-        { id: 1, title: 'Welcome Reward', date: '2026-05-01', status: 'Redeemed', code: 'WELCOME10' },
+        { id: 1, title: 'Welcome Craft Reward', date: '2026-05-01', status: 'Redeemed', code: 'WELCOME10' },
         ...(rewardsEarned > 0
           ? [{
               id: 2,
-              title: `Free T-Shirt Unlocked — ${REWARD_THRESHOLD} items delivered!`,
+              title: `Grand 90% OFF Milestone Voucher — ${REWARD_THRESHOLD} handicraft items delivered!`,
               date: couponCreatedAt ? couponCreatedAt.split('T')[0] : new Date().toISOString().split('T')[0],
               // Reflect actual DB status: Redeemed if coupon is used, else Available
               status: rewardClaimed ? 'Redeemed' : 'Available',
