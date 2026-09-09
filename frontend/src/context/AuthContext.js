@@ -19,31 +19,54 @@ export const AuthProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Auto-sync session in background with database
-  useEffect(() => {
+  const refreshUser = async () => {
     const token = localStorage.getItem('sh_token');
-
-    // Always fetch fresh profile from DB to reflect role changes made in Supabase
-    if (token) {
-      authAPI.me()
-        .then(({ data }) => {
-          if (data) {
-            const normalized = { ...data, role: (data.role || 'user').trim().toLowerCase() };
-            setUser(normalized);
-            localStorage.setItem('sh_user', JSON.stringify(normalized));
-          }
-        })
-        .catch((err) => {
-          if (err.response?.status === 401) {
-            localStorage.removeItem('sh_token');
-            localStorage.removeItem('sh_user');
-            setUser(null);
-          }
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+    if (!token) return null;
+    try {
+      const { data } = await authAPI.me();
+      if (data) {
+        const normalized = { ...data, role: (data.role || 'user').trim().toLowerCase() };
+        setUser(normalized);
+        localStorage.setItem('sh_user', JSON.stringify(normalized));
+        return normalized;
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        localStorage.removeItem('sh_token');
+        localStorage.removeItem('sh_user');
+        setUser(null);
+      }
     }
+    return null;
+  };
+
+  // Auto-sync session on mount with database
+  useEffect(() => {
+    refreshUser().finally(() => setLoading(false));
+  }, []);
+
+  // Real-time listener: immediately sync artisan verification across all devices
+  useEffect(() => {
+    const handleArtisanSync = (e) => {
+      const payload = e.detail?.payload;
+      if (payload?.verification_status) {
+        setUser(prev => {
+          if (!prev) return prev;
+          const updatedProfile = {
+            ...(prev.artisan_profile || {}),
+            verification_status: payload.verification_status
+          };
+          const updatedUser = { ...prev, artisan_profile: updatedProfile };
+          try {
+            localStorage.setItem('sh_user', JSON.stringify(updatedUser));
+          } catch {}
+          return updatedUser;
+        });
+        refreshUser();
+      }
+    };
+    window.addEventListener('kala:sync:artisans_updated', handleArtisanSync);
+    return () => window.removeEventListener('kala:sync:artisans_updated', handleArtisanSync);
   }, []);
 
   const login = async (phone, password) => {
@@ -85,7 +108,7 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, isAdmin, isArtisan, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, isAdmin, isArtisan, isAuthenticated, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -188,7 +188,7 @@ exports.updateArtisanStatus = async (req, res) => {
       .single();
 
     if (error) throw error;
-    broadcastSync('ARTISANS_UPDATED', { id, verification_status, artisan: data });
+    broadcastSync('ARTISANS_UPDATED', { id, user_id: data?.user_id, verification_status, artisan: data });
     await logActivity(req, `Artisan Status Changed to ${verification_status}`, 'Artisan', id);
     res.json({ message: 'Artisan status updated successfully', artisan: data });
   } catch (err) {

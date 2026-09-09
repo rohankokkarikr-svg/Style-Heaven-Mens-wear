@@ -54,10 +54,19 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Fast HTTP caching headers on public GET queries to make repeat page loads 0ms
+// Fast HTTP caching headers ONLY on public catalog GET queries; NEVER cache private/user endpoints
 app.use((req, res, next) => {
-  if (req.method === 'GET' && !req.path.includes('/auth') && !req.path.includes('/health')) {
-    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+  const isPrivate = req.path.includes('/auth') || 
+                    req.path.includes('/admin') || 
+                    req.path.includes('/me') || 
+                    req.path.includes('/my') || 
+                    req.path.includes('/health');
+  if (req.method === 'GET') {
+    if (isPrivate) {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    } else {
+      res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+    }
   }
   next();
 });

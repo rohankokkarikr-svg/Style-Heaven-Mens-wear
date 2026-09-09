@@ -18,10 +18,29 @@ export default function ArtisanProfile() {
   const fileInputRef = useRef();
   const qrInputRef = useRef();
 
-  useEffect(() => {
+  const fetchProfile = () => {
     artisanAPI.getMyProfile().then(({ data }) => {
-      setProfile(data); setForm(data || {}); setLoading(false);
+      if (data) {
+        setProfile(data); setForm(data || {}); setLoading(false);
+      }
     }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  // Real-time listener: immediately update profile banner when Admin verifies
+  useEffect(() => {
+    const handleSync = (e) => {
+      const payload = e.detail?.payload;
+      if (payload?.verification_status) {
+        setProfile(prev => prev ? { ...prev, verification_status: payload.verification_status } : prev);
+        fetchProfile();
+      }
+    };
+    window.addEventListener('kala:sync:artisans_updated', handleSync);
+    return () => window.removeEventListener('kala:sync:artisans_updated', handleSync);
   }, []);
 
   const handleImageUpload = async (e) => {

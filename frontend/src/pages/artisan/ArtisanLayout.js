@@ -1,12 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { HiChartPie, HiCollection, HiSparkles, HiShoppingBag, HiCurrencyRupee, HiUser, HiLogout, HiMenu, HiX, HiLightBulb } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+import { artisanAPI } from '../../services/api';
+import toast from 'react-hot-toast';
 
 export default function ArtisanLayout() {
-  const { logout, user } = useAuth();
+  const { logout, user, refreshUser } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profile, setProfile] = useState(user?.artisan_profile || null);
+
+  // Fetch live artisan profile from server on mount
+  useEffect(() => {
+    artisanAPI.getMyProfile()
+      .then(({ data }) => {
+        if (data) setProfile(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Synchronize when auth user changes
+  useEffect(() => {
+    if (user?.artisan_profile) {
+      setProfile(user.artisan_profile);
+    }
+  }, [user]);
+
+  // Real-time listener: immediately update badge when Admin verifies
+  useEffect(() => {
+    const handleSync = (e) => {
+      const payload = e.detail?.payload;
+      if (payload?.verification_status) {
+        setProfile(prev => ({
+          ...(prev || {}),
+          verification_status: payload.verification_status,
+        }));
+        if (payload.verification_status === 'verified') {
+          toast.success('🎉 Congratulations! Your artisan store has been verified by Admin!');
+        } else if (payload.verification_status === 'suspended') {
+          toast.error('⚠️ Your artisan store has been suspended by Admin');
+        }
+        if (refreshUser) refreshUser();
+      }
+    };
+    window.addEventListener('kala:sync:artisans_updated', handleSync);
+    return () => window.removeEventListener('kala:sync:artisans_updated', handleSync);
+  }, [refreshUser]);
+
+  const currentStatus = profile?.verification_status || user?.artisan_profile?.verification_status || 'pending';
 
   const links = [
     { name: 'Dashboard',      path: '/artisan',                icon: HiChartPie },
@@ -44,9 +86,9 @@ export default function ArtisanLayout() {
           {user && (
             <div className="px-4 py-3 border-b border-dark-600 bg-dark-700/50">
               <p className="text-white font-semibold text-sm truncate">{user.name}</p>
-              <p className="text-gold-400 text-xs">{user.artisan_profile?.store_name || 'Artisan'}</p>
-              <span className={'text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block font-medium ' + (user.artisan_profile?.verification_status === 'verified' ? 'bg-green-500/20 text-green-400' : user.artisan_profile?.verification_status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400')}>
-                {user.artisan_profile?.verification_status === 'verified' ? '✓ Verified' : user.artisan_profile?.verification_status === 'rejected' ? '✗ Rejected' : '⏳ Pending Verification'}
+              <p className="text-gold-400 text-xs">{profile?.store_name || user.artisan_profile?.store_name || 'Artisan'}</p>
+              <span className={'text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block font-medium ' + (currentStatus === 'verified' ? 'bg-green-500/20 text-green-400' : currentStatus === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400')}>
+                {currentStatus === 'verified' ? '✓ Verified' : currentStatus === 'rejected' ? '✗ Rejected' : '⏳ Pending Verification'}
               </span>
             </div>
           )}

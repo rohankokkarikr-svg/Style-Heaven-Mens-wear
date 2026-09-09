@@ -11,9 +11,11 @@ import {
   HiRefresh
 } from 'react-icons/hi';
 import { adminAPI } from '../../services/api';
+import { useRealtimeSync } from '../../context/RealtimeSyncContext';
 import toast from 'react-hot-toast';
 
 export default function Artisans() {
+  const { triggerLiveSync } = useRealtimeSync();
   const [artisans, setArtisans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -46,12 +48,19 @@ export default function Artisans() {
 
   const handleUpdateStatus = async (id, status) => {
     try {
-      await adminAPI.updateArtisanStatus(id, { verification_status: status });
+      const targetArtisan = artisans.find(a => a.id === id);
+      const res = await adminAPI.updateArtisanStatus(id, { verification_status: status });
       toast.success(`Artisan status updated to ${status}`);
       setArtisans(prev => prev.map(a => a.id === id ? { ...a, verification_status: status } : a));
       if (selectedArtisan && selectedArtisan.id === id) {
         setSelectedArtisan(prev => ({ ...prev, verification_status: status }));
       }
+      triggerLiveSync('ARTISANS_UPDATED', {
+        id,
+        user_id: targetArtisan?.user_id,
+        verification_status: status,
+        artisan: res.data?.artisan
+      });
     } catch (err) {
       toast.error('Failed to update status');
     }
