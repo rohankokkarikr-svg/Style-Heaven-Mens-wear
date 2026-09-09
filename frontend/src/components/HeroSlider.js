@@ -4,21 +4,76 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiArrowRight, HiChevronLeft, HiChevronRight } from 'react-icons/hi';
 import { useSettings, DEFAULT_HERO_SLIDES } from '../context/SettingsContext';
 
-const textVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i) => ({
+const SLIDE_DURATION = 5000; // 5 seconds per slide
+
+// Directional background slide + zoom animation
+const bgVariants = {
+  enter: (direction) => ({
+    x: direction > 0 ? '12%' : '-12%',
+    opacity: 0,
+    scale: 1.08,
+  }),
+  center: {
+    x: '0%',
+    opacity: 1,
+    scale: 1,
+    transition: {
+      x: { duration: 0.85, ease: [0.25, 0.46, 0.45, 0.94] },
+      opacity: { duration: 0.75, ease: 'easeInOut' },
+      scale: { duration: 5, ease: 'easeOut' }, // Subtle Ken Burns zoom
+    },
+  },
+  exit: (direction) => ({
+    x: direction > 0 ? '-12%' : '12%',
+    opacity: 0,
+    scale: 0.96,
+    transition: {
+      x: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] },
+      opacity: { duration: 0.6, ease: 'easeInOut' },
+    },
+  }),
+};
+
+// Text content animations
+const contentVariants = {
+  enter: (direction) => ({
+    opacity: 0,
+    y: 25,
+    x: direction > 0 ? 30 : -30,
+  }),
+  center: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, delay: i * 0.12, ease: [0.25, 0.46, 0.45, 0.94] },
+    x: 0,
+    transition: {
+      duration: 0.65,
+      ease: [0.25, 0.46, 0.45, 0.94],
+      staggerChildren: 0.1,
+      delayChildren: 0.15,
+    },
+  },
+  exit: (direction) => ({
+    opacity: 0,
+    y: -20,
+    x: direction > 0 ? -25 : 25,
+    transition: { duration: 0.35, ease: 'easeInOut' },
   }),
-  exit: { opacity: 0, y: -20, transition: { duration: 0.25 } },
+};
+
+const textItemVariants = {
+  enter: { opacity: 0, y: 20 },
+  center: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+  exit: { opacity: 0, y: -15, transition: { duration: 0.25 } },
 };
 
 export default function HeroSlider() {
   const { settings } = useSettings();
   const [current, setCurrent] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef(null);
+  const [direction, setDirection] = useState(1);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
@@ -43,44 +98,45 @@ export default function HeroSlider() {
     }));
   }, [settings?.heroSlides]);
 
-  // Keep index within bounds if activeSlides length changes
+  const totalSlides = activeSlides.length;
+
+  // Slide navigation handlers
+  const next = useCallback(() => {
+    if (totalSlides <= 1) return;
+    setDirection(1);
+    setCurrent((prev) => (prev + 1) % totalSlides);
+  }, [totalSlides]);
+
+  const prev = useCallback(() => {
+    if (totalSlides <= 1) return;
+    setDirection(-1);
+    setCurrent((prev) => (prev - 1 + totalSlides) % totalSlides);
+  }, [totalSlides]);
+
+  const goTo = useCallback((index) => {
+    if (index === current || totalSlides <= 1) return;
+    setDirection(index > current ? 1 : -1);
+    setCurrent(index);
+  }, [current, totalSlides]);
+
+  // Keep index within bounds if slide count changes
   useEffect(() => {
-    if (current >= activeSlides.length) {
+    if (current >= totalSlides && totalSlides > 0) {
       setCurrent(0);
     }
-  }, [activeSlides.length, current]);
+  }, [totalSlides, current]);
 
-  const startTimer = useCallback(() => {
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % (activeSlides.length || 1));
-    }, 5000);
-  }, [activeSlides.length]);
-
+  // Auto-play timer: advances every 5 seconds reliably
   useEffect(() => {
-    if (activeSlides.length > 0 && !isPaused) {
-      startTimer();
-    }
-    return () => clearInterval(timerRef.current);
-  }, [activeSlides.length, isPaused, startTimer]);
+    if (totalSlides <= 1) return;
 
-  const goTo = (index) => {
-    clearInterval(timerRef.current);
-    setCurrent(index);
-    if (!isPaused) startTimer();
-  };
+    const timer = setInterval(() => {
+      setDirection(1);
+      setCurrent((prev) => (prev + 1) % totalSlides);
+    }, SLIDE_DURATION);
 
-  const prev = () => {
-    clearInterval(timerRef.current);
-    setCurrent((c) => (c - 1 + activeSlides.length) % activeSlides.length);
-    if (!isPaused) startTimer();
-  };
-
-  const next = () => {
-    clearInterval(timerRef.current);
-    setCurrent((c) => (c + 1) % activeSlides.length);
-    if (!isPaused) startTimer();
-  };
+    return () => clearInterval(timer);
+  }, [totalSlides, current]);
 
   // Mobile Touch Swipe Handlers
   const handleTouchStart = (e) => {
@@ -94,40 +150,36 @@ export default function HeroSlider() {
   const handleTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe) {
-      next();
-    } else if (isRightSwipe) {
-      prev();
+    if (distance > 50) {
+      next(); // Swiped left -> next slide
+    } else if (distance < -50) {
+      prev(); // Swiped right -> previous slide
     }
     touchStartX.current = 0;
     touchEndX.current = 0;
   };
 
-  if (!activeSlides.length) return null;
+  if (!totalSlides) return null;
   const slide = activeSlides[current] || activeSlides[0];
 
   return (
     <section
       className="relative w-full overflow-hidden bg-black select-none"
       style={{ height: 'min(92vh, 800px)', minHeight: '520px' }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Slide Images with Zoom Effect ── */}
-      <AnimatePresence mode="sync">
+      {/* ── Slide Background Image with Directional Slide & Ken Burns Zoom ── */}
+      <AnimatePresence initial={false} custom={direction}>
         <motion.div
-          key={`bg-${slide.id}-${current}`}
-          className="absolute inset-0"
-          initial={{ scale: 1.08, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.96, opacity: 0 }}
-          transition={{ duration: 1.1, ease: 'easeInOut' }}
+          key={`bg-${slide.id || current}-${current}`}
+          className="absolute inset-0 overflow-hidden"
+          custom={direction}
+          variants={bgVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
         >
           <img
             src={slide.image}
@@ -148,23 +200,25 @@ export default function HeroSlider() {
         </motion.div>
       </AnimatePresence>
 
-      {/* ── Slide Content ── */}
+      {/* ── Slide Content with Staggered Entrance ── */}
       <div
         className={`absolute inset-0 flex items-center z-10 px-5 sm:px-10 md:px-16 lg:px-24 ${
           slide.align === 'center' ? 'justify-center text-center' : 'justify-start text-left'
         }`}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            key={`content-${slide.id}-${current}`}
+            key={`content-${slide.id || current}-${current}`}
             className="max-w-2xl pt-2 sm:pt-0"
-            initial="hidden"
-            animate="visible"
+            custom={direction}
+            variants={contentVariants}
+            initial="enter"
+            animate="center"
             exit="exit"
           >
             {/* Badge */}
             {slide.badge && (
-              <motion.div custom={0} variants={textVariants} className="mb-3 sm:mb-5">
+              <motion.div variants={textItemVariants} className="mb-3 sm:mb-5">
                 <span
                   className={`inline-block px-3.5 py-1 text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-full border backdrop-blur-sm ${
                     slide.badge.type === 'sale'
@@ -179,8 +233,7 @@ export default function HeroSlider() {
 
             {/* Headline */}
             <motion.h1
-              custom={slide.badge ? 1 : 0}
-              variants={textVariants}
+              variants={textItemVariants}
               className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.15] sm:leading-[1.08] tracking-tight mb-3 sm:mb-5 drop-shadow-md"
               style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}
             >
@@ -195,8 +248,7 @@ export default function HeroSlider() {
 
             {/* Subtitle */}
             <motion.p
-              custom={slide.badge ? 2 : 1}
-              variants={textVariants}
+              variants={textItemVariants}
               className="text-gray-200 text-xs sm:text-base md:text-lg leading-relaxed mb-6 sm:mb-8 max-w-lg line-clamp-3 sm:line-clamp-none drop-shadow"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
@@ -205,14 +257,13 @@ export default function HeroSlider() {
 
             {/* Divider line */}
             <motion.div
-              custom={slide.badge ? 2.5 : 1.5}
-              variants={textVariants}
+              variants={textItemVariants}
               className={`h-px w-16 sm:w-20 mb-6 sm:mb-8 ${slide.align === 'center' ? 'mx-auto' : ''}`}
               style={{ background: 'linear-gradient(90deg, #C9A84C, transparent)' }}
             />
 
             {/* CTA Button */}
-            <motion.div custom={slide.badge ? 3 : 2} variants={textVariants}>
+            <motion.div variants={textItemVariants}>
               <Link
                 to={slide.buttonLink}
                 className="group inline-flex items-center gap-2.5 px-6 py-3 sm:px-8 sm:py-4 font-semibold text-xs sm:text-sm uppercase tracking-[0.15em] rounded-full transition-all duration-300 shadow-lg"
@@ -244,21 +295,21 @@ export default function HeroSlider() {
           {String(current + 1).padStart(2, '0')}
         </span>
         <span className="text-gray-500 text-xs">/</span>
-        <span className="text-gray-300 text-xs">{String(activeSlides.length).padStart(2, '0')}</span>
+        <span className="text-gray-300 text-xs">{String(totalSlides).padStart(2, '0')}</span>
       </div>
 
-      {/* ── Navigation Arrows (Desktop / Tablet only to prevent mobile text overlap) ── */}
+      {/* ── Navigation Arrows (Desktop / Tablet) ── */}
       <button
         onClick={prev}
         aria-label="Previous slide"
-        className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/50 backdrop-blur-md hidden md:flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95"
+        className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/40 backdrop-blur-md hidden sm:flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
       >
         <HiChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/50 backdrop-blur-md hidden md:flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95"
+        className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-black/40 backdrop-blur-md hidden sm:flex items-center justify-center text-white hover:bg-amber-500/30 hover:border-amber-400/60 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
       >
         <HiChevronRight className="w-5 h-5" />
       </button>
@@ -270,7 +321,7 @@ export default function HeroSlider() {
             key={i}
             onClick={() => goTo(i)}
             aria-label={`Go to slide ${i + 1}`}
-            className="p-1 transition-all duration-300"
+            className="p-1 transition-all duration-300 cursor-pointer"
           >
             <span
               className={`block rounded-full transition-all duration-500 ${
@@ -283,8 +334,8 @@ export default function HeroSlider() {
         ))}
       </div>
 
-      {/* ── Progress Bar ── */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10 z-20">
+      {/* ── Synchronized Progress Bar (fills smoothly over exactly 5 seconds) ── */}
+      <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10 z-20">
         <motion.div
           key={`bar-${current}`}
           className="h-full"
@@ -295,8 +346,8 @@ export default function HeroSlider() {
         />
       </div>
 
-      {/* ── Scroll-down Indicator (Desktop only to prevent mobile clutter) ── */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 hidden md:flex flex-col items-center gap-1">
+      {/* ── Scroll-down Indicator ── */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 hidden sm:flex flex-col items-center gap-1">
         <span className="text-[9px] text-gray-400 uppercase tracking-[0.2em]">Scroll</span>
         <motion.div
           className="w-px h-6 bg-gradient-to-b from-amber-400 to-transparent"
