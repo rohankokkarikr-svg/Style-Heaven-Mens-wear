@@ -3,7 +3,19 @@ const multer = require('multer');
 
 const CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || 'dcmmxmikz').trim();
 const API_KEY = (process.env.CLOUDINARY_API_KEY || '149393542854794').trim();
-const API_SECRET = (process.env.CLOUDINARY_API_SECRET || '_CBARObUZS9wuKFB3zi1Kuzb58k').trim();
+let API_SECRET = (process.env.CLOUDINARY_API_SECRET || '_CBARObUZS9wuKFB3zi1Kuzb58k').trim();
+
+// Strip surrounding quotes if entered in hosting dashboard
+API_SECRET = API_SECRET.replace(/^["']|["']$/g, '');
+
+// Auto-repair missing leading underscore if copied without '_' on deployment dashboards
+if (CLOUD_NAME === 'dcmmxmikz') {
+  if (API_SECRET === 'CBARObUZS9wuKFB3zi1Kuzb58k' || API_SECRET.startsWith('CBARObUZS9wuKFB3zi1Kuzb58k')) {
+    API_SECRET = '_CBARObUZS9wuKFB3zi1Kuzb58k';
+  } else if (!API_SECRET || API_SECRET === 'your_cloudinary_api_secret') {
+    API_SECRET = '_CBARObUZS9wuKFB3zi1Kuzb58k';
+  }
+}
 
 cloudinary.v2.config({
   cloud_name: CLOUD_NAME,
@@ -11,6 +23,7 @@ cloudinary.v2.config({
   api_secret: API_SECRET,
   secure: true
 });
+
 
 // Use memoryStorage to avoid legacy multer-storage-cloudinary signature calculation issues
 const storage = multer.memoryStorage();
