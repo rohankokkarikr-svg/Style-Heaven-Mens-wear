@@ -26,7 +26,7 @@ export default function ArtisanOrders() {
     try {
       // Try dedicated orders endpoint first, fallback to getMyStats
       const res = await artisanAPI.getMyOrders();
-      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+      if (res?.data && Array.isArray(res.data)) {
         setOrders(res.data);
       } else {
         const statsRes = await artisanAPI.getMyStats();

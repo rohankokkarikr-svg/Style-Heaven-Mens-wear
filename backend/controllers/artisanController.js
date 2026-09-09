@@ -187,13 +187,17 @@ exports.getMyStats = async (req, res) => {
           ),
           products(id, name, price, image_url, category)
         `)
-        .in('product_id', productIds)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .in('product_id', productIds);
 
-      recentOrders = orderItems || [];
-      totalOrders = recentOrders.length;
-      totalRevenue = recentOrders.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0);
+      const sortedItems = (orderItems || []).sort((a, b) => {
+        const timeA = new Date(a.orders?.created_at || 0).getTime();
+        const timeB = new Date(b.orders?.created_at || 0).getTime();
+        return timeB - timeA;
+      });
+
+      recentOrders = sortedItems.slice(0, 100);
+      totalOrders = sortedItems.length;
+      totalRevenue = sortedItems.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0);
     }
 
     res.json({
@@ -221,13 +225,14 @@ exports.getMyOrders = async (req, res) => {
       .eq('user_id', req.user.id)
       .maybeSingle();
 
-    if (!profile) return res.json([]);
-
-    const orCondition = `artisan_id.eq.${profile.id},artisan_id.eq.${req.user.id}`;
-    const { data: products } = await supabase
-      .from('products')
-      .select('id')
-      .or(orCondition);
+    const profileId = profile?.id;
+    let productsQuery = supabase.from('products').select('id');
+    if (profileId) {
+      productsQuery = productsQuery.or(`artisan_id.eq.${profileId},artisan_id.eq.${req.user.id}`);
+    } else {
+      productsQuery = productsQuery.eq('artisan_id', req.user.id);
+    }
+    const { data: products } = await productsQuery;
 
     const productIds = (products || []).map(p => p.id);
     if (productIds.length === 0) return res.json([]);
@@ -250,11 +255,17 @@ exports.getMyOrders = async (req, res) => {
         ),
         products(id, name, price, image_url, category)
       `)
-      .in('product_id', productIds)
-      .order('created_at', { ascending: false });
+      .in('product_id', productIds);
 
     if (error) throw error;
-    res.json(orderItems || []);
+
+    const sorted = (orderItems || []).sort((a, b) => {
+      const timeA = new Date(a.orders?.created_at || 0).getTime();
+      const timeB = new Date(b.orders?.created_at || 0).getTime();
+      return timeB - timeA;
+    });
+
+    res.json(sorted);
   } catch (err) {
     console.error('getMyOrders error:', err);
     res.status(500).json({ error: 'Failed to fetch artisan orders' });
