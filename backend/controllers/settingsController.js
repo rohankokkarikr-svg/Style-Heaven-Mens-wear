@@ -188,6 +188,10 @@ exports.updateSettings = async (req, res) => {
       console.warn('Failed to upsert to Supabase platform_settings:', e.message);
     }
 
+    // Broadcast live to all devices (desktop, phone, tablet)
+    const { broadcastSync } = require('../utils/realtime');
+    broadcastSync('SETTINGS_UPDATED', updated);
+
     res.json({ success: true, settings: updated });
   } catch (err) {
     console.error('updateSettings error:', err);

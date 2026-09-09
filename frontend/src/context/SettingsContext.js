@@ -206,6 +206,23 @@ export const SettingsProvider = ({ children }) => {
         console.warn('Supabase platform_settings update warning:', supaErr.message);
       }
 
+      // 4. Multi-device live broadcast across all tabs and devices
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('kalastyle_device_sync');
+          bc.postMessage({ type: 'SETTINGS_UPDATED', payload: updated });
+          bc.close();
+        }
+        if (supabase && typeof supabase.channel === 'function') {
+          const channel = supabase.channel('kalastyle_live_sync');
+          channel.send({
+            type: 'broadcast',
+            event: 'KALA_SYNC',
+            payload: { type: 'SETTINGS_UPDATED', data: updated },
+          }).catch(() => {});
+        }
+      } catch (bcErr) {}
+
       return { success: true };
     } catch (err) {
       console.error('Failed to update settings:', err);
@@ -216,6 +233,36 @@ export const SettingsProvider = ({ children }) => {
   // Load fresh settings on mount
   useEffect(() => {
     refreshSettings();
+  }, [refreshSettings]);
+
+  // Listen for real-time updates from other devices / Admin control center
+  useEffect(() => {
+    const handleLiveSettings = (e) => {
+      const incoming = e.detail?.payload;
+      if (incoming) {
+        setSettings((prev) => {
+          const merged = {
+            ...prev,
+            ...incoming,
+            heroSlides: Array.isArray(incoming.heroSlides || incoming.hero_slides) && (incoming.heroSlides || incoming.hero_slides).length > 0
+              ? (incoming.heroSlides || incoming.hero_slides)
+              : prev.heroSlides,
+            discountBanner: (incoming.discountBanner || incoming.discount_banner)
+              ? { ...prev.discountBanner, ...(incoming.discountBanner || incoming.discount_banner) }
+              : prev.discountBanner,
+          };
+          try {
+            localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      } else {
+        refreshSettings();
+      }
+    };
+
+    window.addEventListener('kala:sync:settings_updated', handleLiveSettings);
+    return () => window.removeEventListener('kala:sync:settings_updated', handleLiveSettings);
   }, [refreshSettings]);
 
   return (

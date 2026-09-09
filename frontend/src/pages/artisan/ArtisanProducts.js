@@ -21,6 +21,21 @@ export default function ArtisanProducts() {
     fetchStats();
   }, []);
 
+  // Real-time listener: instantly reflect Admin approval / changes
+  useEffect(() => {
+    const handleSync = (e) => {
+      const payload = e.detail?.payload;
+      fetchStats();
+      if (payload?.action === 'approve') {
+        toast.success('🎉 Product approved by Admin and is now live!');
+      } else if (payload?.action === 'reject') {
+        toast.error('⚠️ Product review updated by Admin');
+      }
+    };
+    window.addEventListener('kala:sync:products_updated', handleSync);
+    return () => window.removeEventListener('kala:sync:products_updated', handleSync);
+  }, []);
+
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this product permanently?')) return;
     try {

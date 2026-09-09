@@ -207,6 +207,8 @@ exports.createProduct = async (req, res) => {
     }
 
     invalidateCache();
+    const { broadcastSync } = require('../utils/realtime');
+    broadcastSync('PRODUCTS_UPDATED', { action: 'create', product: data });
     res.status(201).json(data);
   } catch (error) {
     console.error(error);
@@ -242,6 +244,8 @@ exports.updateProduct = async (req, res) => {
     }
     
     invalidateCache();
+    const { broadcastSync } = require('../utils/realtime');
+    broadcastSync('PRODUCTS_UPDATED', { action: 'update', id: req.params.id, product: data });
     res.json(data);
   } catch (error) {
     console.error('Update Error:', error);
@@ -259,6 +263,8 @@ exports.deleteProduct = async (req, res) => {
     if (error) throw error;
     
     invalidateCache();
+    const { broadcastSync } = require('../utils/realtime');
+    broadcastSync('PRODUCTS_UPDATED', { action: 'delete', id: req.params.id });
     res.json({ message: 'Product removed' });
   } catch (error) {
     res.status(500).json({ error: 'Server Error' });

@@ -60,30 +60,44 @@ export default function ProductList() {
   }, [searchQuery]);
 
   // Fetch from API with reliable fallback to full authentic handicrafts data
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const params = {};
-        if (activeCategory && activeCategory !== 'all') params.category = activeCategory;
-        if (searchQuery) params.search = searchQuery;
+  const fetchProducts = React.useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const params = {};
+      if (activeCategory && activeCategory !== 'all') params.category = activeCategory;
+      if (searchQuery) params.search = searchQuery;
 
-        const { data } = await productAPI.getAll(params);
-        if (Array.isArray(data) && data.length > 0) {
-          setProducts(data);
-        } else {
-          // Use client handicraft dataset
-          setProducts(HANDICRAFT_PRODUCTS);
-        }
-      } catch (err) {
-        console.warn('Backend products fetch notice, using handicraft catalog:', err.message);
+      const { data } = await productAPI.getAll(params);
+      if (Array.isArray(data) && data.length > 0) {
+        setProducts(data);
+      } else {
+        // Use client handicraft dataset
         setProducts(HANDICRAFT_PRODUCTS);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchProducts();
+    } catch (err) {
+      console.warn('Backend products fetch notice, using handicraft catalog:', err.message);
+      setProducts(HANDICRAFT_PRODUCTS);
+    } finally {
+      setLoading(false);
+    }
   }, [activeCategory, searchQuery]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Real-time listener: auto-update when Admin changes products or categories
+  useEffect(() => {
+    const handleSync = () => {
+      fetchProducts(true);
+    };
+    window.addEventListener('kala:sync:products_updated', handleSync);
+    window.addEventListener('kala:sync:categories_updated', handleSync);
+    return () => {
+      window.removeEventListener('kala:sync:products_updated', handleSync);
+      window.removeEventListener('kala:sync:categories_updated', handleSync);
+    };
+  }, [fetchProducts]);
 
   // Find active category details for Banner
   const currentCategoryInfo = useMemo(() => {

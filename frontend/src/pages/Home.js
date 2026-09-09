@@ -21,26 +21,41 @@ export default function Home() {
 
   const discountBanner = settings?.discountBanner || DEFAULT_DISCOUNT_BANNER;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data } = await productAPI.getFeatured();
-        if (Array.isArray(data) && data.length > 0) {
-          setFeatured(data);
-        } else {
-          setFeatured(HANDICRAFT_PRODUCTS.slice(0, 8));
-        }
-      } catch {
+  const fetchData = React.useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const { data } = await productAPI.getFeatured();
+      if (Array.isArray(data) && data.length > 0) {
+        setFeatured(data);
+      } else {
         setFeatured(HANDICRAFT_PRODUCTS.slice(0, 8));
       }
-      try {
-        const { data } = await artisanAPI.getAll();
-        setArtisans(Array.isArray(data) ? data.slice(0, 4) : []);
-      } catch {}
-      setLoading(false);
-    };
-    fetchData();
+    } catch {
+      setFeatured(HANDICRAFT_PRODUCTS.slice(0, 8));
+    }
+    try {
+      const { data } = await artisanAPI.getAll();
+      setArtisans(Array.isArray(data) ? data.slice(0, 4) : []);
+    } catch {}
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Real-time listener: auto-update when Admin changes products or artisans
+  useEffect(() => {
+    const handleSync = () => {
+      fetchData(true);
+    };
+    window.addEventListener('kala:sync:products_updated', handleSync);
+    window.addEventListener('kala:sync:artisans_updated', handleSync);
+    return () => {
+      window.removeEventListener('kala:sync:products_updated', handleSync);
+      window.removeEventListener('kala:sync:artisans_updated', handleSync);
+    };
+  }, [fetchData]);
 
   const features = [
     { icon: HiTruck, title: 'Free Shipping', desc: 'On orders over Rs.1500' },

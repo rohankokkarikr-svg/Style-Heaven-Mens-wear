@@ -5,20 +5,23 @@ import toast from 'react-hot-toast';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Restore session from localStorage and auto-sync with database
-  useEffect(() => {
-    const stored = localStorage.getItem('sh_user');
-    const token = localStorage.getItem('sh_token');
-    if (stored && token) {
-      try {
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('sh_user');
+      const token = localStorage.getItem('sh_token');
+      if (stored && token) {
         const parsed = JSON.parse(stored);
         if (parsed.role) parsed.role = parsed.role.trim().toLowerCase();
-        setUser(parsed);
-      } catch (e) {}
-    }
+        return parsed;
+      }
+    } catch (e) {}
+    return null;
+  });
+  const [loading, setLoading] = useState(false);
+
+  // Auto-sync session in background with database
+  useEffect(() => {
+    const token = localStorage.getItem('sh_token');
 
     // Always fetch fresh profile from DB to reflect role changes made in Supabase
     if (token) {

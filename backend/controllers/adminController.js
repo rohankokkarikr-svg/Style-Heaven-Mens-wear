@@ -9,6 +9,7 @@ const supabase = require('../config/supabase');
 const { safeQuery } = require('../config/supabase');
 const { HANDICRAFT_CATEGORIES, HANDICRAFT_PRODUCTS } = require('../data/handicraftsData');
 const { invalidateCache } = require('./productController');
+const { broadcastSync } = require('../utils/realtime');
 
 // ── In-Memory Activity & AI Log Fallbacks ────────────────────────────────────
 let inMemoryActivityLogs = [
@@ -187,6 +188,7 @@ exports.updateArtisanStatus = async (req, res) => {
       .single();
 
     if (error) throw error;
+    broadcastSync('ARTISANS_UPDATED', { id, verification_status, artisan: data });
     await logActivity(req, `Artisan Status Changed to ${verification_status}`, 'Artisan', id);
     res.json({ message: 'Artisan status updated successfully', artisan: data });
   } catch (err) {
@@ -386,6 +388,7 @@ exports.updateProduct = async (req, res) => {
     }
 
     invalidateCache();
+    broadcastSync('PRODUCTS_UPDATED', { action: 'update', id, product: data });
     await logActivity(req, `Edited Product Details: ${data?.name || id}`, 'Product', id, updateData);
     res.json({ message: 'Product updated successfully', product: data });
   } catch (err) {
@@ -406,6 +409,7 @@ exports.approveProduct = async (req, res) => {
 
     if (error) throw error;
     invalidateCache();
+    broadcastSync('PRODUCTS_UPDATED', { action: 'approve', id, product: data });
     await logActivity(req, 'Approved Product', 'Product', id);
     res.json({ message: 'Product approved successfully', product: data });
   } catch (err) {
@@ -428,6 +432,7 @@ exports.rejectProduct = async (req, res) => {
 
     if (error) throw error;
     invalidateCache();
+    broadcastSync('PRODUCTS_UPDATED', { action: 'reject', id, reason, product: data });
     await logActivity(req, `Rejected Product (${reason || 'No reason specified'})`, 'Product', id);
     res.json({ message: 'Product rejected', product: data });
   } catch (err) {
@@ -450,6 +455,7 @@ exports.hideProduct = async (req, res) => {
 
     if (error) throw error;
     invalidateCache();
+    broadcastSync('PRODUCTS_UPDATED', { action: 'hide', id, is_hidden, product: data });
     await logActivity(req, is_hidden ? 'Hidden Product' : 'Unhidden Product', 'Product', id);
     res.json({ message: 'Product visibility updated', product: data });
   } catch (err) {
@@ -465,6 +471,7 @@ exports.deleteProduct = async (req, res) => {
     if (error) throw error;
 
     invalidateCache();
+    broadcastSync('PRODUCTS_UPDATED', { action: 'delete', id });
     await logActivity(req, 'Deleted Product', 'Product', id);
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {
@@ -520,6 +527,7 @@ exports.createCategory = async (req, res) => {
       .single();
 
     if (error) throw error;
+    broadcastSync('CATEGORIES_UPDATED', { action: 'create', category: data });
     await logActivity(req, `Created Category: ${name}`, 'Category', data?.id);
     res.status(201).json(data);
   } catch (err) {
@@ -547,6 +555,7 @@ exports.updateCategory = async (req, res) => {
       .single();
 
     if (error) throw error;
+    broadcastSync('CATEGORIES_UPDATED', { action: 'update', id, category: data });
     await logActivity(req, `Updated Category: ${name || id}`, 'Category', id);
     res.json(data);
   } catch (err) {
@@ -561,6 +570,7 @@ exports.deleteCategory = async (req, res) => {
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw error;
 
+    broadcastSync('CATEGORIES_UPDATED', { action: 'delete', id });
     await logActivity(req, `Deleted Category`, 'Category', id);
     res.json({ message: 'Category deleted' });
   } catch (err) {
@@ -622,6 +632,7 @@ exports.updateOrderStatus = async (req, res) => {
       .single();
 
     if (error) throw error;
+    broadcastSync('ORDERS_UPDATED', { id, status, payment_status, order: data });
     await logActivity(req, `Updated Order #${id.slice(0, 8)} to ${status || payment_status}`, 'Order', id);
     res.json(data);
   } catch (err) {
@@ -1024,10 +1035,12 @@ exports.updateSettings = async (req, res) => {
         .single();
       if (error) throw error;
       inMemorySettings = { ...inMemorySettings, ...normalizedUpdates };
+      broadcastSync('SETTINGS_UPDATED', inMemorySettings);
       await logActivity(req, 'Updated Platform Settings', 'Settings', 'main');
       return res.json(data);
     } catch {
       inMemorySettings = { ...inMemorySettings, ...normalizedUpdates };
+      broadcastSync('SETTINGS_UPDATED', inMemorySettings);
       await logActivity(req, 'Updated Platform Settings', 'Settings', 'main');
       return res.json(inMemorySettings);
     }

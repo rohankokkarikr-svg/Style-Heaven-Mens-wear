@@ -2,7 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { artisanAPI } from '../../services/api';
 export default function ArtisanOrders() {
   const [data, setData] = useState(null); const [loading, setLoading] = useState(true);
-  useEffect(() => { artisanAPI.getMyStats().then(({ data }) => { setData(data); setLoading(false); }).catch(() => setLoading(false)); }, []);
+  const fetchOrders = () => {
+    artisanAPI.getMyStats().then(({ data }) => { setData(data); setLoading(false); }).catch(() => setLoading(false));
+  };
+  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    const handleSync = () => { fetchOrders(); };
+    window.addEventListener('kala:sync:orders_updated', handleSync);
+    return () => window.removeEventListener('kala:sync:orders_updated', handleSync);
+  }, []);
   const STATUS_COLOR = { pending: 'bg-yellow-500/20 text-yellow-400', processing: 'bg-blue-500/20 text-blue-400', shipped: 'bg-purple-500/20 text-purple-400', delivered: 'bg-green-500/20 text-green-400', cancelled: 'bg-red-500/20 text-red-400' };
   return (
     <div className="space-y-6">

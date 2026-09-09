@@ -20,12 +20,29 @@ process.on('unhandledRejection', (err) => {
 });
 
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const compression = require('compression');
+const { initRealtime } = require('./utils/realtime');
 
 const app = express();
+const server = http.createServer(app);
+
+// Setup Socket.IO with CORS for any client device
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true,
+  },
+  pingTimeout: 30000,
+  pingInterval: 15000,
+});
+
+initRealtime(io);
 
 // Middleware
 app.use(cors());
@@ -36,6 +53,14 @@ app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Fast HTTP caching headers on public GET queries to make repeat page loads 0ms
+app.use((req, res, next) => {
+  if (req.method === 'GET' && !req.path.includes('/auth') && !req.path.includes('/health')) {
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -106,7 +131,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, '0.0.0.0', async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`
   🚀 KalaStyle AI Backend is running!
   📡 Port: ${PORT}

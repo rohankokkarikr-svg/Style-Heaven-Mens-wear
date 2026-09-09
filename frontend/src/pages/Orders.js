@@ -72,6 +72,21 @@ export default function Orders() {
     fetchOrders();
   }, []);
 
+  // Real-time listener: auto-update order status when Admin updates status
+  useEffect(() => {
+    const handleSync = (e) => {
+      const payload = e.detail?.payload;
+      if (payload?.id && payload?.status) {
+        setOrders(prev => prev.map(o => o.id === payload.id ? { ...o, status: payload.status, ...(payload.payment_status ? { payment_status: payload.payment_status } : {}) } : o));
+        toast.success(`Order #${payload.id.substring(0, 8)} status updated to ${payload.status}! 📦`);
+      } else {
+        orderAPI.getMyOrders().then(({ data }) => setOrders(data)).catch(() => {});
+      }
+    };
+    window.addEventListener('kala:sync:orders_updated', handleSync);
+    return () => window.removeEventListener('kala:sync:orders_updated', handleSync);
+  }, []);
+
   const getStatusColor = (status) => {
     switch(status?.toLowerCase()) {
       case 'delivered': return 'text-green-400 bg-green-500/10 border-green-500/20';

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import apiCache from '../utils/apiCache';
 
 // Base API instance pointing to backend
 const api = axios.create({
@@ -57,15 +58,32 @@ export const authAPI = {
   getLeaderboard: ()     => api.get('/auth/leaderboard'),
 };
 
+// Ultra-fast cached GET with instant SWR revalidation
+export const cachedGet = async (url, config = {}, ttl) => {
+  const cacheKey = `${url}?${JSON.stringify(config.params || {})}`;
+  const cached = apiCache.get(cacheKey);
+  if (cached && !cached.isExpired) {
+    return cached.data;
+  }
+  const promise = api.get(url, config).then((res) => {
+    apiCache.set(cacheKey, res, ttl);
+    return res;
+  });
+  if (cached && cached.data) {
+    promise.catch(() => {});
+    return cached.data;
+  }
+  return promise;
+};
 
 // ─── Products ────────────────────────────────────
 export const productAPI = {
-  getAll:      (params) => api.get('/products', { params }),
-  getById:     (id)     => api.get(`/products/${id}`),
-  getFeatured: ()       => api.get('/products/featured'),
-  create:      (data)   => api.post('/products', data),
-  update:      (id, d)  => api.put(`/products/${id}`, d),
-  delete:      (id)     => api.delete(`/products/${id}`),
+  getAll:      (params) => cachedGet('/products', { params }, 60000),
+  getById:     (id)     => cachedGet(`/products/${id}`, {}, 60000),
+  getFeatured: ()       => cachedGet('/products/featured', {}, 60000),
+  create:      (data)   => { apiCache.invalidateProducts(); return api.post('/products', data); },
+  update:      (id, d)  => { apiCache.invalidateProducts(); return api.put(`/products/${id}`, d); },
+  delete:      (id)     => { apiCache.invalidateProducts(); return api.delete(`/products/${id}`); },
   uploadImage: (id, fd) => api.post(`/products/${id}/image`, fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
@@ -79,13 +97,13 @@ export const productAPI = {
 
 // ─── Orders ──────────────────────────────────────
 export const orderAPI = {
-  create:             (data)     => api.post('/orders', data),
+  create:             (data)     => { apiCache.invalidateOrders(); return api.post('/orders', data); },
   getMyOrders:        ()         => api.get('/orders/my'),
   getAll:             (params)   => api.get('/orders', { params }),
   getById:            (id)       => api.get(`/orders/${id}`),
-  updateStatus:       (id, data) => api.put(`/orders/${id}/status`, data),
-  updateOrderDetails: (id, data) => api.put(`/orders/${id}/edit`, data),
-  cancelOrder:        (id)       => api.put(`/orders/${id}/cancel`),
+  updateStatus:       (id, data) => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/status`, data); },
+  updateOrderDetails: (id, data) => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/edit`, data); },
+  cancelOrder:        (id)       => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/cancel`); },
   pay:                (id, data) => api.put(`/orders/${id}/pay`, data),
   verifyPayment:      (id, data) => api.put(`/orders/${id}/verify-payment`, data),
 };
@@ -104,7 +122,7 @@ export const dashboardAPI = {
 
 // ─── Reviews ─────────────────────────────────────
 export const reviewAPI = {
-  getApproved: (params) => api.get('/reviews', { params }),
+  getApproved: (params) => cachedGet('/reviews', { params }, 60000),
   getAll: (params) => api.get('/reviews/admin', { params }),
   submit: (data) => api.post('/reviews', data),
   approve: (id) => api.patch(`/reviews/${id}/approve`),
@@ -120,19 +138,19 @@ export const couponAPI = {
 
 // ─── Categories ──────────────────────────────────
 export const categoryAPI = {
-  getAll: () => api.get('/products/categories'),
+  getAll: () => cachedGet('/products/categories', {}, 120000),
 };
 
 // ─── Settings ─────────────────────────────────────
 export const settingsAPI = {
-  get:    ()       => api.get('/settings'),
-  update: (data)   => api.put('/settings', data),
+  get:    ()       => cachedGet('/settings', {}, 60000),
+  update: (data)   => { apiCache.invalidateSettings(); return api.put('/settings', data); },
 };
 
 // ─── Artisans ────────────────────────────────────
 export const artisanAPI = {
-  getAll:       ()       => api.get('/artisans'),
-  getById:      (id)     => api.get(`/artisans/${id}`),
+  getAll:       ()       => cachedGet('/artisans', {}, 60000),
+  getById:      (id)     => cachedGet(`/artisans/${id}`, {}, 60000),
   getMyProfile: ()       => api.get('/artisans/me'),
   getMyStats:   ()       => api.get('/artisans/me/stats'),
   updateProfile:(data)   => api.put('/artisans/me', data),
