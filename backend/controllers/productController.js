@@ -317,14 +317,29 @@ exports.deleteProduct = async (req, res) => {
 
 exports.uploadProductImage = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Please upload a file' });
+    const { cloudinary } = require('../config/cloudinary');
+    let imageUrl = null;
+
+    if (req.file && req.file.buffer) {
+      const mime = req.file.mimetype || 'image/jpeg';
+      const base64Data = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+      const uploadRes = await cloudinary.uploader.upload(base64Data, {
+        folder: 'kalastyle-artisan-marketplace',
+        resource_type: 'auto'
+      });
+      imageUrl = uploadRes.secure_url || uploadRes.url;
+    } else if (req.file && (req.file.secure_url || req.file.path || req.file.url)) {
+      imageUrl = req.file.secure_url || req.file.path || req.file.url;
+    } else if (req.body && req.body.image) {
+      const uploadRes = await cloudinary.uploader.upload(req.body.image, {
+        folder: 'kalastyle-artisan-marketplace',
+        resource_type: 'auto'
+      });
+      imageUrl = uploadRes.secure_url || uploadRes.url;
     }
 
-    const imageUrl = req.file.path || req.file.url || req.file.secure_url;
-
     if (!imageUrl) {
-      return res.status(500).json({ error: 'Failed to retrieve image URL from storage' });
+      return res.status(400).json({ error: 'Please upload a file or image data' });
     }
 
     const { data, error } = await supabase
@@ -340,18 +355,26 @@ exports.uploadProductImage = async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('Upload Error:', error);
-    res.status(500).json({ error: 'Server Error during upload' });
+    res.status(500).json({ error: error.message || 'Server Error during upload' });
   }
 };
 
 exports.uploadDirect = async (req, res) => {
   try {
+    const { cloudinary } = require('../config/cloudinary');
     let imageUrl = null;
 
-    if (req.file) {
+    if (req.file && req.file.buffer) {
+      const mime = req.file.mimetype || 'image/jpeg';
+      const base64Data = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+      const uploadRes = await cloudinary.uploader.upload(base64Data, {
+        folder: 'kalastyle-artisan-marketplace',
+        resource_type: 'auto'
+      });
+      imageUrl = uploadRes.secure_url || uploadRes.url;
+    } else if (req.file && (req.file.secure_url || req.file.path || req.file.url)) {
       imageUrl = req.file.secure_url || req.file.path || req.file.url;
     } else if (req.body && req.body.image) {
-      const { cloudinary } = require('../config/cloudinary');
       const uploadRes = await cloudinary.uploader.upload(req.body.image, {
         folder: 'kalastyle-artisan-marketplace',
         resource_type: 'auto'
@@ -369,4 +392,5 @@ exports.uploadDirect = async (req, res) => {
     res.status(500).json({ error: error.message || 'Server Error during direct upload' });
   }
 };
+
 

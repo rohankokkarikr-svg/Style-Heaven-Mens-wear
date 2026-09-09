@@ -1,20 +1,19 @@
 const cloudinary = require('cloudinary');
-const CloudinaryStorage = require('multer-storage-cloudinary');
 const multer = require('multer');
 
+const CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || 'dcmmxmikz').trim();
+const API_KEY = (process.env.CLOUDINARY_API_KEY || '149393542854794').trim();
+const API_SECRET = (process.env.CLOUDINARY_API_SECRET || '_CBARObUZS9wuKFB3zi1Kuzb58k').trim();
+
 cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: CLOUD_NAME,
+  api_key: API_KEY,
+  api_secret: API_SECRET,
+  secure: true
 });
 
-const storage = CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'kalastyle-artisan-marketplace',
-    resource_type: 'auto'
-  }
-});
+// Use memoryStorage to avoid legacy multer-storage-cloudinary signature calculation issues
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage: storage,
@@ -31,4 +30,5 @@ const upload = multer({
 });
 
 module.exports = { cloudinary: cloudinary.v2, upload };
+
 
