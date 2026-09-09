@@ -60,7 +60,7 @@ export default function ArtisanProducts() {
         </span>
       );
     }
-    if (p.status === 'approved') {
+    if (p.status === 'approved' || p.status === 'active') {
       return (
         <span className="bg-green-600/95 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
           <HiCheckCircle className="w-3 h-3" /> Approved & Live
@@ -75,8 +75,8 @@ export default function ArtisanProducts() {
   };
 
   const filteredProducts = products.filter(p => {
-    if (activeTab === 'approved') return p.status === 'approved' && !p.is_hidden;
-    if (activeTab === 'pending') return (!p.status || p.status === 'pending') && !p.is_hidden;
+    if (activeTab === 'approved') return (p.status === 'approved' || p.status === 'active') && !p.is_hidden;
+    if (activeTab === 'pending') return (!p.status || p.status === 'pending' || p.status === 'draft') && !p.is_hidden;
     if (activeTab === 'rejected') return p.status === 'rejected';
     if (activeTab === 'hidden') return p.is_hidden;
     return true;
@@ -105,11 +105,12 @@ export default function ArtisanProducts() {
       <div className="flex items-center gap-2 overflow-x-auto border-b border-dark-700 pb-2">
         {[
           { id: 'all', label: `All (${products.length})` },
-          { id: 'approved', label: `Live & Approved (${products.filter(p => p.status === 'approved' && !p.is_hidden).length})` },
-          { id: 'pending', label: `Under Review (${products.filter(p => (!p.status || p.status === 'pending') && !p.is_hidden).length})` },
+          { id: 'approved', label: `Live & Approved (${products.filter(p => (p.status === 'approved' || p.status === 'active') && !p.is_hidden).length})` },
+          { id: 'pending', label: `Under Review (${products.filter(p => (!p.status || p.status === 'pending' || p.status === 'draft') && !p.is_hidden).length})` },
           { id: 'rejected', label: `Rejected (${products.filter(p => p.status === 'rejected').length})` },
           { id: 'hidden', label: `Hidden (${products.filter(p => p.is_hidden).length})` },
         ].map(tab => (
+
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}

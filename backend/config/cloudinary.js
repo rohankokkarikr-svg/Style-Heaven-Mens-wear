@@ -11,20 +11,24 @@ cloudinary.v2.config({
 const storage = CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'kalastyle-artisan-marketplace'
+    folder: 'kalastyle-artisan-marketplace',
+    resource_type: 'auto'
   }
 });
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
   fileFilter: (req, file, cb) => {
-    if (file.mimetype && file.mimetype.startsWith('image/')) {
+    const isImageMime = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype === 'application/octet-stream');
+    const isImageExt = /\.(jpe?g|png|webp|gif|svg|heic|heif|avif)$/i.test(file.originalname || '');
+    if (isImageMime || isImageExt) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files (JPG, PNG, WEBP, GIF, etc.) are allowed'), false);
+      cb(new Error('Only image files (JPG, PNG, WEBP, HEIC, etc.) are allowed'), false);
     }
   }
 });
 
 module.exports = { cloudinary: cloudinary.v2, upload };
+

@@ -43,6 +43,63 @@ export default function ArtisanProfile() {
     return () => window.removeEventListener('kala:sync:artisans_updated', handleSync);
   }, []);
 
+  // Client-side image compression: ensures quick uploads under any network conditions
+  const processImageFile = (file) => {
+    return new Promise((resolve) => {
+      if (!file || !file.type.startsWith('image/')) {
+        return resolve({ blob: file, dataUrl: null });
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1600;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          canvas.toBlob((blob) => {
+            resolve({ blob: blob || file, dataUrl });
+          }, 'image/jpeg', 0.88);
+        };
+        img.onerror = () => resolve({ blob: file, dataUrl: e.target.result });
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve({ blob: file, dataUrl: null });
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadImageSmart = async (file) => {
+    const { blob, dataUrl } = await processImageFile(file);
+    try {
+      const fd = new FormData();
+      fd.append('image', blob, file.name ? file.name.replace(/\.[^/.]+$/, ".jpg") : 'upload.jpg');
+      const { data } = await productAPI.uploadDirect(fd);
+      if (data?.imageUrl) return data.imageUrl;
+    } catch (multerErr) {
+      console.warn('FormData direct upload failed, trying base64 fallback...', multerErr);
+      if (dataUrl) {
+        const { data } = await productAPI.uploadDirect({ image: dataUrl });
+        if (data?.imageUrl) return data.imageUrl;
+      }
+      throw multerErr;
+    }
+  };
+
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -54,17 +111,21 @@ export default function ArtisanProfile() {
     setUploadingImg(true);
     const toastId = toast.loading('Uploading profile picture to Cloudinary ☁️...');
     try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const { data } = await productAPI.uploadDirect(fd);
-      if (data?.imageUrl) {
-        set('profile_image', data.imageUrl);
-        toast.success('Profile photo uploaded directly to Cloudinary! ☁️✨', { id: toastId });
+      const uploadedUrl = await uploadImageSmart(file);
+      if (uploadedUrl) {
+        set('profile_image', uploadedUrl);
+        const updatedForm = { ...form, profile_image: uploadedUrl };
+        await artisanAPI.updateProfile(updatedForm);
+        setProfile(p => ({ ...p, profile_image: uploadedUrl }));
+        toast.success('Profile photo uploaded and saved directly! ☁️✨', { id: toastId });
       }
     } catch (err) {
-      toast.error('Failed to upload image to Cloudinary', { id: toastId });
+      console.error('Profile photo upload error:', err);
+      const errMsg = err.response?.data?.error || err.message || 'Failed to upload image to Cloudinary';
+      toast.error(errMsg, { id: toastId });
     } finally {
       setUploadingImg(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -79,19 +140,24 @@ export default function ArtisanProfile() {
     setUploadingQr(true);
     const toastId = toast.loading('Uploading UPI QR Code to Cloudinary ☁️...');
     try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const { data } = await productAPI.uploadDirect(fd);
-      if (data?.imageUrl) {
-        set('upi_qr_code', data.imageUrl);
+      const uploadedUrl = await uploadImageSmart(file);
+      if (uploadedUrl) {
+        set('upi_qr_code', uploadedUrl);
+        const updatedForm = { ...form, upi_qr_code: uploadedUrl };
+        await artisanAPI.updateProfile(updatedForm);
+        setProfile(p => ({ ...p, upi_qr_code: uploadedUrl }));
         toast.success('UPI QR Code saved directly to Cloudinary! ☁️✨', { id: toastId });
       }
     } catch (err) {
-      toast.error('Failed to upload QR code to Cloudinary', { id: toastId });
+      console.error('QR code upload error:', err);
+      const errMsg = err.response?.data?.error || err.message || 'Failed to upload QR code to Cloudinary';
+      toast.error(errMsg, { id: toastId });
     } finally {
       setUploadingQr(false);
+      if (qrInputRef.current) qrInputRef.current.value = '';
     }
   };
+
 
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true);

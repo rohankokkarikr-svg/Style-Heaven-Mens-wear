@@ -1,9 +1,10 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { HiMicrophone, HiSparkles, HiCheck, HiX, HiRefresh, HiChevronRight, HiChevronLeft, HiGlobe, HiCurrencyRupee, HiPhotograph } from 'react-icons/hi';
-import { aiAPI, productAPI, categoryAPI } from '../../services/api';
+import { aiAPI, productAPI, categoryAPI, apiCache } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -337,21 +338,27 @@ export default function AIProductStudio() {
         image_url:      finalUrl || '',
         sizes:          ['Free Size'],
         stock_quantity: 10,
-        artisan_id:     user?.artisan_profile?.id,
+        artisan_id:     user?.artisan_profile?.id || user?.id,
         artisan_name:   user?.name,
-        status:         isDraft ? 'draft' : 'active',
+        status:         isDraft ? 'draft' : 'pending',
         ai_generated:   catalog.isAIGenerated,
       };
 
       await productAPI.create(productData);
-      toast.success(isDraft ? 'Saved as draft!' : 'Product published! 🎉');
+      apiCache.invalidateProducts();
+      window.dispatchEvent(new CustomEvent('kala:sync:products_updated', {
+        detail: { payload: { action: 'create' } }
+      }));
+      toast.success(isDraft ? 'Saved as draft!' : 'Product submitted for admin review! 🎉');
       navigate('/artisan/products');
     } catch (err) {
+      console.error('Publish error:', err);
       toast.error('Publish failed. Please try again.');
     } finally {
       setIsPublishing(false);
     }
   };
+
 
   // ── Step Progress Bar ──────────────────────────────────────────────────────
 

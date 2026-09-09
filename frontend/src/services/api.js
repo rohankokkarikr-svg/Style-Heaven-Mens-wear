@@ -88,10 +88,14 @@ export const productAPI = {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
   }),
-  uploadDirect: (fd) => api.post('/products/upload', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 60000,
-  }),
+  uploadDirect: (data) => {
+    const isFormData = data instanceof FormData;
+    return api.post('/products/upload', data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' },
+      timeout: 60000,
+    });
+  },
+
   generateBarcode: (id) => api.post(`/products/${id}/barcode`),
 };
 
@@ -208,4 +212,6 @@ export const adminAPI = {
 };
 
 export default api;
+export { apiCache };
+
 

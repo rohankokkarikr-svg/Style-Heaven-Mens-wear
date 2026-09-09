@@ -178,24 +178,67 @@ exports.createProduct = async (req, res) => {
     const {
       name, description, price, original_price, category, subcategory, sizes,
       stock_quantity = 0, is_in_stock = true, image_url, barcode,
-      artisan_id, is_handmade, material, style, ai_generated, ai_suggested_price, tags
+      artisan_id, is_handmade, material, style, ai_generated, ai_suggested_price, tags,
+      status
     } = req.body;
+
+    // Reliably resolve artisan_id from authenticated user session
+    let targetArtisanId = artisan_id;
+    if (req.user) {
+      let { data: profile } = await supabase
+        .from('artisan_profiles')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        // Auto-create profile if missing so product is never orphaned
+        const { data: newProfile } = await supabase
+          .from('artisan_profiles')
+          .insert([{
+            user_id: req.user.id,
+            store_name: req.user.name || 'Artisan Craft Studio',
+            artisan_type: 'Master Artisan',
+            verification_status: 'pending'
+          }])
+          .select('id')
+          .single();
+        if (newProfile?.id) targetArtisanId = newProfile.id;
+        else targetArtisanId = req.user.id;
+      } else {
+        targetArtisanId = profile.id;
+      }
+    }
+
+    const finalPrice = Number(price) || 0;
+    const finalOrigPrice = original_price ? Number(original_price) : Math.round(finalPrice * 1.2);
+    const productStatus = status || 'pending';
+
+    const insertPayload = {
+      name,
+      description,
+      price: finalPrice,
+      original_price: finalOrigPrice,
+      category: category || 'Handicrafts',
+      subcategory: subcategory || null,
+      sizes: sizes || ['Free Size'],
+      stock_quantity: Number(stock_quantity) || 0,
+      is_in_stock: is_in_stock !== undefined ? is_in_stock : true,
+      status: productStatus,
+      barcode: barcode ? barcode.trim() : null,
+      ...(image_url ? { image_url } : {}),
+      ...(targetArtisanId ? { artisan_id: targetArtisanId } : {}),
+      ...(is_handmade !== undefined ? { is_handmade } : { is_handmade: true }),
+      ...(material ? { material } : {}),
+      ...(style ? { style } : {}),
+      ...(ai_generated !== undefined ? { ai_generated } : {}),
+      ...(ai_suggested_price ? { ai_suggested_price } : {}),
+      ...(tags ? { tags } : {}),
+    };
 
     const { data, error } = await supabase
       .from('products')
-      .insert([{
-        name, description, price, original_price, category, subcategory, sizes,
-        stock_quantity, is_in_stock,
-        barcode: barcode ? barcode.trim() : null,
-        ...(image_url ? { image_url } : {}),
-        ...(artisan_id ? { artisan_id } : {}),
-        ...(is_handmade !== undefined ? { is_handmade } : {}),
-        ...(material ? { material } : {}),
-        ...(style ? { style } : {}),
-        ...(ai_generated !== undefined ? { ai_generated } : {}),
-        ...(ai_suggested_price ? { ai_suggested_price } : {}),
-        ...(tags ? { tags } : {}),
-      }])
+      .insert([insertPayload])
       .select()
       .single();
 
@@ -211,10 +254,11 @@ exports.createProduct = async (req, res) => {
     broadcastSync('PRODUCTS_UPDATED', { action: 'create', product: data });
     res.status(201).json(data);
   } catch (error) {
-    console.error(error);
+    console.error('createProduct error:', error);
     res.status(500).json({ error: error.message || 'Server Error' });
   }
 };
+
 
 exports.updateProduct = async (req, res) => {
   try {
@@ -302,19 +346,27 @@ exports.uploadProductImage = async (req, res) => {
 
 exports.uploadDirect = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Please upload a file' });
+    let imageUrl = null;
+
+    if (req.file) {
+      imageUrl = req.file.secure_url || req.file.path || req.file.url;
+    } else if (req.body && req.body.image) {
+      const { cloudinary } = require('../config/cloudinary');
+      const uploadRes = await cloudinary.uploader.upload(req.body.image, {
+        folder: 'kalastyle-artisan-marketplace',
+        resource_type: 'auto'
+      });
+      imageUrl = uploadRes.secure_url || uploadRes.url;
     }
 
-    const imageUrl = req.file.path || req.file.url || req.file.secure_url;
-
     if (!imageUrl) {
-      return res.status(500).json({ error: 'Failed to retrieve image URL from storage' });
+      return res.status(400).json({ error: 'No image file or image data received' });
     }
 
     res.json({ imageUrl });
   } catch (error) {
     console.error('Direct Upload Error:', error);
-    res.status(500).json({ error: 'Server Error during direct upload' });
+    res.status(500).json({ error: error.message || 'Server Error during direct upload' });
   }
 };
+

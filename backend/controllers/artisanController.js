@@ -51,13 +51,25 @@ exports.getArtisanById = async (req, res) => {
 // GET /api/artisans/me - own profile (artisan only)
 exports.getMyProfile = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('artisan_profiles')
       .select('*')
       .eq('user_id', req.user.id)
-      .single();
-    if (error || !data) {
-      return res.status(404).json({ error: 'Artisan profile not found' });
+      .maybeSingle();
+
+    if (!data) {
+      const { data: newProfile, error: createErr } = await supabase
+        .from('artisan_profiles')
+        .insert([{
+          user_id: req.user.id,
+          store_name: req.user.name || 'Artisan Studio',
+          artisan_type: 'Master Artisan',
+          verification_status: 'pending'
+        }])
+        .select()
+        .single();
+      if (!createErr && newProfile) data = newProfile;
+      else return res.status(404).json({ error: 'Artisan profile not found' });
     }
     res.json(parseArtisanUpi(data));
   } catch (err) {
@@ -72,7 +84,7 @@ exports.updateMyProfile = async (req, res) => {
     const { store_name, artisan_type, specialization, location, bio, profile_image, preferred_language, upi_id, upi_qr_code } = req.body;
     const bioWithUpi = formatBioWithUpi(bio, upi_id, upi_qr_code);
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('artisan_profiles')
       .update({ 
         store_name, 
@@ -85,8 +97,31 @@ exports.updateMyProfile = async (req, res) => {
       })
       .eq('user_id', req.user.id)
       .select()
-      .single();
-    if (error) throw error;
+      .maybeSingle();
+
+    if (!data) {
+      const { data: newProfile, error: insError } = await supabase
+        .from('artisan_profiles')
+        .insert([{
+          user_id: req.user.id,
+          store_name: store_name || req.user.name,
+          artisan_type: artisan_type || 'Master Artisan',
+          specialization,
+          location,
+          bio: bioWithUpi,
+          profile_image,
+          preferred_language,
+          verification_status: 'pending'
+        }])
+        .select()
+        .single();
+      if (insError) throw insError;
+      data = newProfile;
+    }
+
+    const { broadcastSync } = require('../utils/realtime');
+    broadcastSync('ARTISANS_UPDATED', { action: 'update', profile: data });
+
     res.json(parseArtisanUpi(data));
   } catch (err) {
     console.error('updateMyProfile error:', err);
@@ -97,18 +132,34 @@ exports.updateMyProfile = async (req, res) => {
 // GET /api/artisans/me/stats - earnings + orders summary
 exports.getMyStats = async (req, res) => {
   try {
-    const { data: profile } = await supabase
+    let { data: profile } = await supabase
       .from('artisan_profiles')
       .select('id, earnings_total, verification_status, store_name')
       .eq('user_id', req.user.id)
-      .single();
+      .maybeSingle();
+
+    if (!profile) {
+      const { data: newProfile } = await supabase
+        .from('artisan_profiles')
+        .insert([{
+          user_id: req.user.id,
+          store_name: req.user.name || 'Artisan Studio',
+          artisan_type: 'Master Artisan',
+          verification_status: 'pending'
+        }])
+        .select('id, earnings_total, verification_status, store_name')
+        .single();
+      profile = newProfile;
+    }
 
     if (!profile) return res.status(404).json({ error: 'Artisan profile not found' });
 
+    // Match both profile.id OR user.id to guarantee all products are retrieved
+    const orCondition = `artisan_id.eq.${profile.id},artisan_id.eq.${req.user.id}`;
     const { data: products } = await supabase
       .from('products')
       .select('id, name, price, original_price, stock_quantity, is_in_stock, image_url, ai_generated, category, subcategory, status, rejection_reason, is_hidden, created_at')
-      .eq('artisan_id', profile.id)
+      .or(orCondition)
       .order('created_at', { ascending: false });
 
     const productIds = (products || []).map(p => p.id);
@@ -143,6 +194,7 @@ exports.getMyStats = async (req, res) => {
   } catch (err) {
     console.error('getMyStats error:', err);
     res.status(500).json({ error: 'Failed to fetch stats' });
+
   }
 };
 
