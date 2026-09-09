@@ -215,7 +215,7 @@ export default function Profile() {
                     <HiStar className="w-5 h-5 text-gold-400" /> Free Milestone Reward Progress
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Order {rewardsData.rewardThreshold || 10} items to earn a 100% Free Exclusive Style Heaven T-Shirt coupon!
+                    Order {rewardsData.rewardThreshold || 10} items to earn a 100% Free Exclusive KalaStyle AI Handmade Craft Gift coupon!
                   </p>
                 </div>
                 <span className="text-xs font-bold px-3 py-1 bg-gold-500/15 border border-gold-500/40 text-gold-300 rounded-full">

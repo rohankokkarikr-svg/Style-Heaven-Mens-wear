@@ -1,7 +1,12 @@
 {
-  "short_name": "Style Heaven",
-  "name": "Style Heaven | Premium Mens Wear",
+  "short_name": "KalaStyle AI",
+  "name": "KalaStyle AI | Authentic Indian Handicrafts",
   "icons": [
+    {
+      "src": "images/kalastyle_logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
     {
       "src": "logo.png",
       "type": "image/png",
