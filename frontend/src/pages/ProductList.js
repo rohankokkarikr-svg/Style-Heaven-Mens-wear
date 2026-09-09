@@ -11,7 +11,8 @@ import {
   HiStar,
   HiSparkles,
   HiRefresh,
-  HiChevronRight
+  HiChevronRight,
+  HiShieldCheck
 } from 'react-icons/hi';
 
 export default function ProductList() {
@@ -305,16 +306,45 @@ export default function ProductList() {
             </div>
           </div>
         ) : (
-          <div className="py-12 bg-gradient-to-b from-dark-950 to-dark-900 border-b border-dark-700">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                  <h1 className="text-3xl sm:text-4xl font-serif font-bold text-white tracking-tight">
-                    Explore Indian Handicrafts
-                  </h1>
-                  <p className="text-gray-400 text-sm mt-2">
-                    Browse handloom textiles, home décor, brass jewelry, pottery, and folk art.
-                  </p>
+          <div className="relative min-h-[220px] sm:min-h-[280px] md:min-h-[320px] overflow-hidden flex items-center bg-dark-950 border-b border-dark-700">
+            {/* Background Image with subtle zoom & luxury contrast */}
+            <img
+              src="/images/explore_handicrafts_banner.jpg"
+              alt="Explore Indian Handicrafts"
+              className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out hover:scale-110"
+              loading="eager"
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&auto=format&fit=crop';
+              }}
+            />
+            {/* Multi-tier dark gradient overlay for optimal readability */}
+            <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-dark-950/85 to-dark-950/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-dark-950/90 via-transparent to-dark-950/40" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-400/40 to-transparent" />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 w-full py-10 sm:py-14">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/15 border border-gold-500/30 text-gold-400 text-xs font-semibold uppercase tracking-widest mb-3 backdrop-blur-sm">
+                  <span>🇮🇳</span>
+                  <span>Master Artisans & Heritage</span>
+                  <HiSparkles className="w-3.5 h-3.5 text-gold-400" />
+                </div>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-white tracking-tight leading-tight drop-shadow-md">
+                  Explore <span className="text-gold-400">Indian Handicrafts</span>
+                </h1>
+                <p className="text-gray-200 text-sm sm:text-base mt-3 leading-relaxed drop-shadow max-w-xl">
+                  Browse handloom textiles, home décor, brass jewelry, pottery, and folk art handcrafted with generations of heritage.
+                </p>
+                <div className="flex flex-wrap items-center gap-3 mt-5 text-xs font-semibold text-gray-300">
+                  <span className="px-3 py-1 rounded-full bg-dark-900/80 backdrop-blur-md border border-dark-600 text-gold-400">
+                    {filteredAndSortedProducts.length} Curated Products
+                  </span>
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-dark-900/80 backdrop-blur-md border border-dark-600 text-gray-200">
+                    <HiShieldCheck className="w-3.5 h-3.5 text-green-400" /> 100% Certified Authentic
+                  </span>
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-dark-900/80 backdrop-blur-md border border-dark-600 text-gray-200">
+                    Direct from Artisans
+                  </span>
                 </div>
               </div>
             </div>
