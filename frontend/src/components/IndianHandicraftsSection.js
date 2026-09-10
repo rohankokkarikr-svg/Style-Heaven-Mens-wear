@@ -16,7 +16,7 @@ export default function IndianHandicraftsSection() {
           name: c.name,
           slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
           description: c.description,
-          image: c.image_url || c.image || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop',
+          image: c.image_url || c.image || 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg',
           subcategories: c.subcategories || [],
           featuredTag: c.featuredTag || 'Authentic Craft',
           productCount: c.productCount || ''
@@ -76,7 +76,7 @@ export default function IndianHandicraftsSection() {
                     className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                     loading="lazy"
                     onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop';
+                      e.target.src = 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg';
                     }}
                   />
                   {/* Atmospheric Gradient */}

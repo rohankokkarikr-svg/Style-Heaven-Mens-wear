@@ -314,7 +314,7 @@ export default function ProductList() {
               className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out hover:scale-110"
               loading="eager"
               onError={(e) => {
-                e.target.src = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&auto=format&fit=crop';
+                e.target.src = 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048623/kalastyle-artisan-marketplace/lzc4iz6pi8bmvgh5zl9b.jpg';
               }}
             />
             {/* Multi-tier dark gradient overlay for optimal readability */}

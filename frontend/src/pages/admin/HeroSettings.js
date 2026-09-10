@@ -126,7 +126,7 @@ export default function HeroSettings() {
                   alt={slide.headline}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800';
+                    e.target.src = 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg';
                   }}
                 />
               ) : (

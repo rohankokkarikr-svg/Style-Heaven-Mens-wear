@@ -92,11 +92,11 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
             <div className="space-y-4">
               <div className="relative aspect-square rounded-xl overflow-hidden bg-dark-900 border border-dark-700">
                 <img
-                  src={selectedImage || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop'}
+                  src={selectedImage || 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg'}
                   alt={product.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop';
+                    e.target.src = 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg';
                   }}
                 />
                 {discount && (

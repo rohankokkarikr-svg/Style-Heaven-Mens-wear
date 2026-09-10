@@ -72,12 +72,12 @@ export default function ProductCard({ product }) {
         {/* Clickable Image & Badges */}
         <Link to={`/products/${id}`} className="block relative aspect-[4/5] overflow-hidden bg-dark-700">
           <img
-            src={mainImage || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop'}
+            src={mainImage || 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg'}
             alt={name}
             loading="lazy"
             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
             onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop';
+              e.target.src = 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg';
             }}
           />
 

@@ -6,8 +6,8 @@ const HANDICRAFT_CATEGORIES = [
     icon: '🧵',
     shortDesc: "Discover India's rich heritage of handwoven fabrics, sarees, shawls, and traditional textiles.",
     productCount: 12,
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=900&auto=format&fit=crop',
-    bannerImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=1600&auto=format&fit=crop',
+    image: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg',
+    bannerImage: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048623/kalastyle-artisan-marketplace/lzc4iz6pi8bmvgh5zl9b.jpg',
     featuredTag: 'Heritage Weaves'
   },
   {
@@ -17,8 +17,8 @@ const HANDICRAFT_CATEGORIES = [
     icon: '🏠',
   shortDesc: 'Elevate your living space with artisanal wall hangings, rugs, decorative lamps, and Indian crafts.',
   productCount: 12,
-  image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&auto=format&fit=crop',
-  bannerImage: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1600&auto=format&fit=crop',
+  image: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048918/kalastyle-artisan-marketplace/jkjs1hgqonmbq9h3eizd.jpg',
+  bannerImage: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049267/kalastyle-artisan-marketplace/gnyzho03a9jz09nrwzti.jpg',
   featuredTag: 'Artisanal Living'
   },
 {
@@ -28,8 +28,8 @@ const HANDICRAFT_CATEGORIES = [
         icon: '💎',
           shortDesc: 'Adorn timeless silver, oxidized brass, Kundan, and terracotta handmade jewelry masterfully crafted by hand.',
             productCount: 12,
-              image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900&auto=format&fit=crop',
-                bannerImage: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1600&auto=format&fit=crop',
+              image: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048467/kalastyle-artisan-marketplace/nleugp5kimo4ztk9mhfb.jpg',
+                bannerImage: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048588/kalastyle-artisan-marketplace/wswk3llhg5bu3y2ypuj6.jpg',
                   featuredTag: 'Timeless Adornments'
 },
 {
@@ -39,8 +39,8 @@ const HANDICRAFT_CATEGORIES = [
         icon: '🏺',
           shortDesc: 'Handcrafted clay pots, blue pottery vases, terracotta diyas, and authentic artisanal ceramics.',
             productCount: 12,
-              image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=900&auto=format&fit=crop',
-                bannerImage: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1600&auto=format&fit=crop',
+              image: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047946/kalastyle-artisan-marketplace/jfiun4aeprg2dbfxglcv.jpg',
+                bannerImage: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048198/kalastyle-artisan-marketplace/dgqnjxjokbbkuuznvwnu.jpg',
                   featuredTag: 'Earth & Fire Crafts'
 },
 {
@@ -50,8 +50,8 @@ const HANDICRAFT_CATEGORIES = [
         icon: '🪵',
           shortDesc: 'Channapatna lac-turnery toys, intricately hand-carved teak sculptures, wall art, and heritage woodwork.',
             productCount: 12,
-              image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=900&auto=format&fit=crop',
-                bannerImage: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1600&auto=format&fit=crop',
+              image: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047399/kalastyle-artisan-marketplace/m4z3g3pnrgfwpaixwlbg.jpg',
+                bannerImage: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047127/kalastyle-artisan-marketplace/xi20ztdn6lzlcvssqskl.jpg',
                   featuredTag: 'Hand-Carved Heritage'
 },
 {
@@ -61,8 +61,8 @@ const HANDICRAFT_CATEGORIES = [
         icon: '🖼️',
           shortDesc: 'Authentic Madhubani, Warli tribal art, Pattachitra, Gond, and Tanjore gold foil handmade paintings.',
             productCount: 12,
-              image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=900&auto=format&fit=crop',
-                bannerImage: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1600&auto=format&fit=crop',
+              image: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047566/kalastyle-artisan-marketplace/xtzypfezplersfalej58.jpg',
+                bannerImage: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047511/kalastyle-artisan-marketplace/vhhx4egup5jxucqtelv9.jpg',
                   featuredTag: 'Folk & Tribal Arts'
 },
 {
@@ -72,8 +72,8 @@ const HANDICRAFT_CATEGORIES = [
         icon: '🌿',
           shortDesc: 'Sustainable natural fiber baskets, golden jute rugs, bamboo tableware, and conscious handcrafted living.',
             productCount: 12,
-              image: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=900&auto=format&fit=crop',
-                bannerImage: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=1600&auto=format&fit=crop',
+              image: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047923/kalastyle-artisan-marketplace/xq4plc7foauqrk2tj4k8.jpg',
+                bannerImage: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044071/kalastyle-artisan-marketplace/pwgxu5f4ucraorrlyfip.jpg',
                   featuredTag: 'Sustainable Living'
 }
 ];
@@ -92,11 +92,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.9,
     review_count: 124,
-    image_url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048623/kalastyle-artisan-marketplace/lzc4iz6pi8bmvgh5zl9b.jpg',
     images: [
-      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048623/kalastyle-artisan-marketplace/lzc4iz6pi8bmvgh5zl9b.jpg'
     ],
     short_description: 'Authentic handwoven pure mulberry silk Banarasi saree woven on traditional pit looms in Varanasi.',
     description: 'An exquisite handwoven masterpiece made by fourth-generation Banaras weavers. Features intricate Kadwa floral jaal, pure silver-dipped golden zari motifs, and a rich contrast pallu. Comes with matching unstitched blouse fabric.',
@@ -128,10 +126,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 28,
     rating: 4.9,
     review_count: 98,
-    image_url: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg',
     images: [
-      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg'
     ],
     short_description: 'Pure South Indian Kanchipuram silk saree with interlocked Korvai temple borders and pure zari work.',
     description: 'Woven with three-ply twisted heavy mulberry silk and pure metallic zari. The distinctive Korvai technique interlocks the vibrant contrast border and pallu seamlessly by hand.',
@@ -163,10 +160,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 76,
-    image_url: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048976/kalastyle-artisan-marketplace/zg9tqlh6hnan9ezulvpi.jpg',
     images: [
-      'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048976/kalastyle-artisan-marketplace/zg9tqlh6hnan9ezulvpi.jpg'
     ],
     short_description: 'Genuine Changthangi Cashmere wool handwoven shawl adorned with Sozni needle embroidery.',
     description: 'Spun from the ultra-fine undercoat of Himalayan Changthangi mountain goats. Delicately hand-embroidered with traditional Kashmiri paisley motifs (Sozni kaari) taking over 90 days to complete.',
@@ -198,10 +194,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 28,
     rating: 4.7,
     review_count: 85,
-    image_url: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048997/kalastyle-artisan-marketplace/imd8ymbr6jylfnldrcj5.jpg',
     images: [
-      'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048997/kalastyle-artisan-marketplace/imd8ymbr6jylfnldrcj5.jpg'
     ],
     short_description: 'Fine modal cotton kurta featuring authentic 32-stitch hand Chikankari and delicate Mukaish work.',
     description: 'Crafted with centuries-old Awadhi needlecraft including Bakhiya, Phanda, and Keel Kangan stitches. Breathable, feather-light, and graceful for all seasons.',
@@ -233,8 +228,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 64,
-    image_url: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049017/kalastyle-artisan-marketplace/tcj6cfysbxakst0wqxu7.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049017/kalastyle-artisan-marketplace/tcj6cfysbxakst0wqxu7.jpg'
+    ],
     short_description: 'Hand-tied micro knot Bandhani dupatta with hand-stitched Rajasthani Gota Patti border.',
     description: 'Each dot is meticulously hand-pinched and tied with thread before dipping in vibrant natural dyes. Accented with handcrafted golden gota ribbons on all four edges.',
     material: 'Pure Art Silk',
@@ -265,8 +262,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 29,
     rating: 4.8,
     review_count: 53,
-    image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048800/kalastyle-artisan-marketplace/ncydqmtupkpruisiylve.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048800/kalastyle-artisan-marketplace/ncydqmtupkpruisiylve.jpg'
+    ],
     short_description: 'Geometrical double-ikat Sambalpuri weave with traditional Shankha and Chakra motifs.',
     description: 'Both warp and weft yarns are resist-dyed before weaving to create stunning mirror-precise geometric patterns. Known as the Bandha craft of Western Odisha.',
     material: 'Pure Mercerized Handloom Cotton',
@@ -297,8 +296,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.7,
     review_count: 42,
-    image_url: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048828/kalastyle-artisan-marketplace/pvbmcy0ntvttigf4yljo.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048828/kalastyle-artisan-marketplace/pvbmcy0ntvttigf4yljo.jpg'
+    ],
     short_description: 'Pen-drawn Kalamkari running fabric made with 100% vegetable and mineral dyes on pure cotton.',
     description: 'Drawn freehand using bamboo reed pens (kalam) with fermented jaggery, myrobalan, and alum mordants. Depicts mythological tree-of-life and peacock flora.',
     material: '100% Organic Mangalagiri Cotton',
@@ -329,8 +330,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 57,
-    image_url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048843/kalastyle-artisan-marketplace/sftmk5qcwpkqvmusqpa2.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048843/kalastyle-artisan-marketplace/sftmk5qcwpkqvmusqpa2.jpg'
+    ],
     short_description: 'Dense silken untwisted Pat thread embroidery over lightweight flowing georgette base.',
     description: 'Traditional Bagh (garden) embroidery completely covering the cloth with vibrant geometric patterns in mustard, magenta, and peacock blue silk threads.',
     material: 'Poly-Georgette with Art Silk Threads',
@@ -361,8 +364,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 68,
-    image_url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048873/kalastyle-artisan-marketplace/kxgfrwpaoa7cyd0pajuf.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048873/kalastyle-artisan-marketplace/kxgfrwpaoa7cyd0pajuf.jpg'
+    ],
     short_description: 'Gossamer-light Chanderi weave with hand-woven golden Ashrafi coin butis and tissue border.',
     description: 'Woven with high-count fine cotton warp and degummed silk weft. Incredibly airy, sheer texture with shimmering golden border ideal for summer festivities.',
     material: 'Cotton Silk Blend',
@@ -393,8 +398,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.7,
     review_count: 45,
-    image_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1544816155-12df9643f363?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048554/kalastyle-artisan-marketplace/upw9ghaynsq9vefeabwl.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048554/kalastyle-artisan-marketplace/upw9ghaynsq9vefeabwl.jpg'
+    ],
     short_description: 'Soft Australian merino wool stole adorned with intricate hook-needle Kashmiri Aari flora.',
     description: 'Lightweight warmth combined with majestic Persian floral borders chain-stitched by hand with pointed hooked needles (Aari).',
     material: 'Pure Merino Wool',
@@ -425,8 +432,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.9,
     review_count: 51,
-    image_url: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048859/kalastyle-artisan-marketplace/jahlkcfkfemnecynzdry.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048859/kalastyle-artisan-marketplace/jahlkcfkfemnecynzdry.jpg'
+    ],
     short_description: '16-step resist block printed fabric dyed with true indigo, madder root, and iron mordants.',
     description: 'An ancient textile craft originating over 4,000 years ago in the Indus Valley. Hand-printed with carved teak blocks on both sides in cosmic geometric alignments.',
     material: '100% Pure Cambric Cotton',
@@ -457,8 +466,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 29,
     rating: 4.8,
     review_count: 62,
-    image_url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048569/kalastyle-artisan-marketplace/jaj4slfkj60u96blnhq1.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048569/kalastyle-artisan-marketplace/jaj4slfkj60u96blnhq1.jpg'
+    ],
     short_description: 'Reversible multi-layered pure cotton quilt covered entirely in artisanal Kantha running stitches.',
     description: 'Handmade by rural women artisans in Shantiniketan, layering soft breathable cotton and binding them with thousands of tiny rhythmic needle stitches.',
     material: '100% Layered Cotton',
@@ -493,8 +504,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 59,
-    image_url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049286/kalastyle-artisan-marketplace/egrkupbnnswehwntavry.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049286/kalastyle-artisan-marketplace/egrkupbnnswehwntavry.jpg'
+    ],
     short_description: 'Intricately knotted organic cotton cord on natural weathered wooden drift branch.',
     description: 'Hand-knotted with 100% unbleached natural cotton rope. Adds warmth, texture, and bohemian elegance to living rooms, bedrooms, or meditation nooks.',
     material: 'Organic Cotton Cord & Natural Wood',
@@ -525,8 +538,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.9,
     review_count: 48,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048903/kalastyle-artisan-marketplace/arbwhecc1wkm0pf5kv9x.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048903/kalastyle-artisan-marketplace/arbwhecc1wkm0pf5kv9x.jpg'
+    ],
     short_description: 'Hand-punched pure brass hanging lamp casting mesmerizing geometric light shadows.',
     description: 'Crafted in Moradabad (the Brass City of India). Thousands of tiny perforations are hand-chiseled into solid antique gold-burnished brass to cast starlight patterns across your room.',
     material: 'Solid Brass',
@@ -557,8 +572,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 29,
     rating: 4.8,
     review_count: 73,
-    image_url: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048888/kalastyle-artisan-marketplace/tgqm75qui7kltg3rd372.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048888/kalastyle-artisan-marketplace/tgqm75qui7kltg3rd372.jpg'
+    ],
     short_description: 'Vibrant nomadic Rabari embroidery with authentic glass mirror insets on heavy cotton canvas.',
     description: 'Reflective glass mirrors embedded with tight chain and buttonhole needle stitches. Hidden zipper enclosure on reverse.',
     material: 'Cotton Canvas & Glass Mirrors',
@@ -589,8 +606,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.7,
     review_count: 38,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049154/kalastyle-artisan-marketplace/igocxvh1il8jj6nzro16.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049154/kalastyle-artisan-marketplace/igocxvh1il8jj6nzro16.jpg'
+    ],
     short_description: 'Geometric diamond fringe tapestry crafted with 4mm thick braided natural cotton yarn.',
     description: 'Meticulously crafted with symmetric square knots and flowing chevron tassels suspended from a solid wooden dowel.',
     material: '100% Recycled Cotton Rope',
@@ -621,8 +640,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 35,
     rating: 4.8,
     review_count: 52,
-    image_url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049247/kalastyle-artisan-marketplace/txaqlcvcw8cdybpgpeiw.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049247/kalastyle-artisan-marketplace/txaqlcvcw8cdybpgpeiw.jpg'
+    ],
     short_description: 'Floral Mughal bootah block print table runner with corner cotton tassels.',
     description: 'Double-layered premium duck cotton runner hand-stamped with Sanganeri botanical motifs using non-toxic pigment dyes.',
     material: 'Heavy Duck Cotton',
@@ -653,8 +674,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.9,
     review_count: 41,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049267/kalastyle-artisan-marketplace/gnyzho03a9jz09nrwzti.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049267/kalastyle-artisan-marketplace/gnyzho03a9jz09nrwzti.jpg'
+    ],
     short_description: 'Royal Rajasthani palace arch window (Jharokha) frame with distressed antique finish.',
     description: 'Carved out of seasoned Indian teakwood with intricate Mughal arches and twin opening shutters. Fitted with distortion-free high clarity mirror glass.',
     material: 'Solid Teak Wood & Glass',
@@ -685,8 +708,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 67,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049218/kalastyle-artisan-marketplace/obxiu1dspl2o6ipob14w.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049218/kalastyle-artisan-marketplace/obxiu1dspl2o6ipob14w.jpg'
+    ],
     short_description: 'Vintage lantern with faceted colored glass panels and brass filigree latch.',
     description: 'Designed for tea-lights, candles, or fairy strings. Sturdy base and top loop for hanging outdoors or placing on coffee tables.',
     material: 'Iron Sheet, Copper Polish & Stained Glass',
@@ -717,8 +742,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 36,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049049/kalastyle-artisan-marketplace/x25yjmtp8mosjj9acxlh.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049049/kalastyle-artisan-marketplace/x25yjmtp8mosjj9acxlh.jpg'
+    ],
     short_description: 'Ethically sourced resin & camel bone geometric inlay on solid Sheesham wood.',
     description: 'Individually shaped tesserae set into hand-carved wood to form a stunning floral mosaic. Fits standard 5x7 inch photographs.',
     material: 'Sheesham Rosewood & Ethically Sourced Inlay',
@@ -749,8 +776,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 82,
-    image_url: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049033/kalastyle-artisan-marketplace/snxthlvhbkn0cz7wqtea.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789049033/kalastyle-artisan-marketplace/snxthlvhbkn0cz7wqtea.jpg'
+    ],
     short_description: 'GI-certified quartz stone and fuller earth plate hand-painted with Persian turquoise bird motifs.',
     description: 'Made without clay using quartz powder, glass frit, and natural gum. Fired once at low heat and glazed with cobalt blue and copper turquoise mineral oxides. Comes with rear wall hanging hook.',
     material: 'Quartz Powder, Glass & Mineral Glaze',
@@ -781,8 +810,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.8,
     review_count: 44,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048933/kalastyle-artisan-marketplace/d6yfefjy0taciidr2rme.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048933/kalastyle-artisan-marketplace/d6yfefjy0taciidr2rme.jpg'
+    ],
     short_description: 'Soft Agra soapstone candle holder hand-pierced with Taj Mahal lattice fretwork.',
     description: 'Each lattice aperture is hand-carved with steel burins into raw natural soapstone (gorara stone), scattering warm candlelight in geometric ripples.',
     material: 'Natural Indian Soapstone',
@@ -813,8 +844,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 55,
-    image_url: 'https://images.unsplash.com/photo-1600121848594-d8644e57abab?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1600121848594-d8644e57abab?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048918/kalastyle-artisan-marketplace/jkjs1hgqonmbq9h3eizd.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048918/kalastyle-artisan-marketplace/jkjs1hgqonmbq9h3eizd.jpg'
+    ],
     short_description: 'Reversible flatweave floor rug in geometric Aztec and Rajasthani chevron motifs.',
     description: 'Woven on manual horizontal wooden looms using blended semi-worsted New Zealand wool and pure cotton warp for heavy durability and soft step comfort.',
     material: '70% Wool, 30% Cotton Flatweave',
@@ -845,8 +878,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 88,
-    image_url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048604/kalastyle-artisan-marketplace/vsxagwwgbgyghti5wdws.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048604/kalastyle-artisan-marketplace/vsxagwwgbgyghti5wdws.jpg'
+    ],
     short_description: 'Handmade auspicious entrance bandarwal with brass bells, beads, and fabric elephants.',
     description: 'Welcoming entrance toran embellished with handcrafted stuffed fabric elephants, parrot motifs, brass jingling bells, and auspicious golden gotta lace.',
     material: 'Cotton Fabric, Glass Beads & Brass Bells',
@@ -881,10 +916,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.9,
     review_count: 112,
-    image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048588/kalastyle-artisan-marketplace/wswk3llhg5bu3y2ypuj6.jpg',
     images: [
-      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048588/kalastyle-artisan-marketplace/wswk3llhg5bu3y2ypuj6.jpg'
     ],
     short_description: 'Authentic 92.5 hallmark sterling silver peacock jhumkas with tiny ghungroo beads.',
     description: 'Chiseled by silver filigree goldsmiths using antique oxidized silver finish. Features twin peacock studs and bell-shaped jhumkas lined with musical tinkling silver bells.',
@@ -916,8 +950,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 67,
-    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048539/kalastyle-artisan-marketplace/lr7cta4ftf83w4fsis3r.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048539/kalastyle-artisan-marketplace/lr7cta4ftf83w4fsis3r.jpg'
+    ],
     short_description: '4000-year-old non-ferrous lost-wax cast metal pendant strung on hand-braided black cotton cords.',
     description: 'Each Dokra piece is one-of-a-kind because the clay mold is broken open to release the cooled brass casting. Features tribal sun and fertility goddess symbolism.',
     material: 'Recycled Solid Brass & Cotton Dori',
@@ -948,8 +984,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 89,
-    image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048503/kalastyle-artisan-marketplace/lnxhkhwgdhfdox8ujz6q.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048503/kalastyle-artisan-marketplace/lnxhkhwgdhfdox8ujz6q.jpg'
+    ],
     short_description: 'Vintage finish statement collar necklace with matching drop earrings and turquoise stone insets.',
     description: 'Intricately stamped metal plates joined by antique ghungroo links. Complements ethnic sarees, kurtis, and fusion dresses effortlessly.',
     material: 'High-Grade Oxidized German Silver & Faux Turquoise',
@@ -980,8 +1018,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.7,
     review_count: 54,
-    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048253/kalastyle-artisan-marketplace/pxr2ma6sscr1mhpxjbhe.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048253/kalastyle-artisan-marketplace/pxr2ma6sscr1mhpxjbhe.jpg'
+    ],
     short_description: 'Solid gold-toned brass kadas hand-etched with floral jaali and screw lock mechanism.',
     description: 'Hand-cast and turned on manual lathes before fine chiseling by brass-smiths. Openable screw lock ensures a secure fit on all wrist sizes.',
     material: 'Pure Solid Brass',
@@ -1012,8 +1052,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.9,
     review_count: 38,
-    image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048275/kalastyle-artisan-marketplace/c6r138ojrdn0xjsm1ke9.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048275/kalastyle-artisan-marketplace/c6r138ojrdn0xjsm1ke9.jpg'
+    ],
     short_description: '12-strand hand-strung carnelian red and turquoise glass beads with brass coins.',
     description: 'Crafted by indigenous Angami and Ao tribal artisans of Nagaland. Symbolizes protection, vitality, and northeastern heritage.',
     material: 'Fire-Polished Glass Beads & Brass Spacers',
@@ -1044,8 +1086,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 94,
-    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048289/kalastyle-artisan-marketplace/aamzobcrv8fthqead5a2.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048289/kalastyle-artisan-marketplace/aamzobcrv8fthqead5a2.jpg'
+    ],
     short_description: 'Foil-set uncut glass Kundan stones with reversible enamel Meenakari floral painting.',
     description: 'Masterfully enameled on the reverse with green and crimson floral meenakari art. Accented with pearl drops and rich 22k gold micron plating.',
     material: 'Brass Alloy, Uncut Kundan, Enamel & Faux Pearls',
@@ -1076,8 +1120,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.7,
     review_count: 46,
-    image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048302/kalastyle-artisan-marketplace/ocqnvkzhds03qmcqloeo.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048302/kalastyle-artisan-marketplace/ocqnvkzhds03qmcqloeo.jpg'
+    ],
     short_description: 'Kiln-fired organic clay hand-painted in traditional kalamkari motifs with matching jhumkas.',
     description: 'Shaped from natural river silt clay, kiln-baked for toughness, and hand-detailed with vibrant waterproof acrylic earth tones.',
     material: 'Natural Kiln-Fired Clay & Cotton Cord',
@@ -1108,8 +1154,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 29,
     rating: 4.8,
     review_count: 61,
-    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048317/kalastyle-artisan-marketplace/h3ksnqdnm39soykbgrcs.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048317/kalastyle-artisan-marketplace/h3ksnqdnm39soykbgrcs.jpg'
+    ],
     short_description: 'Traditional musical bell payal with antique filigree links and S-hook closure.',
     description: 'Charming melodious sound with every step. Crafted in skin-safe hypoallergenic alloy with dual-tone antique oxidation.',
     material: 'Oxidized Brass/German Silver',
@@ -1140,8 +1188,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.7,
     review_count: 49,
-    image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048329/kalastyle-artisan-marketplace/lpxmaiigtxa0ewzmynyr.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048329/kalastyle-artisan-marketplace/lpxmaiigtxa0ewzmynyr.jpg'
+    ],
     short_description: 'Vintage Banjara gypsy cuff with real cowrie shells, metallic coins, and mirror needlework.',
     description: 'Stitched onto reinforced cotton fabric with adjustable tie closure. Adds a vibrant nomadic indie statement to any outfit.',
     material: 'Cotton Fabric, Cowrie Shells & Brass Coins',
@@ -1172,8 +1222,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 38,
     rating: 4.9,
     review_count: 77,
-    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048445/kalastyle-artisan-marketplace/ita6mkiu0hvkmqo9yrlg.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048445/kalastyle-artisan-marketplace/ita6mkiu0hvkmqo9yrlg.jpg'
+    ],
     short_description: 'Bold oversized peacock cocktail ring with adjustable band and ruby red stone centerpiece.',
     description: 'Detailed feather engraving with miniature ghungroo tassels along the lower perimeter. Fits any finger size smoothly.',
     material: 'Silver-Plated Brass & Synthetic Glass Ruby',
@@ -1204,8 +1256,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 81,
-    image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048467/kalastyle-artisan-marketplace/nleugp5kimo4ztk9mhfb.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048467/kalastyle-artisan-marketplace/nleugp5kimo4ztk9mhfb.jpg'
+    ],
     short_description: 'Royal rigid Hasli collar embedded with polki kundan crystals and emerald green hydro beads.',
     description: 'Inspired by Mewar royal jewel vaults. A rigid curved golden hasli choker lined with cluster pearls and dangling faceted emerald bead drops.',
     material: '22k Gold Micron Plated Brass & Glass Polki',
@@ -1236,8 +1290,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.8,
     review_count: 53,
-    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048482/kalastyle-artisan-marketplace/pimnzlrtegjcj0fk1mgd.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048482/kalastyle-artisan-marketplace/pimnzlrtegjcj0fk1mgd.jpg'
+    ],
     short_description: 'Traditional temple jewelry sun & moon hair ornamentation with ruby red Kempu stones.',
     description: 'Worn for classical Bharatanatyam dance recitals, South Indian weddings, and festive temple rituals. Fitted with rear pin for hair braid fixation.',
     material: 'Antique Matte Gold Plated Brass & Kemp Stones',
@@ -1272,10 +1328,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 108,
-    image_url: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048230/kalastyle-artisan-marketplace/ptserit5fd7nwgmndutb.jpg',
     images: [
-      'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048230/kalastyle-artisan-marketplace/ptserit5fd7nwgmndutb.jpg'
     ],
     short_description: 'Unbleached natural river silt hand-thrown cooking pot that retains natural 100% nutrient value.',
     description: 'Hand-thrown on traditional potter wheels and fired in sawdust wood kilns. Alkaline clay neutralizes acid content in curries, biryani, and dals for rich earthy flavor.',
@@ -1307,8 +1362,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.7,
     review_count: 65,
-    image_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048003/kalastyle-artisan-marketplace/wuiyf7yski5msxy0eycj.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048003/kalastyle-artisan-marketplace/wuiyf7yski5msxy0eycj.jpg'
+    ],
     short_description: 'Porous breathable natural terracotta planter with carved mandala relief pattern and drainage hole.',
     description: 'Porous walls allow root aeration and natural moisture regulation to prevent root rot in indoor succulents and houseplants.',
     material: 'Natural Red Clay',
@@ -1339,8 +1396,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 58,
-    image_url: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048029/kalastyle-artisan-marketplace/nrvfxigizoiqenrezv7k.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048029/kalastyle-artisan-marketplace/nrvfxigizoiqenrezv7k.jpg'
+    ],
     short_description: 'Glossy glazed stoneware vase hand-painted in cobalt blue and emerald botanicals.',
     description: 'Fired at 1250°C for exceptional durability and waterproof stoneware strength in Khurja, the Ceramic City of India.',
     material: 'High-Fired Glazed Stoneware Ceramic',
@@ -1371,8 +1430,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 29,
     rating: 4.8,
     review_count: 92,
-    image_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048051/kalastyle-artisan-marketplace/xaumxequa70nntz1dhym.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048051/kalastyle-artisan-marketplace/xaumxequa70nntz1dhym.jpg'
+    ],
     short_description: 'Authentic desi chai experience with food-grade glazed clay cups and serving teapot.',
     description: 'Inner surface is smoothly glazed with food-safe non-toxic coating while maintaining the raw rustic terracotta exterior and earthy aroma.',
     material: 'Food-Grade Glazed Natural Terracotta',
@@ -1403,8 +1464,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 38,
     rating: 4.9,
     review_count: 140,
-    image_url: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048076/kalastyle-artisan-marketplace/fkyquefajj5rnb5rssj7.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048076/kalastyle-artisan-marketplace/fkyquefajj5rnb5rssj7.jpg'
+    ],
     short_description: 'Festive oil lamps hand-painted with acrylic colors and rhinestone embellishments.',
     description: 'Perfect for Diwali, Puja ceremonies, and home decoration. Handcrafted by rural artisans with eco-friendly natural clay.',
     material: 'Natural Red Clay & Eco Colors',
@@ -1435,8 +1498,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.8,
     review_count: 47,
-    image_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048127/kalastyle-artisan-marketplace/rnqi6hve3cdndcddmhts.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048127/kalastyle-artisan-marketplace/rnqi6hve3cdndcddmhts.jpg'
+    ],
     short_description: 'Auspicious Surya Dev relief sculpture hand-molded in baked red terracotta clay.',
     description: 'Symbolizes health, energy, and radiant vitality. Equipped with rear mounting hole for entrance doors or living room focal walls.',
     material: 'Weather-Resistant Fired Terracotta',
@@ -1467,8 +1532,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 51,
-    image_url: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048521/kalastyle-artisan-marketplace/n1n4h4yaqwtgnf02tbga.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048521/kalastyle-artisan-marketplace/n1n4h4yaqwtgnf02tbga.jpg'
+    ],
     short_description: 'Microwave and dishwasher safe stoneware bowl with reactive olive and ivory dual glaze.',
     description: 'Hand-thrown stoneware bowl ideal for salads, curries, pasta, or fruit centerpiece display.',
     material: 'High-Temperature Glazed Stoneware',
@@ -1499,8 +1566,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.7,
     review_count: 39,
-    image_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048155/kalastyle-artisan-marketplace/sl6cgh1nufwbpjvgx5lv.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048155/kalastyle-artisan-marketplace/sl6cgh1nufwbpjvgx5lv.jpg'
+    ],
     short_description: 'Hand-etched and painted terracotta plate with Warli tribal dancing figures.',
     description: 'Created by tribal artists in Dahanu. White rice paste and natural red ochre tones sealed under protective varnish coat.',
     material: 'Natural Terracotta Clay & Eco Paints',
@@ -1531,8 +1600,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 87,
-    image_url: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048177/kalastyle-artisan-marketplace/bixrvok22skrxk6ngwxn.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048177/kalastyle-artisan-marketplace/bixrvok22skrxk6ngwxn.jpg'
+    ],
     short_description: 'Ergonomic handle ceramic studio mugs with speckled matte cream and amber glaze.',
     description: 'Individually wheel-thrown mugs crafted to fit comfortably in your hands. Lead-free and cadmium-free for daily hot coffee and teas.',
     material: 'Food-Grade Stoneware Ceramic',
@@ -1563,8 +1634,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 35,
-    image_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048198/kalastyle-artisan-marketplace/dgqnjxjokbbkuuznvwnu.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048198/kalastyle-artisan-marketplace/dgqnjxjokbbkuuznvwnu.jpg'
+    ],
     short_description: 'Traditional Assam Asharikandi heritage clay elephant figurine with sacred motifs.',
     description: 'Hand-sculpted using the special Hiramati clay of the Brahmaputra banks. GI-certified folk craft symbol of wisdom and auspicious fortune.',
     material: 'Natural Assam Hiramati Clay',
@@ -1595,8 +1668,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.9,
     review_count: 88,
-    image_url: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047946/kalastyle-artisan-marketplace/jfiun4aeprg2dbfxglcv.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047946/kalastyle-artisan-marketplace/jfiun4aeprg2dbfxglcv.jpg'
+    ],
     short_description: 'Naturally cools drinking water by evaporative micro-porosity. Fitted with leakproof pure brass tap.',
     description: 'Eco-friendly, chemical-free, and refrigerator-free natural cooling. Infuses vital minerals (calcium, magnesium) and maintains healthy alkaline pH balance.',
     material: 'Organic Red Clay & Solid Brass Tap',
@@ -1627,8 +1702,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 42,
-    image_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048213/kalastyle-artisan-marketplace/z7pef2inkzkghof9ze9m.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048213/kalastyle-artisan-marketplace/z7pef2inkzkghof9ze9m.jpg'
+    ],
     short_description: 'Dual-piece diffuser for essential oils and tealights with cut-out floral light vents.',
     description: 'Top bowl holds essential oil blended with water while bottom chamber houses standard tea-light candle to diffuse calming fragrance across your home.',
     material: 'Natural Terracotta Clay',
@@ -1663,8 +1740,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.9,
     review_count: 135,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047962/kalastyle-artisan-marketplace/rmqelgwzakthabkxhkyb.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047962/kalastyle-artisan-marketplace/rmqelgwzakthabkxhkyb.jpg'
+    ],
     short_description: 'GI-certified non-toxic vegetable-dyed wooden toy crafted from Wrightia tinctoria (Ivory Wood).',
     description: '100% chemical-free and baby-safe. Lacquered using natural tree lac and colored with turmeric, indigo, and kumkum extracts on high-speed manual wood lathes.',
     material: 'Natural Ivory Wood (Aale Mara) & Vegetable Lac',
@@ -1695,8 +1774,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.9,
     review_count: 78,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047982/kalastyle-artisan-marketplace/msl8rrb7btxcisoqwqag.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047982/kalastyle-artisan-marketplace/msl8rrb7btxcisoqwqag.jpg'
+    ],
     short_description: 'Solid Sheesham wood elephant featuring open jaali undercut lattice work with baby elephant inside.',
     description: 'Chiseled from a single block of seasoned rosewood. The master craftsman hollows the outer body through tiny jaali lattice windows to carve an independent baby elephant inside.',
     material: '100% Solid Indian Sheesham (Rosewood)',
@@ -1727,8 +1808,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 91,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047084/kalastyle-artisan-marketplace/zjlqkbfqo3chsiywewmq.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047084/kalastyle-artisan-marketplace/zjlqkbfqo3chsiywewmq.jpg'
+    ],
     short_description: 'Floral lid carving with pure brass inlay wire work and royal red velvet interior lining.',
     description: 'Features antique brass clasp latch, removable compartmentalized tray for rings/earrings, and a deep lower chamber for bangles and necklaces.',
     material: 'Indian Sheesham Wood, Brass Inlay & Velvet',
@@ -1759,8 +1842,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 53,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047127/kalastyle-artisan-marketplace/xi20ztdn6lzlcvssqskl.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047127/kalastyle-artisan-marketplace/xi20ztdn6lzlcvssqskl.jpg'
+    ],
     short_description: 'Intricate Tree of Life (Kalpavriksha) circular medallion carved in antique distressed mango wood.',
     description: 'Hand-chiseled with flowering branches and perched songbirds representing prosperity and abundance in Vedic architecture.',
     material: 'Seasoned Solid Mango Wood',
@@ -1791,8 +1876,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 84,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047158/kalastyle-artisan-marketplace/q9zuxt7bbv7fxzcxyxu4.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047158/kalastyle-artisan-marketplace/q9zuxt7bbv7fxzcxyxu4.jpg'
+    ],
     short_description: 'Auspicious Lord Ganesha figurine with minute crown ornaments and Modak bowl.',
     description: 'Carved with razor-sharp micro gouges from dense seasoned Kadam wood. Polished to a warm natural sheen ideal for puja altars and office desks.',
     material: 'Indian Kadam Wood',
@@ -1823,8 +1910,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.7,
     review_count: 42,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047174/kalastyle-artisan-marketplace/fejqiztaoh7aetoy9ymj.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047174/kalastyle-artisan-marketplace/fejqiztaoh7aetoy9ymj.jpg'
+    ],
     short_description: 'Rustic vintage border carving with dual desktop stand and wall hanging hooks.',
     description: 'Crafted from reclaimed teakwood blocks with whitewashed distressed edges. Fits standard 4x6 inch family portraits.',
     material: 'Reclaimed Teak Wood & Glass',
@@ -1855,8 +1944,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 61,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047202/kalastyle-artisan-marketplace/xxjkyr0oeph6zdcogpph.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047202/kalastyle-artisan-marketplace/xxjkyr0oeph6zdcogpph.jpg'
+    ],
     short_description: 'Sculpted from a single teak root showing natural organic wood grain rings.',
     description: 'Food-safe mineral oil finish. Every bowl has a completely unique organic grain and edge profile.',
     material: '100% Solid Indian Teak Wood',
@@ -1887,8 +1978,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 45,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047236/kalastyle-artisan-marketplace/m4u932gg270zyrijjphp.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047236/kalastyle-artisan-marketplace/m4u932gg270zyrijjphp.jpg'
+    ],
     short_description: 'Solid mango wood base with natural handwoven textured jute fabric lampshade.',
     description: 'Warm ambient lighting designed for bedside tables, console tables, and living room lounges. Standard B22/E27 bulb compatible.',
     material: 'Solid Mango Wood & Natural Jute Fabric',
@@ -1919,8 +2012,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.9,
     review_count: 67,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047255/kalastyle-artisan-marketplace/xyalgwywdtbcjtplyvvu.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047255/kalastyle-artisan-marketplace/xyalgwywdtbcjtplyvvu.jpg'
+    ],
     short_description: 'Nesting wooden trays with ergonomic side cut-out handles and floral brass inlay lines.',
     description: 'Sturdy, spill-resistant, and elegant for serving guests tea, drinks, and snacks in style.',
     material: 'Pure Sheesham Wood & Solid Brass Strips',
@@ -1951,8 +2046,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 54,
-    image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047374/kalastyle-artisan-marketplace/lxewlpezcvnoppqe9trt.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047374/kalastyle-artisan-marketplace/lxewlpezcvnoppqe9trt.jpg'
+    ],
     short_description: 'Silent sweep quartz movement clock carved with concentric sunburst mandala petals.',
     description: '100% silent ticking mechanism with golden metal hands and laser-crisp hand-carved numbers on polished Sheesham timber.',
     material: 'Sheesham Rosewood & Silent Quartz Unit',
@@ -1983,8 +2080,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 37,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047399/kalastyle-artisan-marketplace/m4z3g3pnrgfwpaixwlbg.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047399/kalastyle-artisan-marketplace/m4z3g3pnrgfwpaixwlbg.jpg'
+    ],
     short_description: 'Ornate Baroque and Mughal acanthus leaf carvings in rich walnut polish.',
     description: 'Perfect for bathroom vanities, entryways, or bedroom dressers. Includes heavy-duty brass wall hangers on reverse.',
     material: 'Seasoned Solid Teak Wood & Premium Mirror Glass',
@@ -2015,8 +2114,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 62,
-    image_url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047419/kalastyle-artisan-marketplace/xrzrukosikbfa3ciwtiv.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047419/kalastyle-artisan-marketplace/xrzrukosikbfa3ciwtiv.jpg'
+    ],
     short_description: 'Smooth rounded glossy lacquered animal figurines in emerald and saffron hues.',
     description: 'Charming desktop companions and collectible showpieces created on traditional hand-driven wood lathes with natural vegetable dyes.',
     material: 'Ivory Wood & Non-Toxic Natural Resin',
@@ -2051,10 +2152,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 118,
-    image_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047496/kalastyle-artisan-marketplace/ks3ynn3ebff3b6itrg7c.jpg',
     images: [
-      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047496/kalastyle-artisan-marketplace/ks3ynn3ebff3b6itrg7c.jpg'
     ],
     short_description: 'Intricate pen-and-nib Mithila artwork depicting Tree of Life, Sun, and auspicious lotus fish on cow-dung treated handmade paper.',
     description: 'Drawn freehand without stencils using fine bamboo nibs (Kalam) and natural organic pigments extracted from soot, turmeric, and aparajita flowers. Originating in the ancient Mithila kingdom of Bihar.',
@@ -2086,8 +2186,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 85,
-    image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047872/kalastyle-artisan-marketplace/bzeqcf5x8rwehksm1uph.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047872/kalastyle-artisan-marketplace/bzeqcf5x8rwehksm1uph.jpg'
+    ],
     short_description: 'Celebratory Tarpa trumpet circular tribal community dance painted with rice paste on red mud canvas.',
     description: 'Uses geometric elemental shapes (circle for sun/moon, triangle for mountains/trees, square for sacred space) to celebrate communal harmony with nature.',
     material: 'Textured Cotton Canvas, Red Mud Base & Rice Flour Paste',
@@ -2118,8 +2220,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 63,
-    image_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047511/kalastyle-artisan-marketplace/vhhx4egup5jxucqtelv9.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047511/kalastyle-artisan-marketplace/vhhx4egup5jxucqtelv9.jpg'
+    ],
     short_description: 'Lord Jagannath and Dasavatara etched into treated palm leaves with iron stylus and lampblack soot.',
     description: 'Dried and treated palm leaves stitched together into folding scroll panels. Micro-etched with an iron stylus (Lekhani) and rubbed with natural lampblack ink for stunning permanent line precision.',
     material: 'Sun-Cured Palm Leaves & Lampblack Charcoal',
@@ -2150,8 +2254,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 72,
-    image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047046/kalastyle-artisan-marketplace/dgz3rryfsbbguf1soovp.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047046/kalastyle-artisan-marketplace/dgz3rryfsbbguf1soovp.jpg'
+    ],
     short_description: 'Hypnotic repetitive line and dot texture painting celebrating forest creatures and spirits.',
     description: 'Painted by Gond Pardhan tribe artists. The philosophy holds that viewing good images begets good fortune. Filled with vibrant dots, dashes, and scales over flowing animal figures.',
     material: 'Fine Grain Artist Canvas & High-Grade Acrylics',
@@ -2182,8 +2288,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 28,
     rating: 5.0,
     review_count: 56,
-    image_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047566/kalastyle-artisan-marketplace/xtzypfezplersfalej58.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047566/kalastyle-artisan-marketplace/xtzypfezplersfalej58.jpg'
+    ],
     short_description: 'GI-certified Thanjavur art with authentic 22-carat gold foil sheets and Jaipur semi-precious stones.',
     description: 'Relief gesso work made from limestone paste and Arabic gum, overlaid with genuine 22k gold leaves that will not tarnish for generations. Encased in traditional Chettinad Mani teakwood frame.',
     material: '22k Gold Foil, Gesso Plaster & Teakwood Frame',
@@ -2214,8 +2322,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 49,
-    image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047584/kalastyle-artisan-marketplace/o88hpti9z4qbmzclafxn.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047584/kalastyle-artisan-marketplace/o88hpti9z4qbmzclafxn.jpg'
+    ],
     short_description: 'Single-hair squirrel brush miniature artwork painted with mineral colors on raw silk.',
     description: 'Depicts Radha Krishna in Vrindavan gardens with microscopic brush precision. Painted using precious lapis lazuli blue, malachite green, and gold highlights.',
     material: 'Pure Tussar Silk Fabric & Stone Pigments',
@@ -2246,8 +2356,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 55,
-    image_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047598/kalastyle-artisan-marketplace/z0x2qtanzigrpnd1tbgu.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047598/kalastyle-artisan-marketplace/z0x2qtanzigrpnd1tbgu.jpg'
+    ],
     short_description: 'Vegetable dye Kalamkari tapestry on thick handloom cotton with wooden hanging rods.',
     description: 'Freehand pen-drawn depiction of the eternal Tree of Life with blooming flowers, singing birds, and resting deer washed in the sacred Swarnamukhi river.',
     material: 'Pure Handspun Cotton & Natural Vegetable Extracts',
@@ -2278,8 +2390,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 41,
-    image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047650/kalastyle-artisan-marketplace/ai4ruhw5qgbvkb8nt7uj.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047650/kalastyle-artisan-marketplace/ai4ruhw5qgbvkb8nt7uj.jpg'
+    ],
     short_description: '19th-century satirical Kalighat temple watercolor style with sweeping brush contours.',
     description: 'Originating near the Kalighat temple in Kolkata, known for dramatic sweeping calligraphic brush outlines and bold watercolor gradations.',
     material: 'Mill-Made Cartridge Art Paper & Opaque Watercolors',
@@ -2310,8 +2424,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 68,
-    image_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047667/kalastyle-artisan-marketplace/kq5ktpxx6ey0hcff3tqe.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047667/kalastyle-artisan-marketplace/kq5ktpxx6ey0hcff3tqe.jpg'
+    ],
     short_description: 'Nathdwara cloth temple backdrop art depicting sacred Kamdhenu cows and blooming pink lotuses.',
     description: 'Hand-painted with natural stone colors and pure gold pigment borders. Originally hung behind deities in Pushtimarg temples of Nathdwara.',
     material: 'Starched Cotton Canvas & Mineral/Gold Powders',
@@ -2342,8 +2458,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 36,
-    image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047684/kalastyle-artisan-marketplace/ylxwljwq7gnfe97boiv0.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047684/kalastyle-artisan-marketplace/ylxwljwq7gnfe97boiv0.jpg'
+    ],
     short_description: 'GI-tagged Jharkhand harvest mural art painted with natural soils and chewing-stick brushes.',
     description: 'Created by indigenous Kurmi and Santhal women to celebrate harvest and cattle. Features peacocks, deer, and flowering vines painted with black mangan soil, red oxide, and yellow earth.',
     material: 'Handmade Eco Paper & Natural Mineral Soils',
@@ -2374,8 +2492,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 48,
-    image_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047837/kalastyle-artisan-marketplace/rvvu16lwhyiua0tye2td.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047837/kalastyle-artisan-marketplace/rvvu16lwhyiua0tye2td.jpg'
+    ],
     short_description: 'Vibrant depiction of women carrying water pots amidst banyan trees and mustard fields.',
     description: 'Rich impressionist brushwork capturing the peaceful pastoral warmth and colorful attire of rural Indian village life.',
     material: 'Stretched Cotton Canvas & Premium Acrylics',
@@ -2406,8 +2526,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 76,
-    image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047473/kalastyle-artisan-marketplace/bjmyplbf7gffcbtkekm9.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047473/kalastyle-artisan-marketplace/bjmyplbf7gffcbtkekm9.jpg'
+    ],
     short_description: 'Sacred geometry mandala hand-drawn with metallic gold ink on jet black archival canvas.',
     description: 'Over 20 hours of concentrated geometric micro-pen detailing creating meditative harmony and cosmic energy focus for your home or yoga studio.',
     material: 'Archival Black Cotton Paper & Liquid Gold Acrylic Ink',
@@ -2442,10 +2564,9 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.8,
     review_count: 142,
-    image_url: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=800&auto=format&fit=crop',
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047888/kalastyle-artisan-marketplace/qvrkppwqhlootph2j8y9.jpg',
     images: [
-      'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=1000&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1000&auto=format&fit=crop'
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047888/kalastyle-artisan-marketplace/qvrkppwqhlootph2j8y9.jpg'
     ],
     short_description: '100% biodegradable golden fiber jute tote with waterproof laminated inner lining and zippered pocket.',
     description: 'Eco-friendly, strong, and chic for daily shopping, work, or beach outings. Reinforced with heavy brass rivets and top-grain leather straps.',
@@ -2477,8 +2598,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 88,
-    image_url: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047906/kalastyle-artisan-marketplace/sae9x7i4kmblpyuaqj23.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047906/kalastyle-artisan-marketplace/sae9x7i4kmblpyuaqj23.jpg'
+    ],
     short_description: 'Finely shaved seasoned Assam bamboo strips handwoven into lightweight multi-utility container.',
     description: 'Perfect for laundry, toy organizing, or bread and pantry storage. Naturally smoked for termite resistance without toxic chemicals.',
     material: 'Indigenous Assam Muli Bamboo',
@@ -2509,8 +2632,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 53,
-    image_url: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047923/kalastyle-artisan-marketplace/xq4plc7foauqrk2tj4k8.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047923/kalastyle-artisan-marketplace/xq4plc7foauqrk2tj4k8.jpg'
+    ],
     short_description: 'Sturdy cane mudda stool hand-bound with natural rattan strips. Supports up to 130 kg weight.',
     description: 'Lightweight, ultra-durable, and weather-resistant seating for balconies, verandas, coffee tables, and living room corners.',
     material: 'Natural Indian Cane & Rattan',
@@ -2541,8 +2666,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.8,
     review_count: 64,
-    image_url: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045071/kalastyle-artisan-marketplace/dnmb3lle9tinsvvprdyq.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045071/kalastyle-artisan-marketplace/dnmb3lle9tinsvvprdyq.jpg'
+    ],
     short_description: 'Hand-coiled natural and black-dyed golden jute fiber round plate with fringe edge.',
     description: 'Adds warm rustic Scandinavian and earthy texture to living room feature walls, hallways, and dining areas.',
     material: '100% Natural Raw Jute Cord',
@@ -2573,8 +2700,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 110,
-    image_url: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045454/kalastyle-artisan-marketplace/econdd9ualy6q5v45f6n.png',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045454/kalastyle-artisan-marketplace/econdd9ualy6q5v45f6n.png'
+    ],
     short_description: 'Food-grade 304 stainless steel interior encased in natural organic polished bamboo shell.',
     description: 'Keeps liquids hot for 12 hours and cold for 24 hours. Features a removable stainless steel tea infuser filter for green tea and fruit infusions.',
     material: 'Natural Bamboo Exterior & 304 Grade Stainless Steel',
@@ -2605,8 +2734,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.8,
     review_count: 57,
-    image_url: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045490/kalastyle-artisan-marketplace/czrhcnekxiywqmzvz05y.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045490/kalastyle-artisan-marketplace/czrhcnekxiywqmzvz05y.jpg'
+    ],
     short_description: 'Eco-positive basket handwoven from harvested lake water hyacinth weed with handles.',
     description: 'Transforming invasive weed into sustainable designer planters and organizers. Fits 8-10 inch nursery flower pots effortlessly.',
     material: '100% Upcycled Dried Water Hyacinth Stems',
@@ -2637,8 +2768,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 33,
     rating: 4.9,
     review_count: 95,
-    image_url: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044109/kalastyle-artisan-marketplace/a83mtg8vm7rwzqarbm6i.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044109/kalastyle-artisan-marketplace/a83mtg8vm7rwzqarbm6i.jpg'
+    ],
     short_description: 'Heavyweight unbleached 14oz cotton canvas shopping bag with internal bottle holders.',
     description: 'Designed to replace hundreds of single-use plastic bags. Features 6 inner bottle sleeves, zipper pocket for phone/keys, and wide reinforced shoulder straps.',
     material: '100% GOTS Certified Organic Cotton Canvas',
@@ -2669,8 +2802,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 51,
-    image_url: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044071/kalastyle-artisan-marketplace/pwgxu5f4ucraorrlyfip.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044071/kalastyle-artisan-marketplace/pwgxu5f4ucraorrlyfip.jpg'
+    ],
     short_description: 'Dome silhouette bamboo latticework lamp casting warm woven shadows across ceiling and walls.',
     description: 'Artisanal hand-woven bamboo light shade that brings Japanese-Scandinavian and tropical Indian minimalism into your dining room, cafes, or bedrooms.',
     material: 'Natural Seasoned Bamboo Splints',
@@ -2701,8 +2836,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.7,
     review_count: 63,
-    image_url: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045605/kalastyle-artisan-marketplace/ndge3dzyqixm7hd82knq.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045605/kalastyle-artisan-marketplace/ndge3dzyqixm7hd82knq.jpg'
+    ],
     short_description: 'Food-safe untreated natural cane basket perfect for breakfast croissants, rotis, and fresh fruits.',
     description: 'Hand-braided open weave prevents condensation from gathering under hot rotis and breads while serving.',
     material: 'Natural Forest Cane',
@@ -2733,8 +2870,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 30,
     rating: 4.8,
     review_count: 79,
-    image_url: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044345/kalastyle-artisan-marketplace/nbwp4jaih5zvrfqnvgdz.webp',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044345/kalastyle-artisan-marketplace/nbwp4jaih5zvrfqnvgdz.webp'
+    ],
     short_description: 'Reversible thick circular floor mat hand-braided from natural unbleached golden jute fibers.',
     description: 'Heavy duty, thick cushion feel underfoot, and non-slip natural grip. Ideal for coffee table underlays, reading corners, and bedside.',
     material: '100% High-Grade Biodegradable Jute',
@@ -2765,8 +2904,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 31,
     rating: 4.9,
     review_count: 71,
-    image_url: 'https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044622/kalastyle-artisan-marketplace/hg3aikice0x09ujxfkoh.webp',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789044622/kalastyle-artisan-marketplace/hg3aikice0x09ujxfkoh.webp'
+    ],
     short_description: 'Natural bamboo slat tray with solid side handles and water-repellent food-safe oil polish.',
     description: 'Eco-friendly, lightweight, and sturdy for serving breakfast in bed, evening tea, and snacks to guests.',
     material: '100% Solid Seasoned Bamboo',
@@ -2797,8 +2938,10 @@ const HANDICRAFT_PRODUCTS = [
     discount_percentage: 32,
     rating: 4.8,
     review_count: 58,
-    image_url: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=800&auto=format&fit=crop',
-    images: ['https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=1000&auto=format&fit=crop'],
+    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045490/kalastyle-artisan-marketplace/czrhcnekxiywqmzvz05y.jpg',
+    images: [
+      'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789045490/kalastyle-artisan-marketplace/czrhcnekxiywqmzvz05y.jpg'
+    ],
     short_description: 'Naturally hollowed cured bamboo stem planters with drainage holes and braided hanging rope.',
     description: 'Perfect for indoor money plants, succulents, ivy, and herbs. Creates a stunning vertical green wall garden.',
     material: 'Natural Giant Timber Bamboo & Jute Ropes',

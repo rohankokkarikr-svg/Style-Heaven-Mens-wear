@@ -5,38 +5,38 @@ const supabase = require('../config/supabase');
 const FALLBACK_REVIEWS = [
   {
     id: 'fallback-1',
-    customer_name: 'Rahul Sharma',
-    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336528/style-heaven-assets/review_rahul.jpg',
+    customer_name: 'Priya Sharma',
+    image_url: null,
     rating: 5,
-    review_text: "Excellent quality and premium fitting. The designs are stylish and perfect for modern fashion lovers.",
-    product_name: 'Premium Tailored Suit',
+    review_text: "The Pure Katan Banarasi Silk Saree arrived in breathtaking quality with authentic Zari weaving. Supporting real Indian weavers directly feels wonderful.",
+    product_name: 'Pure Katan Banarasi Silk Saree',
     is_approved: true
   },
   {
     id: 'fallback-2',
-    customer_name: 'Arjun Patel',
-    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336531/style-heaven-assets/review_arjun.jpg',
+    customer_name: 'Rajesh Iyer',
+    image_url: null,
     rating: 5,
-    review_text: "Fast delivery and amazing customer service. The fabric quality feels luxurious.",
-    product_name: 'Linen Summer Shirt',
+    review_text: "The Channapatna wooden crafts and lacquer finish are 100% genuine and safe for children. True royal heritage craftsmanship.",
+    product_name: 'Handcrafted Wooden Ambari Elephant',
     is_approved: true
   },
   {
     id: 'fallback-3',
-    customer_name: 'Vikram Singh',
-    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336532/style-heaven-assets/review_vikram.jpg',
+    customer_name: 'Meenakshi Sundaram',
+    image_url: null,
     rating: 5,
-    review_text: "Best menswear website I've used. Stylish collection and affordable prices.",
-    product_name: 'Classic Chinos',
+    review_text: "The 22K gold foil Tanjore painting with teak frame exceeded all expectations. Packaged with extreme care and museum quality.",
+    product_name: 'Royal Tanjore 22K Gold Foil Painting',
     is_approved: true
   },
   {
     id: 'fallback-4',
-    customer_name: 'Karan Mehta',
-    image_url: 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1778336534/style-heaven-assets/review_karan.jpg',
+    customer_name: 'Ananya Roy',
+    image_url: null,
     rating: 5,
-    review_text: "The jackets and hoodies look even better in real life. Highly recommended.",
-    product_name: 'Urban Streetwear Hoodie',
+    review_text: "Authentic Kashmiri Pashmina with exquisite Sozni needle embroidery. The warmth and softness are unmatched.",
+    product_name: 'Kashmiri Hand-Embroidered Pashmina Shawl',
     is_approved: true
   }
 ];
