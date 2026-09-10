@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
-import { productAPI, reviewAPI } from '../services/api';
+import { productAPI, reviewAPI, artisanAPI } from '../services/api';
 import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import ReviewModal from '../components/ReviewModal';
 import ProductCard from '../components/ProductCard';
@@ -38,47 +38,93 @@ export default function ProductDetail() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      setLoading(true);
+  const fetchProduct = async () => {
+    setLoading(true);
+    try {
+      let found = null;
+      // 1. Try Backend API first for live DB product and artisan data
       try {
-        let found = null;
-        // 1. Try local handicrafts dataset first or by id
-        const localMatch = HANDICRAFT_PRODUCTS.find((p) => p.id === id || String(p.id) === String(id));
-        if (localMatch) {
-          found = localMatch;
-        } else {
-          // 2. Try fetching from Backend API
-          const { data } = await productAPI.getById(id);
+        const { data } = await productAPI.getById(id);
+        if (data && (data.id || data.name)) {
           found = data;
         }
-
-        if (found) {
-          setProduct(found);
-          const firstImg =
-            (found.images && found.images[0]) || found.image_url || found.image || '';
-          setSelectedImage(firstImg);
-        } else {
-          throw new Error('Product not found');
-        }
-      } catch (err) {
-        console.warn('Product API notice, looking in local catalog:', err.message);
-        const fallback = HANDICRAFT_PRODUCTS.find((p) => p.id === id) || HANDICRAFT_PRODUCTS[0];
-        if (fallback) {
-          setProduct(fallback);
-          setSelectedImage((fallback.images && fallback.images[0]) || fallback.image_url);
-        } else {
-          toast.error('Product not found');
-          navigate('/products');
-        }
-      } finally {
-        setLoading(false);
+      } catch (apiErr) {
+        console.warn('Backend product API notice, checking catalog fallback:', apiErr.message);
       }
-    };
 
+      // 2. Fallback to local catalog if not found in backend
+      if (!found) {
+        const localMatch = HANDICRAFT_PRODUCTS.find((p) => p.id === id || String(p.id) === String(id));
+        if (localMatch) {
+          found = { ...localMatch };
+        }
+      }
+
+      if (found) {
+        // If product has artisan_id or user_id and artisan_profiles is not attached, try fetching it
+        if (!found.artisan_profiles && (found.artisan_id || found.user_id)) {
+          try {
+            const { data: artData } = await artisanAPI.getById(found.artisan_id || found.user_id);
+            if (artData) {
+              found.artisan_profiles = artData;
+            }
+          } catch (e) {
+            // Ignore if artisan endpoint unavailable
+          }
+        }
+
+        setProduct(found);
+        const firstImg =
+          (found.images && found.images[0]) || found.image_url || found.image || '';
+        setSelectedImage(firstImg);
+      } else {
+        throw new Error('Product not found');
+      }
+    } catch (err) {
+      console.warn('Product load error, using catalog fallback:', err.message);
+      const fallback = HANDICRAFT_PRODUCTS.find((p) => p.id === id) || HANDICRAFT_PRODUCTS[0];
+      if (fallback) {
+        setProduct(fallback);
+        setSelectedImage((fallback.images && fallback.images[0]) || fallback.image_url);
+      } else {
+        toast.error('Product not found');
+        navigate('/products');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProduct();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [id, navigate]);
+
+  // Real-time listener: refresh product & artisan details whenever an artisan updates their profile or product
+  useEffect(() => {
+    const handleArtisanSync = async () => {
+      try {
+        const { data } = await productAPI.getById(id);
+        if (data && (data.id || data.name)) {
+          setProduct((prev) => ({
+            ...prev,
+            ...data,
+            artisan_profiles: data.artisan_profiles || prev?.artisan_profiles,
+          }));
+        }
+      } catch (err) {
+        // If offline or local product, silently ignore
+      }
+    };
+
+    window.addEventListener('kala:sync:artisans_updated', handleArtisanSync);
+    window.addEventListener('kala:sync:products_updated', handleArtisanSync);
+
+    return () => {
+      window.removeEventListener('kala:sync:artisans_updated', handleArtisanSync);
+      window.removeEventListener('kala:sync:products_updated', handleArtisanSync);
+    };
+  }, [id]);
 
   // Related Products Fetching
   useEffect(() => {
@@ -175,6 +221,19 @@ export default function ProductDetail() {
       : [product.image_url || product.image].filter(Boolean);
 
   const isFavorited = isInWishlist(product.id);
+
+  const artisanProfile = product?.artisan_profiles || {};
+  const rawArtisanBio = artisanProfile.bio || product?.artisan_bio || '';
+  const cleanArtisanBio =
+    (rawArtisanBio.split('__UPI_META__:')[0] || '').trim() ||
+    'Carrying forward ancestral Indian craft traditions with unwavering dedication to perfection and authentic handmade heritage.';
+  const artisanName = artisanProfile.store_name || product?.artisan_name || 'Master Artisan';
+  const artisanAvatar =
+    artisanProfile.profile_image ||
+    product?.artisan_avatar ||
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop';
+  const artisanLocation = artisanProfile.location || product?.artisan_location || 'Varanasi';
+  const artisanHeritage = artisanProfile.years_of_experience || product?.years_of_experience || 20;
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
@@ -498,16 +557,12 @@ export default function ProductDetail() {
               </div>
 
               {/* Meet the Artisan Card */}
-              {(product.artisan_name || product.artisan_bio || product.artisan_profiles) && (
+              {(artisanName || cleanArtisanBio || product.artisan_profiles) && (
                 <div className="mt-8 p-5 rounded-2xl bg-gradient-to-br from-dark-800 to-dark-850 border border-gold-500/30 relative overflow-hidden shadow-xl">
                   <div className="flex items-start gap-4">
                     <img
-                      src={
-                        product.artisan_avatar ||
-                        product.artisan_profiles?.profile_image ||
-                        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop'
-                      }
-                      alt={product.artisan_name || 'Artisan'}
+                      src={artisanAvatar}
+                      alt={artisanName}
                       className="w-16 h-16 rounded-full object-cover ring-2 ring-gold-500/60 flex-shrink-0"
                     />
                     <div className="flex-1">
@@ -518,16 +573,21 @@ export default function ProductDetail() {
                         <HiBadgeCheck className="text-gold-400 w-4 h-4" />
                       </div>
                       <h3 className="text-lg font-serif font-bold text-white mt-0.5">
-                        {product.artisan_name || product.artisan_profiles?.store_name || 'Master Craftsman'}
+                        {artisanName}
                       </h3>
                       <div className="flex flex-wrap gap-y-1 gap-x-3 text-xs text-gray-400 mt-1">
-                        <span>📍 {product.artisan_location || 'India'}, {product.state_of_origin}</span>
-                        {product.years_of_experience && (
-                          <span>• 🛠️ {product.years_of_experience} Years Experience</span>
+                        <span>
+                          📍 Based in {artisanLocation}
+                          {product.state_of_origin && product.state_of_origin !== artisanLocation
+                            ? `, ${product.state_of_origin}`
+                            : ''}
+                        </span>
+                        {artisanHeritage && (
+                          <span>• 🛠️ {artisanHeritage}+ Years Experience</span>
                         )}
                       </div>
                       <p className="text-gray-300 text-xs mt-2.5 italic leading-relaxed">
-                        "{product.artisan_bio || 'Dedicated to preserving centuries-old Indian artisan techniques passed down through generations.'}"
+                        "{cleanArtisanBio}"
                       </p>
                     </div>
                   </div>
@@ -679,21 +739,17 @@ export default function ProductDetail() {
                 <h3 className="text-xl font-serif font-bold text-white">About the Master Craftsman</h3>
                 <div className="flex flex-col sm:flex-row items-start gap-6">
                   <img
-                    src={
-                      product.artisan_avatar ||
-                      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop'
-                    }
-                    alt={product.artisan_name}
+                    src={artisanAvatar}
+                    alt={artisanName}
                     className="w-24 h-24 rounded-2xl object-cover ring-2 ring-gold-500/50 shadow-lg"
                   />
                   <div className="space-y-2">
-                    <h4 className="text-lg font-bold text-white">{product.artisan_name || 'Master Artisan'}</h4>
+                    <h4 className="text-lg font-bold text-white">{artisanName}</h4>
                     <p className="text-xs text-gold-400 font-medium">
-                      Based in {product.artisan_location || 'Varanasi'}, {product.state_of_origin} • {product.years_of_experience || 20}+ Years of Heritage
+                      Based in {artisanLocation}{product.state_of_origin && product.state_of_origin !== artisanLocation ? `, ${product.state_of_origin}` : ''} • {artisanHeritage}+ Years of Heritage
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-300">
-                      {product.artisan_bio ||
-                        'Carrying forward ancestral Indian craft traditions with unwavering dedication to perfection and authentic handmade heritage.'}
+                    <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                      {cleanArtisanBio}
                     </p>
                   </div>
                 </div>

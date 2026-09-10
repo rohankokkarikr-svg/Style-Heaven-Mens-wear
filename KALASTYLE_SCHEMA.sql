@@ -28,9 +28,11 @@ CREATE TABLE IF NOT EXISTS artisan_profiles (
   profile_image TEXT,
   verification_status VARCHAR(50) DEFAULT 'pending',
   preferred_language VARCHAR(50) DEFAULT 'English',
+  years_of_experience INTEGER DEFAULT 20,
   earnings_total DECIMAL(12, 2) DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE artisan_profiles ADD COLUMN IF NOT EXISTS years_of_experience INTEGER DEFAULT 20;
 
 -- 3. Products Table
 CREATE TABLE IF NOT EXISTS products (

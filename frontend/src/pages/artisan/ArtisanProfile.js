@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { artisanAPI, productAPI } from '../../services/api';
+import { artisanAPI, productAPI, aiAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { HiCamera, HiPhotograph, HiCheckCircle, HiQrcode } from 'react-icons/hi';
+import { HiCamera, HiPhotograph, HiCheckCircle, HiQrcode, HiSparkles, HiEye } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
 const LANGUAGES = ['English', 'Hindi', 'Kannada', 'Tamil', 'Telugu', 'Marathi', 'Bengali'];
@@ -15,6 +15,7 @@ export default function ArtisanProfile() {
   const [saving, setSaving] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [uploadingQr, setUploadingQr] = useState(false);
+  const [generatingBio, setGeneratingBio] = useState(false);
   const fileInputRef = useRef();
   const qrInputRef = useRef();
 
@@ -24,6 +25,41 @@ export default function ArtisanProfile() {
         setProfile(data); setForm(data || {}); setLoading(false);
       }
     }).catch(() => setLoading(false));
+  };
+
+  const handleGenerateBio = async () => {
+    setGeneratingBio(true);
+    const toastId = toast.loading('Generating authentic artisan story with AI... ✨');
+    try {
+      const res = await aiAPI.generateArtisanStory({
+        name: form.store_name || user?.name || 'Master Artisan',
+        location: form.location || 'Varanasi',
+        craft: form.specialization || form.artisan_type || 'Traditional Indian Handicrafts',
+        yearsExperience: form.years_of_experience || '20',
+        familyHistory: 'Carrying forward ancestral Indian craft traditions with unwavering dedication to perfection and authentic handmade heritage.'
+      });
+      if (res.data?.story) {
+        set('bio', res.data.story);
+        toast.success('Artisan story generated! ✨ Click "Save Profile" to update your live products.', { id: toastId });
+      } else {
+        throw new Error('No story returned');
+      }
+    } catch (err) {
+      console.warn('AI generator notice, using authentic template:', err);
+      const fallbackStory = `Carrying forward ancestral Indian craft traditions in ${form.location || 'Varanasi'} with ${form.years_of_experience || '20'}+ years of dedicated heritage. Every piece is handcrafted with unwavering dedication to perfection, honoring centuries-old techniques and authentic handmade heritage.`;
+      set('bio', fallbackStory);
+      toast.success('Artisan heritage story generated! ✨ Click "Save Profile" to update your live products.', { id: toastId });
+    } finally {
+      setGeneratingBio(false);
+    }
+  };
+
+  const handleQuickFillHeritage = () => {
+    set('store_name', form.store_name || 'Master Artisan');
+    set('location', form.location || 'Varanasi');
+    set('years_of_experience', form.years_of_experience || '20');
+    set('bio', 'Carrying forward ancestral Indian craft traditions with unwavering dedication to perfection and authentic handmade heritage.');
+    toast.success('Master Craftsman heritage data loaded! ✨ Click "Save Profile" to apply.');
   };
 
   useEffect(() => {
@@ -284,13 +320,147 @@ export default function ArtisanProfile() {
           </div>
         </div>
 
-        <div><label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Store Name *</label><input className="input-field" value={field('store_name')} onChange={e => set('store_name', e.target.value)} placeholder="e.g. Lakshmi Handlooms" required /></div>
-        <div><label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Artisan Type</label><select className="input-field" value={field('artisan_type')} onChange={e => set('artisan_type', e.target.value)}>{ARTISAN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-        <div><label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Specialization</label><input className="input-field" value={field('specialization')} onChange={e => set('specialization', e.target.value)} placeholder="e.g. Handwoven Silk Sarees" /></div>
-        <div><label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Location</label><input className="input-field" value={field('location')} onChange={e => set('location', e.target.value)} placeholder="e.g. Mysore, Karnataka" /></div>
-        <div><label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">About Your Store / Bio</label><textarea rows={4} className="input-field resize-none" value={field('bio')} onChange={e => set('bio', e.target.value)} placeholder="Tell customers about your craft, your story, and what makes your products special..." /></div>
-        <div><label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Preferred Language (for AI features)</label><select className="input-field" value={field('preferred_language') || 'English'} onChange={e => set('preferred_language', e.target.value)}>{LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
-        <button type="submit" disabled={saving || uploadingImg || uploadingQr} className="btn-primary w-full">{saving ? 'Saving...' : 'Save Profile & UPI Settings'}</button>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Store Name *</label>
+          <input className="input-field" value={field('store_name')} onChange={e => set('store_name', e.target.value)} placeholder="e.g. Master Artisan / Lakshmi Handlooms" required />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Artisan Type</label>
+            <select className="input-field" value={field('artisan_type')} onChange={e => set('artisan_type', e.target.value)}>
+              {ARTISAN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Specialization</label>
+            <input className="input-field" value={field('specialization')} onChange={e => set('specialization', e.target.value)} placeholder="e.g. Handwoven Banarasi Silk" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Location</label>
+            <input className="input-field" value={field('location')} onChange={e => set('location', e.target.value)} placeholder="e.g. Varanasi, Uttar Pradesh" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Years of Craft Heritage / Experience</label>
+            <input
+              type="number"
+              min="1"
+              max="99"
+              className="input-field font-semibold"
+              value={field('years_of_experience')}
+              onChange={e => set('years_of_experience', e.target.value)}
+              placeholder="e.g. 20"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+            <label className="block text-xs text-gray-400 uppercase tracking-wider font-medium">About Your Store / Bio</label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleGenerateBio}
+                disabled={generatingBio}
+                className="px-2.5 py-1 rounded-lg bg-gold-500/10 hover:bg-gold-500/20 text-gold-400 border border-gold-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+              >
+                <HiSparkles className="w-3.5 h-3.5" />
+                {generatingBio ? 'Writing with AI...' : '✨ AI Generate Story'}
+              </button>
+              <button
+                type="button"
+                onClick={handleQuickFillHeritage}
+                className="px-2.5 py-1 rounded-lg bg-dark-700 hover:bg-dark-600 text-gray-300 border border-dark-600 text-xs font-medium transition-all"
+                title="Fill with Master Craftsman heritage values"
+              >
+                🪄 Quick Fill Heritage
+              </button>
+            </div>
+          </div>
+          <textarea
+            rows={4}
+            className="input-field resize-none leading-relaxed"
+            value={field('bio')}
+            onChange={e => set('bio', e.target.value)}
+            placeholder="Tell customers about your craft, your story, and what makes your products special..."
+          />
+          <p className="text-[11px] text-gray-500 mt-1">This text is displayed directly under "About the Master Craftsman" on all your product detail pages.</p>
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Preferred Language (for AI features)</label>
+          <select className="input-field" value={field('preferred_language') || 'English'} onChange={e => set('preferred_language', e.target.value)}>
+            {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
+
+        {/* Live Customer Preview Card matching user screenshot */}
+        <div className="p-5 rounded-2xl bg-dark-900/90 border border-gold-500/40 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-dark-700/80">
+            <div className="flex items-center gap-2">
+              <HiEye className="w-4 h-4 text-gold-400" />
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                Live Customer View: Product Page Preview
+              </h3>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 self-start sm:self-auto">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Real-time Live
+            </span>
+          </div>
+
+          {/* Tab Pill Headers */}
+          <div className="flex items-center gap-1.5 bg-dark-950/80 p-1.5 rounded-xl border border-dark-700/70 overflow-x-auto text-[11px]">
+            <span className="px-2.5 py-1 text-gray-500 font-medium whitespace-nowrap">Description</span>
+            <span className="px-2.5 py-1 text-gray-500 font-medium whitespace-nowrap">Customer Reviews (0)</span>
+            <span className="px-2.5 py-1 text-gray-500 font-medium whitespace-nowrap">Craftsmanship & Process</span>
+            <span className="px-3 py-1 rounded-lg bg-gold-500 text-dark-950 font-bold shadow whitespace-nowrap">
+              About the Artisan
+            </span>
+            <span className="px-2.5 py-1 text-gray-500 font-medium whitespace-nowrap">Dimensions & Specs</span>
+            <span className="px-2.5 py-1 text-gray-500 font-medium whitespace-nowrap">Care Instructions</span>
+          </div>
+
+          {/* Gold separator accent bar */}
+          <div className="h-1 rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-600" />
+
+          {/* Master Craftsman Content Container */}
+          <div className="pt-2 space-y-3">
+            <h4 className="text-base font-serif font-bold text-white">About the Master Craftsman</h4>
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden ring-2 ring-gold-500/60 shadow-md flex-shrink-0 bg-dark-800">
+                <img
+                  src={
+                    field('profile_image') ||
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop'
+                  }
+                  alt={field('store_name') || 'Master Artisan'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="space-y-1 flex-1 min-w-0">
+                <h5 className="text-sm font-bold text-white">{field('store_name') || 'Master Artisan'}</h5>
+                <p className="text-xs text-gold-400 font-medium">
+                  Based in {field('location') || 'Varanasi'}, • {field('years_of_experience') || 20}+ Years of Heritage
+                </p>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  {(field('bio') || '').split('__UPI_META__:')[0].trim() ||
+                    'Carrying forward ancestral Indian craft traditions with unwavering dedication to perfection and authentic handmade heritage.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving || uploadingImg || uploadingQr}
+          className="btn-primary w-full py-3 text-sm font-bold shadow-lg shadow-gold-500/20 flex items-center justify-center gap-2"
+        >
+          {saving ? 'Saving & Syncing in Real-Time...' : '💾 Save Profile & Real-Time Sync'}
+        </button>
       </form>
     </div>
   );

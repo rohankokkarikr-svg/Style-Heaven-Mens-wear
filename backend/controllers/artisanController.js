@@ -81,23 +81,37 @@ exports.getMyProfile = async (req, res) => {
 // PUT /api/artisans/me - update own profile
 exports.updateMyProfile = async (req, res) => {
   try {
-    const { store_name, artisan_type, specialization, location, bio, profile_image, preferred_language, upi_id, upi_qr_code } = req.body;
+    const { store_name, artisan_type, specialization, location, bio, profile_image, preferred_language, upi_id, upi_qr_code, years_of_experience } = req.body;
     const bioWithUpi = formatBioWithUpi(bio, upi_id, upi_qr_code);
+
+    const updateFields = { 
+      store_name, 
+      artisan_type, 
+      specialization, 
+      location, 
+      bio: bioWithUpi, 
+      profile_image, 
+      preferred_language,
+      years_of_experience: years_of_experience !== undefined && years_of_experience !== '' ? Number(years_of_experience) : undefined
+    };
 
     let { data, error } = await supabase
       .from('artisan_profiles')
-      .update({ 
-        store_name, 
-        artisan_type, 
-        specialization, 
-        location, 
-        bio: bioWithUpi, 
-        profile_image, 
-        preferred_language 
-      })
+      .update(updateFields)
       .eq('user_id', req.user.id)
       .select()
       .maybeSingle();
+
+    if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('years_of_experience')))) {
+      delete updateFields.years_of_experience;
+      const resFallback = await supabase
+        .from('artisan_profiles')
+        .update(updateFields)
+        .eq('user_id', req.user.id)
+        .select()
+        .maybeSingle();
+      data = resFallback.data;
+    }
 
     if (!data) {
       const { data: newProfile, error: insError } = await supabase

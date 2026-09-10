@@ -99,3 +99,8 @@ ALTER TABLE products
   ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS is_in_stock BOOLEAN DEFAULT TRUE;
 
+-- 10. Add years_of_experience to artisan_profiles
+ALTER TABLE IF EXISTS artisan_profiles
+  ADD COLUMN IF NOT EXISTS years_of_experience INTEGER DEFAULT 20;
+
+

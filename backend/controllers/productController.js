@@ -143,9 +143,9 @@ exports.getFeaturedProducts = async (req, res) => {
 
 exports.getProductById = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
-      .select('*, artisan_profiles(id, store_name, location, specialization, profile_image, verification_status)')
+      .select('*, artisan_profiles(id, store_name, artisan_type, location, specialization, bio, profile_image, verification_status, years_of_experience, user_id)')
       .eq('id', req.params.id)
       .maybeSingle();
 
@@ -159,6 +159,37 @@ exports.getProductById = async (req, res) => {
           return res.status(403).json({ error: 'This product is currently under admin review and awaiting approval.' });
         }
       }
+
+      // If artisan_profiles is null, try looking up by artisan_id or user_id
+      if (!data.artisan_profiles && data.artisan_id) {
+        try {
+          const { data: prof } = await supabase
+            .from('artisan_profiles')
+            .select('id, store_name, artisan_type, location, specialization, bio, profile_image, verification_status, years_of_experience, user_id')
+            .or(`id.eq.${data.artisan_id},user_id.eq.${data.artisan_id}`)
+            .maybeSingle();
+          if (prof) data.artisan_profiles = prof;
+        } catch (e) {
+          console.warn('Artisan profile lookup notice:', e.message);
+        }
+      }
+
+      // Normalize real artisan data and clean bio
+      if (data.artisan_profiles) {
+        const { parseArtisanUpi } = require('./authController');
+        const parsed = parseArtisanUpi(data.artisan_profiles);
+        data.artisan_profiles = parsed;
+        data.artisan_name = parsed.store_name || data.artisan_name || 'Master Craftsman';
+        data.artisan_avatar = parsed.profile_image || data.artisan_avatar;
+        data.artisan_location = parsed.location || data.artisan_location;
+        data.artisan_bio = parsed.bio || data.artisan_bio;
+        data.artisan_type = parsed.artisan_type || data.artisan_type || 'Master Artisan';
+        data.artisan_specialization = parsed.specialization || data.artisan_specialization;
+        if (parsed.years_of_experience) {
+          data.years_of_experience = parsed.years_of_experience;
+        }
+      }
+
       return res.json(data);
     }
 
