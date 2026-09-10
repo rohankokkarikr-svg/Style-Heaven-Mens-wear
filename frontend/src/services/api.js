@@ -198,6 +198,7 @@ export const adminAPI = {
   getOrders:            (params)   => api.get('/admin/orders', { params }),
   updateOrderStatus:    (id, data) => api.put(`/admin/orders/${id}/status`, data),
   getPayments:          ()         => api.get('/admin/payments'),
+  updatePaymentStatus:  (id, data) => api.put(`/admin/orders/${id}/status`, data),
   getAIContent:         ()         => api.get('/admin/ai/content'),
   getAIStats:           ()         => api.get('/admin/ai/stats'),
   getAILogs:            ()         => api.get('/admin/ai/logs'),

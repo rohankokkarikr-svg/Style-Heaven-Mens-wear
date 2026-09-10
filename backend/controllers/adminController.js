@@ -633,6 +633,7 @@ exports.updateOrderStatus = async (req, res) => {
 
     if (error) throw error;
     broadcastSync('ORDERS_UPDATED', { id, status, payment_status, order: data });
+    broadcastSync('PAYMENTS_UPDATED', { id, status, payment_status, order: data });
     await logActivity(req, `Updated Order #${id.slice(0, 8)} to ${status || payment_status}`, 'Order', id);
     res.json(data);
   } catch (err) {
@@ -650,22 +651,57 @@ exports.getPayments = async (req, res) => {
     const { data: orders, error } = await safeQuery(() =>
       supabase
         .from('orders')
-        .select('id, total_price, payment_status, payment_method, razorpay_payment_id, created_at, users(name, email)')
+        .select('id, total_price, payment_status, payment_method, razorpay_payment_id, created_at, phone, shipping_address, status, users(name, email, phone)')
         .order('created_at', { ascending: false })
     );
 
     if (error) throw error;
 
-    const payments = (orders || []).map(o => ({
-      transactionId: o.razorpay_payment_id || `TXN-${o.id.slice(0, 8).toUpperCase()}`,
-      orderId: o.id,
-      customerName: o.users?.name || 'Customer',
-      customerEmail: o.users?.email || '',
-      amount: Number(o.total_price || 0),
-      paymentMethod: o.payment_method || 'Online UPI / Card',
-      status: o.payment_status || (o.status === 'cancelled' ? 'failed' : 'successful'),
-      date: o.created_at,
-    }));
+    const payments = (orders || []).map(o => {
+      // Determine payment method if not explicitly stored
+      let method = o.payment_method;
+      if (!method && o.shipping_address) {
+        const match = o.shipping_address.match(/\[Method:\s*([^\]]+)\]/i);
+        if (match) method = match[1].trim();
+      }
+      if (!method) {
+        method = o.razorpay_payment_id ? 'Online UPI / Card' : 'cod';
+      }
+
+      // Customer name and identifier
+      const customerName = o.users?.name || 'Customer';
+      const customerContact = o.users?.email || o.phone || o.users?.phone || '';
+      const customerPhone = o.phone || o.users?.phone || '';
+
+      // Normalize status
+      const pStatus = (o.payment_status || '').toLowerCase();
+      let status = 'pending';
+      if (pStatus === 'paid' || pStatus === 'successful' || pStatus === 'completed') {
+        status = 'successful';
+      } else if (pStatus === 'failed' || o.status === 'cancelled') {
+        status = 'failed';
+      } else if (pStatus === 'refunded') {
+        status = 'refunded';
+      } else if (o.status === 'delivered') {
+        status = 'successful';
+      } else {
+        status = 'pending';
+      }
+
+      return {
+        transactionId: o.razorpay_payment_id || `TXN-${o.id.slice(0, 8).toUpperCase()}`,
+        orderId: o.id,
+        customerName,
+        customerEmail: customerContact,
+        customerPhone,
+        amount: Number(o.total_price || 0),
+        paymentMethod: method,
+        status,
+        rawPaymentStatus: o.payment_status || 'pending',
+        orderStatus: o.status || 'pending',
+        date: o.created_at,
+      };
+    });
 
     res.json(payments);
   } catch (err) {

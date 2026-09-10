@@ -23,6 +23,7 @@ export const RealtimeSyncProvider = ({ children }) => {
         apiCache.invalidateCategories();
         break;
       case 'ORDERS_UPDATED':
+      case 'PAYMENTS_UPDATED':
         apiCache.invalidateOrders();
         break;
       case 'SETTINGS_UPDATED':

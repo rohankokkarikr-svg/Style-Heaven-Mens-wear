@@ -333,6 +333,7 @@ exports.createOrder = async (req, res) => {
     try {
       const { broadcastSync } = require('../utils/realtime');
       broadcastSync('ORDERS_UPDATED', { action: 'create', orderId: order.id, order });
+      broadcastSync('PAYMENTS_UPDATED', { action: 'create', orderId: order.id, order });
     } catch (syncErr) {
       console.warn('Realtime order broadcast notice:', syncErr.message);
     }
@@ -429,6 +430,7 @@ exports.updateOrderStatus = async (req, res) => {
     try {
       const { broadcastSync } = require('../utils/realtime');
       broadcastSync('ORDERS_UPDATED', { id, status, payment_status, order: data });
+      broadcastSync('PAYMENTS_UPDATED', { id, status, payment_status, order: data });
     } catch (bcErr) {
       console.warn('Realtime broadcast notice:', bcErr.message);
     }
@@ -731,6 +733,15 @@ exports.payOrder = async (req, res) => {
 
     if (updateError) throw updateError;
 
+    // Realtime broadcast payment update
+    try {
+      const { broadcastSync } = require('../utils/realtime');
+      broadcastSync('PAYMENTS_UPDATED', { id, payment_status: 'paid', order: updatedOrder });
+      broadcastSync('ORDERS_UPDATED', { id, payment_status: 'paid', order: updatedOrder });
+    } catch (syncErr) {
+      console.warn('Realtime sync broadcast notice:', syncErr.message);
+    }
+
     // Trigger WhatsApp notification to Admin to alert about submitted UPI Ref No.
     let whatsappLink = null;
     let whatsappMessage = null;
@@ -800,6 +811,15 @@ exports.verifyPayment = async (req, res) => {
     }
 
     if (updateError) throw updateError;
+
+    // Realtime broadcast payment verification
+    try {
+      const { broadcastSync } = require('../utils/realtime');
+      broadcastSync('PAYMENTS_UPDATED', { id, status: updatedOrder?.status, payment_status: updatedOrder?.payment_status, order: updatedOrder });
+      broadcastSync('ORDERS_UPDATED', { id, status: updatedOrder?.status, payment_status: updatedOrder?.payment_status, order: updatedOrder });
+    } catch (syncErr) {
+      console.warn('Realtime sync broadcast notice:', syncErr.message);
+    }
 
     // Send WhatsApp Notification to Admin
     try {
