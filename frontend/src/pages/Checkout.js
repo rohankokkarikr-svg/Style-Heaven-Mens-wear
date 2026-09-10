@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import {
   HiShieldCheck, HiTruck, HiUser, HiPhone, HiLocationMarker,
   HiCheckCircle, HiArrowRight, HiArrowLeft, HiTag, HiExclamationCircle,
-  HiLockClosed, HiReceiptTax, HiCash, HiRefresh, HiMap, HiX
+  HiLockClosed, HiReceiptTax, HiCash, HiRefresh, HiMap, HiX, HiExternalLink
 } from 'react-icons/hi';
 
 /* ─── Field error ─── */
@@ -151,6 +151,7 @@ export default function Checkout() {
   const [verifyLoading, setVerifyLoading]     = useState(false);
   const [verifyResult, setVerifyResult]       = useState(null); // { ok, display, lat, lng, mapUrl }
   const [addressVerified, setAddressVerified] = useState(false);
+  const [liveLocation, setLiveLocation]       = useState(null); // { lat, lng, mapUrl, accuracy, source }
 
   // ── Coupon ──
   const [couponCode, setCouponCode]       = useState('');
@@ -251,6 +252,14 @@ export default function Checkout() {
             lng: ipData.longitude || null,
             mapUrl,
           });
+          if (ipData.latitude && ipData.longitude) {
+            setLiveLocation({
+              lat: ipData.latitude,
+              lng: ipData.longitude,
+              mapUrl,
+              source: 'ip'
+            });
+          }
           setAddressVerified(true);
           setErrors(e => ({ ...e, address: '', city: '', state: '', pinCode: '' }));
           toast.success('Location detected via IP and auto-filled! ✅');
@@ -281,6 +290,13 @@ export default function Checkout() {
           lat: coords.latitude,
           lng: coords.longitude,
           mapUrl,
+        });
+        setLiveLocation({
+          lat: coords.latitude,
+          lng: coords.longitude,
+          mapUrl,
+          accuracy: coords.accuracy || null,
+          source: 'gps'
         });
         setAddressVerified(true);
         setErrors(e => ({ ...e, address: '', city: '', state: '', pinCode: '' }));
@@ -361,6 +377,14 @@ export default function Checkout() {
         detectedState:   state,
         detectedPincode: postcode,
       });
+      if (place.lat && place.lon) {
+        setLiveLocation(prev => prev || {
+          lat: parseFloat(place.lat),
+          lng: parseFloat(place.lon),
+          mapUrl,
+          source: 'forward_geocode'
+        });
+      }
       setAddressVerified(isGood);
 
       if (isGood) {
@@ -437,20 +461,59 @@ export default function Checkout() {
   const handlePlaceOrder = async () => {
     setLoading(true);
     try {
-      const fullAddress = [
+      let activeLat = liveLocation?.lat || (verifyResult?.lat ? parseFloat(verifyResult.lat) : null);
+      let activeLng = liveLocation?.lng || (verifyResult?.lng ? parseFloat(verifyResult.lng) : null);
+      let activeMapUrl = liveLocation?.mapUrl || (activeLat && activeLng ? `https://www.google.com/maps?q=${activeLat},${activeLng}` : null);
+
+      // If live GPS location was not yet captured, attempt a quick capture now
+      if (!activeLat && navigator.geolocation) {
+        try {
+          const quickPos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 4000,
+              maximumAge: 60000
+            });
+          });
+          if (quickPos?.coords) {
+            activeLat = quickPos.coords.latitude;
+            activeLng = quickPos.coords.longitude;
+            activeMapUrl = `https://www.google.com/maps?q=${activeLat},${activeLng}`;
+            setLiveLocation({
+              lat: activeLat,
+              lng: activeLng,
+              mapUrl: activeMapUrl,
+              accuracy: quickPos.coords.accuracy || null,
+              source: 'gps'
+            });
+          }
+        } catch (geoErr) {
+          console.warn('Quick GPS capture during checkout skipped/unavailable:', geoErr);
+        }
+      }
+
+      const addressTokens = [
         form.address.trim(),
         form.landmark.trim() ? `Landmark: ${form.landmark.trim()}` : '',
         form.city.trim(),
         form.state.trim(),
         `PIN: ${form.pinCode.trim()}`,
-        verifyResult?.lat ? `(GPS: ${Number(verifyResult.lat).toFixed(5)}, ${Number(verifyResult.lng).toFixed(5)})` : '',
-      ].filter(Boolean).join(', ');
+      ];
+
+      if (activeMapUrl) {
+        addressTokens.push(`📍 Live Location: ${activeMapUrl}`);
+      }
+
+      const fullAddress = addressTokens.filter(Boolean).join(', ');
 
       const orderData = {
         total_price: finalTotal,
         discount_amount: discountAmount,
         coupon_code: isCouponApplied ? couponCode : null,
         shipping_address: fullAddress,
+        live_location_url: activeMapUrl,
+        latitude: activeLat || null,
+        longitude: activeLng || null,
         phone: form.phone.replace(/\D/g, ''),
         payment_method: paymentMethod === 'cod' ? 'cod' : 'upi_phonepe',
         payment_status: 'pending',
@@ -473,7 +536,8 @@ export default function Checkout() {
         let waLink = createdOrder.whatsappLink;
         if (!waLink) {
           const itemsText = items.map(i => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${(i.product.price * i.quantity).toLocaleString()}`).join('\n');
-          const msg = `🔔 *New COD Order Placed on KalaStyle AI!*\n----------------------------------------\n📦 *Order ID:* #${createdOrder.id?.substring(0, 8)}\n👤 *Customer Name:* ${form.fullName}\n📞 *Phone:* +91 ${form.phone}\n📍 *Address:* ${fullAddress}\n\n🛒 *Items (${items.reduce((s,i)=>s+i.quantity,0)} items):*\n${itemsText}\n\n💰 *Payment Method:* COD (Cash on Delivery)\n💵 *Total Amount:* ₹${finalTotal.toLocaleString()}\n----------------------------------------\n✅ *Status:* CONFIRMED (COD)`;
+          const liveLocText = activeMapUrl ? `\n🗺️ *Customer Live Location:* ${activeMapUrl}` : '';
+          const msg = `🔔 *New COD Order Placed on KalaStyle AI!*\n----------------------------------------\n📦 *Order ID:* #${createdOrder.id?.substring(0, 8)}\n👤 *Customer Name:* ${form.fullName}\n📞 *Phone:* +91 ${form.phone}\n📍 *Address:* ${fullAddress}${liveLocText}\n\n🛒 *Items (${items.reduce((s,i)=>s+i.quantity,0)} items):*\n${itemsText}\n\n💰 *Payment Method:* COD (Cash on Delivery)\n💵 *Total Amount:* ₹${finalTotal.toLocaleString()}\n----------------------------------------\n✅ *Status:* CONFIRMED (COD)`;
           waLink = `https://wa.me/${defaultAdminPhone}?text=${encodeURIComponent(msg)}`;
         }
 
@@ -730,6 +794,32 @@ export default function Checkout() {
                         {gpsLoading ? 'Detecting...' : '📍 Use My Location'}
                       </button>
                     </div>
+
+                    {/* Live Location Active Pill */}
+                    {liveLocation?.mapUrl && (
+                      <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                          </span>
+                          <div className="truncate text-xs">
+                            <span className="text-emerald-400 font-bold mr-1.5">Live Delivery Pin Attached:</span>
+                            <span className="text-gray-300 font-mono">
+                              {liveLocation.lat ? `${Number(liveLocation.lat).toFixed(5)}°, ${Number(liveLocation.lng).toFixed(5)}°` : 'Coordinates ready'}
+                            </span>
+                          </div>
+                        </div>
+                        <a
+                          href={liveLocation.mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 shrink-0 bg-emerald-500/15 px-2.5 py-1 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/25 transition-all"
+                        >
+                          <HiExternalLink className="w-3.5 h-3.5" /> Preview Map
+                        </a>
+                      </div>
+                    )}
 
                     <div className="space-y-4">
                       <div>

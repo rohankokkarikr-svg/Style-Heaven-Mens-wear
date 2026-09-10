@@ -34,6 +34,7 @@ CREATE TABLE orders (
   status VARCHAR(50) DEFAULT 'pending', -- pending, shipped, delivered, cancelled
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS live_location_url TEXT;
 
 -- 4. Create Order Items Table
 CREATE TABLE order_items (

@@ -87,11 +87,16 @@ exports.createOrder = async (req, res) => {
     }
 
     // 1. Create the order
-    const { payment_method, payment_status } = req.body;
+    const { payment_method, payment_status, live_location_url } = req.body;
+    let finalShippingAddress = shipping_address || '';
+    if (live_location_url && !finalShippingAddress.includes(live_location_url)) {
+      finalShippingAddress = `${finalShippingAddress}\n📍 Live Location: ${live_location_url}`;
+    }
+
     let orderData = {
       user_id,
       total_price,
-      shipping_address,
+      shipping_address: finalShippingAddress,
       phone: String(phone || '').replace(/[^\d+]/g, '').substring(0, 20),
       discount_amount: discount_amount || 0,
       coupon_code: coupon_code ? coupon_code.trim().toUpperCase() : null,
@@ -113,7 +118,7 @@ exports.createOrder = async (req, res) => {
       const fallbackOrderData = {
         user_id,
         total_price,
-        shipping_address: `${shipping_address} [Method: ${payment_method || 'cod'}]`,
+        shipping_address: `${finalShippingAddress} [Method: ${payment_method || 'cod'}]`,
         phone,
         status: 'pending',
         discount_amount: discount_amount || 0,
@@ -131,7 +136,7 @@ exports.createOrder = async (req, res) => {
         const absoluteBaseData = {
           user_id,
           total_price,
-          shipping_address: `${shipping_address} [Method: ${payment_method || 'cod'}]`,
+          shipping_address: `${finalShippingAddress} [Method: ${payment_method || 'cod'}]`,
           phone,
           status: 'pending'
         };
@@ -151,8 +156,11 @@ exports.createOrder = async (req, res) => {
 
     if (orderError) throw orderError;
 
-    if (order && !order.payment_method) {
-      order.payment_method = payment_method || 'cod';
+    if (order) {
+      if (!order.payment_method) {
+        order.payment_method = payment_method || 'cod';
+      }
+      order.live_location_url = live_location_url || (order.shipping_address?.match(/https:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com)\/[^\s,]+/i)?.[0]) || null;
     }
 
     // 2. Create order items (safely sanitize size to max 20 chars to fit DB schema)

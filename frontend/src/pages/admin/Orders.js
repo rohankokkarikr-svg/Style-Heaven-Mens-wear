@@ -8,10 +8,13 @@ import {
   HiX,
   HiCheckCircle,
   HiClock,
-  HiTruck
+  HiTruck,
+  HiLocationMarker,
+  HiExternalLink
 } from 'react-icons/hi';
 import { adminAPI } from '../../services/api';
 import toast from 'react-hot-toast';
+import { extractOrderLocation } from '../../utils/locationHelper';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -156,7 +159,9 @@ export default function Orders() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-600/50">
-                {orders.map(o => (
+                {orders.map(o => {
+                  const loc = extractOrderLocation(o);
+                  return (
                   <tr key={o.id} className="hover:bg-dark-700/30 transition-colors">
                     <td className="py-3 px-4">
                       <span className="font-mono text-gold-400 font-bold">
@@ -169,6 +174,28 @@ export default function Orders() {
                     <td className="py-3 px-4">
                       <p className="font-semibold text-white truncate">{o.users?.name || 'Customer'}</p>
                       <p className="text-gray-400 text-[10px] truncate">{o.users?.email || o.phone}</p>
+                      {loc.hasLiveGps ? (
+                        <a
+                          href={loc.mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold hover:bg-emerald-500/25 transition-all"
+                          title="Open Customer Live GPS Location in Google Maps"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                          📍 Live GPS
+                        </a>
+                      ) : loc.mapsUrl ? (
+                        <a
+                          href={loc.mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-1 text-[10px] text-gray-400 hover:text-blue-400"
+                          title="Open Delivery Address in Google Maps"
+                        >
+                          🗺️ Maps
+                        </a>
+                      ) : null}
                     </td>
                     <td className="py-3 px-4 text-gray-300">
                       {o.order_items?.length > 0 ? (
@@ -200,7 +227,8 @@ export default function Orders() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -256,18 +284,58 @@ export default function Orders() {
             </div>
 
             {/* Customer & Shipping Info */}
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-lg bg-dark-750 border border-dark-600 space-y-1">
-                <p className="font-bold text-white">Customer Information</p>
-                <p className="text-gray-300">{selectedOrder.users?.name || 'Customer'}</p>
-                <p className="text-gray-400">{selectedOrder.users?.email}</p>
-                <p className="text-gray-400">Phone: {selectedOrder.phone}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-dark-750 border border-dark-600 space-y-1">
-                <p className="font-bold text-white">Shipping Address</p>
-                <p className="text-gray-300 leading-relaxed">{selectedOrder.shipping_address || 'Address on file'}</p>
-              </div>
-            </div>
+            {(() => {
+              const selectedLoc = extractOrderLocation(selectedOrder);
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div className="p-3 rounded-lg bg-dark-750 border border-dark-600 space-y-1">
+                    <p className="font-bold text-white flex items-center gap-1.5">
+                      👤 Customer Information
+                    </p>
+                    <p className="text-gray-200 font-semibold">{selectedOrder.users?.name || 'Customer'}</p>
+                    <p className="text-gray-400">{selectedOrder.users?.email}</p>
+                    <p className="text-gray-400">Phone: {selectedOrder.phone}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-750 border border-dark-600 space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <p className="font-bold text-white flex items-center gap-1">
+                          <HiLocationMarker className="w-3.5 h-3.5 text-gold-400" /> Shipping Address
+                        </p>
+                        {selectedLoc.hasLiveGps && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live GPS
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-300 leading-relaxed font-sans">{selectedLoc.cleanAddress}</p>
+                    </div>
+
+                    {selectedLoc.mapsUrl && (
+                      <div className="pt-2 border-t border-dark-600/70 flex items-center justify-between gap-2 mt-1">
+                        {selectedLoc.coordinatesText ? (
+                          <span className="text-[10px] text-emerald-300 font-mono">
+                            📍 {selectedLoc.coordinatesText}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-400">
+                            Postal Map Pin
+                          </span>
+                        )}
+                        <a
+                          href={selectedLoc.mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-400 text-dark-950 font-bold text-[11px] ml-auto transition-all shadow-sm"
+                        >
+                          <HiExternalLink className="w-3.5 h-3.5" /> Open in Google Maps
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Items in Order */}
             <div className="space-y-2 text-xs border-t border-dark-600 pt-3">

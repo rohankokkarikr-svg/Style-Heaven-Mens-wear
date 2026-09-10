@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orderAPI } from '../services/api';
-import { HiShoppingBag, HiPencilAlt } from 'react-icons/hi';
+import { HiShoppingBag, HiPencilAlt, HiLocationMarker } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import EditOrderModal from '../components/EditOrderModal';
+import { extractOrderLocation } from '../utils/locationHelper';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -230,6 +231,35 @@ export default function Orders() {
                 </div>
               )}
             </div>
+
+            {/* Delivery Address block */}
+            {(() => {
+              const loc = extractOrderLocation(order);
+              return (
+                <div className="mt-4 p-3 bg-dark-900/40 rounded-xl border border-dark-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                      <HiLocationMarker className="w-3.5 h-3.5 text-gold-400" /> Delivery Address
+                    </span>
+                    <p className="text-gray-300 leading-relaxed">{loc.cleanAddress}</p>
+                  </div>
+                  {loc.mapsUrl && (
+                    <a
+                      href={loc.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold shrink-0 transition-all ${
+                        loc.hasLiveGps
+                          ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : 'bg-dark-800 hover:bg-dark-700 text-gray-300 border-dark-600'
+                      }`}
+                    >
+                      {loc.hasLiveGps ? '📍 Live Delivery Pin' : '🗺️ View on Maps'} ↗
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="mt-6 pt-4 border-t border-dark-600 flex items-center justify-between flex-wrap gap-3">
               <span className="text-[11px] text-gray-400 italic font-medium flex items-center gap-1">

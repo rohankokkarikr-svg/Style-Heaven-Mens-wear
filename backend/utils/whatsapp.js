@@ -118,6 +118,12 @@ const getWhatsappDirectLink = (phoneStr, text) => {
 };
 
 // Formats the order confirmation message
+const extractLiveLocationLink = (order) => {
+  if (order?.live_location_url) return order.live_location_url;
+  const match = (order?.shipping_address || '').match(/https:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com)\/[^\s,]+/i);
+  return match ? match[0] : null;
+};
+
 const buildOrderWhatsappText = (order, customerName) => {
   const itemsText = (order.items || [])
     .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
@@ -128,13 +134,15 @@ const buildOrderWhatsappText = (order, customerName) => {
   const discount = order.discount_amount || 0;
   const shipping = (order.total_price || 0) - subtotal + discount;
   const isUpi = getEffectivePaymentMethod(order).includes('UPI');
+  const liveLocationUrl = extractLiveLocationLink(order);
+  const liveLocLine = liveLocationUrl ? `\n🗺️ *Customer Live Location Link:* ${liveLocationUrl}` : '';
 
   return `🔔 *New Order Placed on KalaStyle AI!*
 ----------------------------------------
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}
 📞 *Phone Number:* +91 ${order.phone}
-📍 *Shipping Address:* ${order.shipping_address}
+📍 *Shipping Address:* ${order.shipping_address}${liveLocLine}
 
 🛒 *Items Ordered (${itemsCount} items):*
 ${itemsText || 'No items listed'}
@@ -305,6 +313,8 @@ exports.sendArtisanOrderNotification = async (artisanPhone, artisanStoreName, or
     .join('\n');
 
   const totalArtisanAmount = (artisanItems || []).reduce((sum, item) => sum + ((item.price_at_time || item.price || 0) * (item.quantity || 1)), 0);
+  const liveLocationUrl = extractLiveLocationLink(order);
+  const liveLocLine = liveLocationUrl ? `\n🗺️ *Customer Live Location Link:* ${liveLocationUrl}` : '';
 
   const messageBody = `🎉 *New Customer Order for ${artisanStoreName || 'Your Craft Studio'}!*
 ========================================
@@ -317,7 +327,7 @@ exports.sendArtisanOrderNotification = async (artisanPhone, artisanStoreName, or
 • *Email:* ${customer?.email || 'N/A'}
 
 📍 *DELIVERY / SHIPPING ADDRESS:*
-${order.shipping_address || 'Address provided at checkout'}
+${order.shipping_address || 'Address provided at checkout'}${liveLocLine}
 
 🛒 *YOUR PRODUCTS ORDERED:*
 ${itemsText || 'Craft item'}

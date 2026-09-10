@@ -10,10 +10,13 @@ import {
   HiShoppingBag, 
   HiTruck,
   HiCheckCircle,
-  HiClock
+  HiClock,
+  HiExternalLink,
+  HiMap
 } from 'react-icons/hi';
 import { FaWhatsapp } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { extractOrderLocation } from '../../utils/locationHelper';
 
 export default function ArtisanOrders() {
   const [orders, setOrders] = useState([]);
@@ -185,12 +188,13 @@ export default function ArtisanOrders() {
             const customerName = customerObj.name || 'Customer';
             const customerPhone = orderObj.phone || customerObj.phone || '';
             const customerEmail = customerObj.email || '';
-            const shippingAddress = orderObj.shipping_address || 'Address provided at checkout';
+            const loc = extractOrderLocation(orderObj);
             const statusKey = orderObj.status || 'pending';
             const statusConfig = STATUS_CONFIG[statusKey] || STATUS_CONFIG.pending;
             const StatusIcon = statusConfig.icon;
 
-            const fullShippingText = `Recipient: ${customerName}\nPhone: ${customerPhone}\nAddress:\n${shippingAddress}\nProduct: ${item.products?.name || 'Craft'} (Qty: ${item.quantity || 1}, Size: ${item.size || 'Free Size'})`;
+            const locLabel = loc.hasLiveGps ? `\nLive GPS Pin: ${loc.mapsUrl}` : '';
+            const fullShippingText = `Recipient: ${customerName}\nPhone: ${customerPhone}\nAddress:\n${loc.cleanAddress}${locLabel}\nProduct: ${item.products?.name || 'Craft'} (Qty: ${item.quantity || 1}, Size: ${item.size || 'Free Size'})`;
 
             return (
               <div key={item.id || idx} className="card p-5 border border-dark-600/80 hover:border-gold-500/40 transition-all bg-dark-800/95 space-y-4">
@@ -279,9 +283,9 @@ export default function ArtisanOrders() {
                       )}
                     </div>
 
-                    {/* Quick WhatsApp contact */}
-                    {customerPhone && (
-                      <div className="mt-3 pt-2.5 border-t border-dark-700/60">
+                    {/* Quick WhatsApp & Map contact */}
+                    <div className="mt-3 pt-2.5 border-t border-dark-700/60 flex flex-wrap items-center gap-2">
+                      {customerPhone && (
                         <a
                           href={`https://wa.me/91${customerPhone.replace(/\D/g, '')}?text=Hello%20${encodeURIComponent(customerName)},%20this%20is%20regarding%20your%20order%20%23${encodeURIComponent(orderObj.id?.substring(0, 8))}%20for%20"${encodeURIComponent(item.products?.name || 'craft item')}".%20We%20are%20preparing%20it%20for%20dispatch!`}
                           target="_blank"
@@ -290,8 +294,22 @@ export default function ArtisanOrders() {
                         >
                           <FaWhatsapp className="w-3.5 h-3.5" /> Chat on WhatsApp
                         </a>
-                      </div>
-                    )}
+                      )}
+                      {loc.mapsUrl && (
+                        <a
+                          href={loc.mapsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-2 rounded border ${
+                            loc.hasLiveGps
+                              ? 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border-emerald-500/20'
+                              : 'text-blue-400 hover:text-blue-300 bg-blue-500/10 border-blue-500/20'
+                          }`}
+                        >
+                          <HiLocationMarker className="w-3.5 h-3.5" /> {loc.hasLiveGps ? 'Live GPS Pin' : 'Map Pin'}
+                        </a>
+                      )}
+                    </div>
                   </div>
 
                   {/* Right Column: Complete Delivery Address (4 cols) */}
@@ -311,14 +329,63 @@ export default function ArtisanOrders() {
                       </div>
 
                       <div className="text-xs text-gray-200 leading-relaxed font-sans bg-dark-950/60 p-2.5 rounded-lg border border-dark-800 select-all">
-                        {shippingAddress}
+                        {loc.cleanAddress}
                       </div>
+
+                      {/* Customer Live GPS Navigation Box */}
+                      {loc.hasLiveGps ? (
+                        <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              </span>
+                              Customer Live GPS Attached
+                            </span>
+                            <span className="text-[10px] text-emerald-300/80 font-mono">
+                              {loc.coordinatesText}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={loc.mapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-dark-950 font-bold text-xs transition-all shadow-sm"
+                            >
+                              <HiExternalLink className="w-4 h-4" /> Open in Google Maps
+                            </a>
+                            <button
+                              onClick={() => copyToClipboard(loc.mapsUrl, 'Live Location Link')}
+                              className="p-1.5 rounded-lg bg-dark-800 hover:bg-dark-700 text-gray-300 border border-dark-600 text-xs flex items-center justify-center"
+                              title="Copy Maps Link"
+                            >
+                              <HiClipboardCopy className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : loc.mapsUrl ? (
+                        <div className="mt-2.5 p-2 rounded-lg bg-dark-800/80 border border-dark-700 flex items-center justify-between">
+                          <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                            <HiMap className="w-3.5 h-3.5 text-blue-400" /> Address Navigation
+                          </span>
+                          <a
+                            href={loc.mapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
+                          >
+                            Open in Maps <HiExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      ) : null}
                     </div>
 
-                    <div className="mt-3 pt-2 flex items-center justify-between text-[11px] text-gray-400">
+                    <div className="mt-3 pt-2 flex items-center justify-between text-[11px] text-gray-400 border-t border-dark-700/60">
                       <span>Recipient: <strong className="text-white">{customerName}</strong></span>
                       <button
-                        onClick={() => copyToClipboard(shippingAddress, 'Address')}
+                        onClick={() => copyToClipboard(loc.cleanAddress, 'Address')}
                         className="text-gold-400 hover:underline flex items-center gap-0.5"
                       >
                         Copy Address Only

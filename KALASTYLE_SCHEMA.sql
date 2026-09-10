@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS orders (
   razorpay_payment_id VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS live_location_url TEXT;
 
 -- 5. Order Items Table
 CREATE TABLE IF NOT EXISTS order_items (
