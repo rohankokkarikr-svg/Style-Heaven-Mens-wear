@@ -1,5 +1,5 @@
 -- 1. Create Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE users (
 );
 
 -- 2. Create Products Table
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -23,7 +23,7 @@ CREATE TABLE products (
 );
 
 -- 3. Create Orders Table
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   total_price DECIMAL(10, 2) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE orders (
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS live_location_url TEXT;
 
 -- 4. Create Order Items Table
-CREATE TABLE order_items (
+CREATE TABLE IF NOT EXISTS order_items (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
@@ -47,7 +47,7 @@ CREATE TABLE order_items (
 );
 
 -- 5. Create Sales Table (for offline barcode scans)
-CREATE TABLE sales (
+CREATE TABLE IF NOT EXISTS sales (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
   quantity INTEGER NOT NULL DEFAULT 1,
