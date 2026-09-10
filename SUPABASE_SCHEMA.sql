@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS sales (
 -- etc.
 
 -- 6. Create Reviews Table
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   product_name VARCHAR(255) NOT NULL,
@@ -75,7 +75,7 @@ CREATE TABLE reviews (
 );
 
 -- 7. Create Coupons Table (for spin-wheel rewards and loyalty coupons)
-CREATE TABLE coupons (
+CREATE TABLE IF NOT EXISTS coupons (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   code VARCHAR(100) UNIQUE NOT NULL,
   discount_type VARCHAR(50) NOT NULL,  -- 'percentage', 'fixed', 'free_shipping'
@@ -87,7 +87,7 @@ CREATE TABLE coupons (
 );
 
 -- 8. Create User Spins Table (tracks daily spin-wheel usage per user)
-CREATE TABLE user_spins (
+CREATE TABLE IF NOT EXISTS user_spins (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
   last_spin_date TIMESTAMP WITH TIME ZONE NOT NULL,
