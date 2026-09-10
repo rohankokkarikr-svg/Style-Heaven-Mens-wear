@@ -54,6 +54,15 @@ const artisan = (req, res, next) => {
   }
 };
 
+const artisanOrAdmin = (req, res, next) => {
+  const role = (req.user?.role || '').trim().toLowerCase();
+  if (role === 'artisan' || role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Not authorized. Admin or Artisan access required.' });
+  }
+};
+
 const optionalProtect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer')) {
@@ -70,4 +79,4 @@ const optionalProtect = async (req, res, next) => {
   next();
 };
 
-module.exports = { protect, admin, artisan, optionalProtect };
+module.exports = { protect, admin, artisan, artisanOrAdmin, optionalProtect };

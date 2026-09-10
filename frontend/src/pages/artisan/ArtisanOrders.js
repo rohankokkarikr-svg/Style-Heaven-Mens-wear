@@ -23,6 +23,7 @@ export default function ArtisanOrders() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [updatingId, setUpdatingId] = useState(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -51,15 +52,45 @@ export default function ArtisanOrders() {
     fetchOrders();
   }, []);
 
-  // Real-time listener: instantly reflect when a customer places an order
+  // Real-time listener: instantly reflect when a customer places or updates an order
   useEffect(() => {
-    const handleSync = (e) => {
+    const handleSync = () => {
       fetchOrders();
-      toast.success('🔔 New customer order received! Details updated.');
     };
     window.addEventListener('kala:sync:orders_updated', handleSync);
     return () => window.removeEventListener('kala:sync:orders_updated', handleSync);
   }, []);
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    if (!orderId || !newStatus) return;
+    setUpdatingId(orderId);
+
+    // Optimistically update order status in state
+    setOrders(prev => prev.map(item => {
+      if (item.orders?.id === orderId) {
+        return {
+          ...item,
+          orders: {
+            ...item.orders,
+            status: newStatus
+          }
+        };
+      }
+      return item;
+    }));
+
+    try {
+      await artisanAPI.updateOrderStatus(orderId, { status: newStatus });
+      toast.success(`Order #${orderId.substring(0, 8).toUpperCase()} updated to "${newStatus}"! 🚀`);
+      window.dispatchEvent(new CustomEvent('kala:sync:orders_updated', { detail: { orderId, status: newStatus } }));
+    } catch (err) {
+      console.error('Failed to update order status:', err);
+      toast.error(err.response?.data?.error || 'Failed to update order status');
+      fetchOrders(); // Revert on failure
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const copyToClipboard = (text, label) => {
     if (!text) return;
@@ -391,6 +422,66 @@ export default function ArtisanOrders() {
                         Copy Address Only
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Artisan Order Fulfillment & Status Action Bar */}
+                <div className="pt-3.5 border-t border-dark-700 flex flex-wrap items-center justify-between gap-3 bg-dark-900/60 p-3.5 rounded-xl border border-dark-700/60">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                      <HiTruck className="w-4 h-4 text-gold-400" /> Order Fulfillment Status:
+                    </span>
+                    <span className="text-[11px] text-gray-400 hidden sm:inline">• Update tracking for customer & admin</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Status Dropdown */}
+                    <div className="relative">
+                      <select
+                        value={statusKey}
+                        disabled={updatingId === orderObj.id}
+                        onChange={(e) => handleStatusChange(orderObj.id, e.target.value)}
+                        className="bg-dark-800 border border-dark-600 hover:border-gold-500/50 text-xs text-white rounded-lg px-3 py-1.5 focus:border-gold-500 focus:outline-none font-medium cursor-pointer transition-all shadow-sm"
+                      >
+                        <option value="pending">🟡 Pending Packing</option>
+                        <option value="processing">📦 In Preparation</option>
+                        <option value="shipped">🚚 Out for Delivery</option>
+                        <option value="delivered">🟢 Delivered</option>
+                        <option value="cancelled">🔴 Cancelled</option>
+                      </select>
+                    </div>
+
+                    {/* Quick 1-Click Progressive Next-Step Buttons */}
+                    {statusKey === 'pending' && (
+                      <button
+                        onClick={() => handleStatusChange(orderObj.id, 'processing')}
+                        disabled={updatingId === orderObj.id}
+                        className="text-xs py-1.5 px-3 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30 font-semibold transition-all flex items-center gap-1 shadow-sm"
+                      >
+                        <HiShoppingBag className="w-3.5 h-3.5" /> Start Preparation →
+                      </button>
+                    )}
+                    {statusKey === 'processing' && (
+                      <button
+                        onClick={() => handleStatusChange(orderObj.id, 'shipped')}
+                        disabled={updatingId === orderObj.id}
+                        className="text-xs py-1.5 px-3 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/40 hover:bg-purple-500/30 font-semibold transition-all flex items-center gap-1 shadow-sm"
+                      >
+                        <HiTruck className="w-3.5 h-3.5" /> Mark Shipped →
+                      </button>
+                    )}
+                    {statusKey === 'shipped' && (
+                      <button
+                        onClick={() => handleStatusChange(orderObj.id, 'delivered')}
+                        disabled={updatingId === orderObj.id}
+                        className="text-xs py-1.5 px-3 rounded-lg bg-green-500/20 text-green-400 border border-green-500/40 hover:bg-green-500/30 font-bold transition-all flex items-center gap-1 shadow-sm"
+                      >
+                        <HiCheckCircle className="w-3.5 h-3.5" /> Mark as Delivered ✓
+                      </button>
+                    )}
+                    {updatingId === orderObj.id && (
+                      <span className="text-xs text-gold-400 animate-pulse font-medium">Updating...</span>
+                    )}
                   </div>
                 </div>
               </div>

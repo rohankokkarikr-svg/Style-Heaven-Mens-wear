@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, admin } = require('../middleware/auth');
+const { protect, admin, artisanOrAdmin } = require('../middleware/auth');
 const {
   createOrder,
   getMyOrders,
@@ -21,9 +21,9 @@ router.put('/:id/edit', protect, updateOrderDetails);
 router.put('/:id/cancel', protect, cancelOrder);
 router.put('/:id/pay', protect, payOrder);
 
-// Admin routes
+// Admin & Artisan routes
 router.get('/', protect, admin, getAllOrders);
-router.put('/:id/status', protect, admin, updateOrderStatus);
+router.put('/:id/status', protect, artisanOrAdmin, updateOrderStatus);
 router.put('/:id/verify-payment', protect, admin, verifyPayment);
 
 module.exports = router;

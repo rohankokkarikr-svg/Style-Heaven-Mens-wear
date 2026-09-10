@@ -40,6 +40,15 @@ export default function Orders() {
     fetchOrders();
   }, [statusFilter]);
 
+  // Real-time listener: auto-update when artisan or customer changes order status
+  useEffect(() => {
+    const handleSync = () => {
+      fetchOrders();
+    };
+    window.addEventListener('kala:sync:orders_updated', handleSync);
+    return () => window.removeEventListener('kala:sync:orders_updated', handleSync);
+  }, []);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchOrders();
@@ -209,7 +218,21 @@ export default function Orders() {
                       <p className="text-[10px] text-gray-400">{o.payment_method || 'Online'}</p>
                     </td>
                     <td className="py-3 px-4">
-                      {getStatusBadge(o.status)}
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={(o.status || 'pending').toLowerCase()}
+                          disabled={updating}
+                          onChange={(e) => handleStatusChange(o.id, e.target.value)}
+                          className="bg-dark-800 border border-dark-600 hover:border-gold-500/50 text-[11px] text-white rounded-lg px-2.5 py-1 focus:border-gold-500 focus:outline-none font-medium cursor-pointer transition-all"
+                        >
+                          <option value="pending">🟡 Pending</option>
+                          <option value="confirmed">🔵 Confirmed</option>
+                          <option value="processing">📦 Processing</option>
+                          <option value="shipped">🚚 Shipped</option>
+                          <option value="delivered">🟢 Delivered</option>
+                          <option value="cancelled">🔴 Cancelled</option>
+                        </select>
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`text-[11px] font-semibold ${

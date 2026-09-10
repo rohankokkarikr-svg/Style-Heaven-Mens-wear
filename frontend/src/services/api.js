@@ -153,14 +153,15 @@ export const settingsAPI = {
 
 // ─── Artisans ────────────────────────────────────
 export const artisanAPI = {
-  getAll:       ()       => cachedGet('/artisans', {}, 60000),
-  getById:      (id)     => cachedGet(`/artisans/${id}`, {}, 60000),
-  getMyProfile: ()       => api.get('/artisans/me'),
-  getMyStats:   ()       => api.get('/artisans/me/stats'),
-  getMyOrders:  ()       => api.get('/artisans/me/orders'),
-  updateProfile:(data)   => api.put('/artisans/me', data),
-  verify:       (id, d)  => api.patch(`/artisans/${id}/verify`, d),
-  getAllAdmin:   ()       => api.get('/artisans/admin/all'),
+  getAll:            ()       => cachedGet('/artisans', {}, 60000),
+  getById:           (id)     => cachedGet(`/artisans/${id}`, {}, 60000),
+  getMyProfile:      ()       => api.get('/artisans/me'),
+  getMyStats:        ()       => api.get('/artisans/me/stats'),
+  getMyOrders:       ()       => api.get('/artisans/me/orders'),
+  updateOrderStatus: (id, d)  => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/status`, d); },
+  updateProfile:     (data)   => api.put('/artisans/me', data),
+  verify:            (id, d)  => api.patch(`/artisans/${id}/verify`, d),
+  getAllAdmin:       ()       => api.get('/artisans/admin/all'),
 };
 
 

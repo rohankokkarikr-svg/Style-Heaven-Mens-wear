@@ -198,6 +198,8 @@ exports.createOrder = async (req, res) => {
       } catch (err) {
         console.error(`Failed to update stock for product ${item.product_id}:`, err);
       }
+    }
+
     // 2.5 Record in sales table for offline & online sales tracking
     for (const item of items) {
       try {
@@ -395,39 +397,49 @@ exports.getAllOrders = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, payment_status } = req.body;
     const { id } = req.params;
+
+    if (!status && !payment_status) {
+      return res.status(400).json({ error: 'Status or payment status is required' });
+    }
+
+    const updates = {
+      ...(status ? { status } : {}),
+      ...(payment_status ? { payment_status } : {}),
+    };
 
     const { data, error } = await supabase
       .from('orders')
-      .update({ status })
+      .update(updates)
       .eq('id', id)
-      .select()
+      .select(`
+        *,
+        users (id, name, email, phone),
+        order_items (
+          id, quantity, price_at_time, size,
+          products (id, name, image_url, category)
+        )
+      `)
       .single();
 
     if (error) throw error;
+
+    // Multi-device live broadcast sync across Admin, Artisan, and Shopper devices
+    try {
+      const { broadcastSync } = require('../utils/realtime');
+      broadcastSync('ORDERS_UPDATED', { id, status, payment_status, order: data });
+    } catch (bcErr) {
+      console.warn('Realtime broadcast notice:', bcErr.message);
+    }
 
     // Send WhatsApp cancellation notification if status changed to cancelled
     if (status === 'cancelled') {
       try {
         const settings = getSiteSettings();
         if (settings.orderNotifications) {
-          const { data: fullOrder } = await supabase
-            .from('orders')
-            .select(`
-              *,
-              user:users (id, name, email),
-              items:order_items (
-                quantity, price_at_time, size,
-                product:products (id, name, image_url, category)
-              )
-            `)
-            .eq('id', id)
-            .single();
-
-          const notifyOrder = fullOrder || data;
-          const customerName = notifyOrder?.user?.name || req.user?.name || 'Customer';
-          await sendOrderCancelWhatsappNotification(settings.whatsappNumber, notifyOrder, customerName);
+          const customerName = data?.users?.name || req.user?.name || 'Customer';
+          await sendOrderCancelWhatsappNotification(settings.whatsappNumber, data, customerName);
         }
       } catch (wsErr) {
         console.error('Failed to trigger WhatsApp cancellation notification:', wsErr.message);
@@ -436,6 +448,7 @@ exports.updateOrderStatus = async (req, res) => {
 
     res.json(data);
   } catch (error) {
+    console.error('updateOrderStatus error:', error);
     res.status(500).json({ error: 'Failed to update order status' });
   }
 };

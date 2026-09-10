@@ -4,6 +4,7 @@ const {
   getArtisans, getArtisanById, getMyProfile, updateMyProfile,
   getMyStats, getMyOrders, verifyArtisan, getAllArtisans
 } = require('../controllers/artisanController');
+const { updateOrderStatus } = require('../controllers/orderController');
 const { protect, admin, artisan } = require('../middleware/auth');
 
 // Public routes
@@ -12,6 +13,8 @@ router.get('/admin/all', protect, admin, getAllArtisans);
 router.get('/me', protect, artisan, getMyProfile);
 router.get('/me/stats', protect, artisan, getMyStats);
 router.get('/me/orders', protect, artisan, getMyOrders);
+router.put('/me/orders/:id/status', protect, artisan, updateOrderStatus);
+router.put('/orders/:id/status', protect, artisan, updateOrderStatus);
 router.put('/me', protect, artisan, updateMyProfile);
 
 router.patch('/:id/verify', protect, admin, verifyArtisan);
