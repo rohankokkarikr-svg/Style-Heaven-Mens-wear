@@ -198,6 +198,38 @@ exports.createOrder = async (req, res) => {
       } catch (err) {
         console.error(`Failed to update stock for product ${item.product_id}:`, err);
       }
+    // 2.5 Record in sales table for offline & online sales tracking
+    for (const item of items) {
+      try {
+        const qty = Number(item.quantity) || 1;
+        const price = Number(item.price_at_time) || 0;
+        const total = price * qty;
+        const today = new Date().toISOString().split('T')[0];
+
+        const saleRecord = {
+          product_id: String(item.product_id),
+          product_name: item.name || item.product_name || `Product #${item.product_id}`,
+          quantity: qty,
+          unit_price: price,
+          total_amount: total,
+          date: today,
+          order_id: String(order.id),
+          sale_type: 'online_order',
+          created_at: new Date().toISOString()
+        };
+
+        const { error: sErr } = await supabase.from('sales').insert([saleRecord]);
+        if (sErr) {
+          // Fallback if sales table uses base schema
+          await supabase.from('sales').insert([{
+            product_id: String(item.product_id),
+            quantity: qty,
+            date: today
+          }]);
+        }
+      } catch (errSale) {
+        console.warn('Notice recording order item in sales table:', errSale.message);
+      }
     }
     
     // 3. Mark coupon as used if provided

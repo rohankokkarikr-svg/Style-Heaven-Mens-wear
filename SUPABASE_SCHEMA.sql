@@ -46,14 +46,26 @@ CREATE TABLE IF NOT EXISTS order_items (
   size VARCHAR(20)
 );
 
--- 5. Create Sales Table (for offline barcode scans)
+-- 5. Create Sales Table (for offline barcode scans & order sales tracking)
 CREATE TABLE IF NOT EXISTS sales (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  product_id VARCHAR(255),
+  product_name VARCHAR(255),
   quantity INTEGER NOT NULL DEFAULT 1,
+  unit_price DECIMAL(10, 2) DEFAULT 0,
+  total_amount DECIMAL(10, 2) DEFAULT 0,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
+  order_id VARCHAR(255),
+  artisan_id VARCHAR(255),
+  sale_type VARCHAR(50) DEFAULT 'offline_scan', -- 'offline_scan', 'online_order', 'pos'
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS product_name VARCHAR(255);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS total_amount DECIMAL(10, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS order_id VARCHAR(255);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS artisan_id VARCHAR(255);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS sale_type VARCHAR(50) DEFAULT 'offline_scan';
 
 -- Note: We are bypassing RLS in the backend by using the Service Role Key.
 -- If you choose to enable RLS, you must write appropriate policies.
@@ -102,5 +114,38 @@ ALTER TABLE products
 -- 10. Add years_of_experience to artisan_profiles
 ALTER TABLE IF EXISTS artisan_profiles
   ADD COLUMN IF NOT EXISTS years_of_experience INTEGER DEFAULT 20;
+
+-- 11. Create Reports Table (Customer complaints & platform safety)
+CREATE TABLE IF NOT EXISTS reports (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  report_type VARCHAR(50) NOT NULL DEFAULT 'product', -- 'product', 'artisan', 'customer', 'review', 'safety'
+  target_id VARCHAR(255) NOT NULL,
+  reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  reason VARCHAR(255) NOT NULL,
+  description TEXT,
+  status VARCHAR(50) DEFAULT 'open', -- 'open', 'under_review', 'resolved', 'rejected'
+  admin_notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS reporter_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE reports ALTER COLUMN target_id TYPE VARCHAR(255);
+
+-- 12. Create AI Usage Logs Table (Tracks all Gemini AI inferences & audit logs)
+CREATE TABLE IF NOT EXISTS ai_usage_logs (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  feature VARCHAR(100) NOT NULL, -- 'catalog', 'image_analysis', 'price_suggestion', 'translation', 'story', 'smart_search'
+  model VARCHAR(100) DEFAULT 'gemini-2.0-flash',
+  status VARCHAR(50) DEFAULT 'success', -- 'success', 'failed'
+  prompt_length INTEGER DEFAULT 0,
+  response_length INTEGER DEFAULT 0,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS metadata JSONB;
+
 
 

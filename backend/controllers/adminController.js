@@ -698,24 +698,50 @@ exports.getAIContent = async (req, res) => {
 
 exports.getAIUsageStats = async (req, res) => {
   try {
+    const { data: logs } = await safeQuery(() =>
+      supabase.from('ai_usage_logs').select('*').order('created_at', { ascending: false })
+    );
+
     const { data: products } = await safeQuery(() =>
       supabase.from('products').select('ai_generated, created_at')
     );
 
-    const totalAIGenerated = (products || []).filter(p => p.ai_generated).length;
+    const catalogProductsCount = (products || []).filter(p => p.ai_generated).length;
+    const logList = logs || [];
+
+    const totalRequests = logList.length || catalogProductsCount;
+    const successfulRequests = logList.filter(l => l.status === 'success').length || catalogProductsCount;
+    const failedRequests = logList.filter(l => l.status === 'failed').length;
+    const catalogsGenerated = Math.max(logList.filter(l => l.feature === 'catalog').length, catalogProductsCount);
+    const priceSuggestions = logList.filter(l => l.feature === 'price_suggestion').length;
+    const translationsDone = logList.filter(l => l.feature === 'translation').length;
 
     res.json({
-      totalRequests: totalAIGenerated * 3 + 42,
-      successfulRequests: totalAIGenerated * 3 + 40,
-      failedRequests: 2,
-      catalogsGenerated: totalAIGenerated,
-      priceSuggestions: totalAIGenerated * 2 + 18,
-      translationsDone: totalAIGenerated * 3 + 12,
-      modelUsed: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+      totalRequests,
+      successfulRequests,
+      failedRequests,
+      catalogsGenerated,
+      priceSuggestions,
+      translationsDone,
+      modelUsed: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+      recentLogs: logList.slice(0, 25)
     });
   } catch (err) {
     console.error('getAIUsageStats error:', err);
     res.status(500).json({ error: 'Failed to fetch AI stats' });
+  }
+};
+
+exports.getAIUsageLogs = async (req, res) => {
+  try {
+    const { data, error } = await safeQuery(() =>
+      supabase.from('ai_usage_logs').select('*').order('created_at', { ascending: false }).limit(100)
+    );
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('getAIUsageLogs error:', err);
+    res.status(500).json({ error: 'Failed to fetch AI usage logs' });
   }
 };
 
@@ -783,13 +809,79 @@ exports.deleteReview = async (req, res) => {
 exports.getReports = async (req, res) => {
   try {
     const { data, error } = await safeQuery(() =>
-      supabase.from('reports').select('*, users(name, email)').order('created_at', { ascending: false })
+      supabase.from('reports').select('*').order('created_at', { ascending: false })
     );
 
-    if (data && data.length > 0) return res.json(data);
+    if (data && data.length > 0) {
+      // Enrich with reporter details if reporter_id or user_id exists
+      const enriched = await Promise.all(data.map(async (r) => {
+        const uid = r.reporter_id || r.user_id;
+        if (uid) {
+          try {
+            const { data: u } = await supabase.from('users').select('name, email').eq('id', uid).maybeSingle();
+            if (u) return { ...r, users: u, customer_name: u.name, customer_email: u.email };
+          } catch (e) {}
+        }
+        return r;
+      }));
+      return res.json(enriched);
+    }
     res.json(inMemoryReports);
   } catch (err) {
+    console.warn('getReports fallback notice:', err.message);
     res.json(inMemoryReports);
+  }
+};
+
+exports.createReport = async (req, res) => {
+  try {
+    const { report_type, target_id, reason, description } = req.body;
+    if (!target_id || !reason) {
+      return res.status(400).json({ error: 'target_id and reason are required' });
+    }
+
+    const reporter_id = req.user?.id || null;
+    const newReport = {
+      report_type: report_type || 'product',
+      target_id: String(target_id),
+      reporter_id,
+      user_id: reporter_id,
+      reason,
+      description: description || '',
+      status: 'open',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    let { data, error } = await supabase
+      .from('reports')
+      .insert([newReport])
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.warn('createReport initial insert error, retrying without user_id:', error.message);
+      delete newReport.user_id;
+      const res2 = await supabase
+        .from('reports')
+        .insert([newReport])
+        .select()
+        .maybeSingle();
+      data = res2.data;
+    }
+
+    if (!data) {
+      const fallbackReport = { id: String(Date.now()), ...newReport };
+      inMemoryReports.unshift(fallbackReport);
+      data = fallbackReport;
+    }
+
+    await logActivity(req, `Filed New Report against ${target_id}`, 'Report', data.id || 'new');
+    broadcastSync('REPORTS_UPDATED', { report: data });
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('createReport error:', err);
+    res.status(500).json({ error: 'Failed to create report' });
   }
 };
 
@@ -807,6 +899,7 @@ exports.updateReportStatus = async (req, res) => {
         .single();
       if (error) throw error;
       await logActivity(req, `Updated Report #${id} to ${status}`, 'Report', id);
+      broadcastSync('REPORTS_UPDATED', { id, status, admin_notes });
       return res.json(data);
     } catch {
       const report = inMemoryReports.find(r => r.id === id);
@@ -815,6 +908,7 @@ exports.updateReportStatus = async (req, res) => {
         report.admin_notes = admin_notes;
       }
       await logActivity(req, `Updated Report #${id} to ${status}`, 'Report', id);
+      broadcastSync('REPORTS_UPDATED', { id, status, admin_notes });
       return res.json(report || { id, status, admin_notes });
     }
   } catch (err) {

@@ -45,8 +45,9 @@ ON CONFLICT (name) DO NOTHING;
 CREATE TABLE IF NOT EXISTS reports (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   report_type VARCHAR(50) NOT NULL, -- 'product', 'artisan', 'customer', 'review'
-  target_id UUID NOT NULL,
+  target_id VARCHAR(255) NOT NULL,
   reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   reason VARCHAR(255) NOT NULL,
   description TEXT,
   status VARCHAR(50) DEFAULT 'open', -- 'open', 'under_review', 'resolved', 'rejected'
@@ -54,6 +55,9 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS reporter_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE reports ALTER COLUMN target_id TYPE VARCHAR(255);
 
 -- 5. Notifications Table
 CREATE TABLE IF NOT EXISTS notifications (

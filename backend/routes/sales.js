@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { protect, admin } = require('../middleware/auth');
-const { recordScanSale } = require('../controllers/salesController');
+const { recordScanSale, getDailySales, getSalesSummary } = require('../controllers/salesController');
 
-// All sales routes are admin only
-router.post('/scan', protect, admin, recordScanSale);
+// Sales routes
+router.post('/scan', protect, recordScanSale);
+router.get('/daily', protect, getDailySales);
+router.get('/summary', protect, getSalesSummary);
 
 module.exports = router;

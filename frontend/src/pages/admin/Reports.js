@@ -15,6 +15,14 @@ export default function Reports() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [newReport, setNewReport] = useState({
+    report_type: 'product',
+    target_id: '',
+    reason: '',
+    description: ''
+  });
 
   const fetchReports = async () => {
     setLoading(true);
@@ -30,7 +38,33 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReports();
+
+    const handleSync = () => {
+      fetchReports();
+    };
+    window.addEventListener('kala:sync:reports_updated', handleSync);
+    return () => window.removeEventListener('kala:sync:reports_updated', handleSync);
   }, []);
+
+  const handleCreateReport = async (e) => {
+    e.preventDefault();
+    if (!newReport.target_id || !newReport.reason) {
+      toast.error('Please specify target identifier and reason');
+      return;
+    }
+    setSubmittingReport(true);
+    try {
+      const { data } = await adminAPI.createReport(newReport);
+      toast.success('Report ticket filed and saved in database! 🚨');
+      setReports(prev => [data, ...prev]);
+      setShowNewModal(false);
+      setNewReport({ report_type: 'product', target_id: '', reason: '', description: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to file report');
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
 
   const handleUpdateStatus = async (id, nextStatus) => {
     setUpdating(true);
@@ -75,13 +109,22 @@ export default function Reports() {
             Investigate customer feedback, counterfeit complaints, or artisan dispute tickets.
           </p>
         </div>
-        <button
-          onClick={fetchReports}
-          className="btn-secondary self-start sm:self-auto flex items-center gap-2 text-xs py-2"
-        >
-          <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Tickets
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 shadow-lg shadow-gold-500/20"
+          >
+            <span>🚨</span>
+            <span>File New Report</span>
+          </button>
+          <button
+            onClick={fetchReports}
+            className="btn-secondary flex items-center gap-2 text-xs py-2"
+          >
+            <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Tickets
+          </button>
+        </div>
       </div>
 
       {/* Reports Table */}
@@ -197,6 +240,91 @@ export default function Reports() {
                 Dismiss
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: File New Report */}
+      {showNewModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card max-w-md w-full p-6 space-y-4 border border-gold-500/40 shadow-2xl">
+            <div className="flex justify-between items-center pb-2 border-b border-dark-600">
+              <h3 className="font-bold text-white text-base flex items-center gap-2">
+                <span>🚨</span>
+                <span>File Platform Safety Report</span>
+              </h3>
+              <button onClick={() => setShowNewModal(false)} className="text-gray-400 hover:text-white">
+                <HiX className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateReport} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-gray-400 font-semibold mb-1 uppercase tracking-wider">Report Category</label>
+                <select
+                  className="input-field"
+                  value={newReport.report_type}
+                  onChange={e => setNewReport(prev => ({ ...prev, report_type: e.target.value }))}
+                >
+                  <option value="product">Product (Counterfeit, Damaged, Misleading)</option>
+                  <option value="artisan">Artisan (Store Issue, Disputed Claim)</option>
+                  <option value="customer">Customer / Buyer (Payment Fraud)</option>
+                  <option value="order">Order (Delivery Failure)</option>
+                  <option value="safety">Platform Safety / Compliance</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-400 font-semibold mb-1 uppercase tracking-wider">Target ID / Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Product ID, Order ID, or Store Name"
+                  className="input-field"
+                  value={newReport.target_id}
+                  onChange={e => setNewReport(prev => ({ ...prev, target_id: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 font-semibold mb-1 uppercase tracking-wider">Reason *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Counterfeit silk claim, damaged pottery, wrong dimension"
+                  className="input-field"
+                  value={newReport.reason}
+                  onChange={e => setNewReport(prev => ({ ...prev, reason: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 font-semibold mb-1 uppercase tracking-wider">Description & Investigation Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Provide comprehensive details about the issue..."
+                  className="input-field resize-none leading-relaxed"
+                  value={newReport.description}
+                  onChange={e => setNewReport(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-dark-600">
+                <button
+                  type="button"
+                  onClick={() => setShowNewModal(false)}
+                  className="btn-secondary text-xs flex-1 py-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReport}
+                  className="btn-primary text-xs flex-1 py-2 font-bold shadow-lg shadow-gold-500/20"
+                >
+                  {submittingReport ? 'Submitting to DB...' : '💾 Submit Ticket'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

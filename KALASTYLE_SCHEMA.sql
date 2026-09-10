@@ -142,3 +142,57 @@ CREATE INDEX IF NOT EXISTS idx_products_artisan_id ON products(artisan_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_artisan_profiles_user_id ON artisan_profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_artisan_profiles_verification ON artisan_profiles(verification_status);
+
+-- 10. Sales Table
+CREATE TABLE IF NOT EXISTS sales (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  product_id VARCHAR(255),
+  product_name VARCHAR(255),
+  quantity INTEGER NOT NULL DEFAULT 1,
+  unit_price DECIMAL(10, 2) DEFAULT 0,
+  total_amount DECIMAL(10, 2) DEFAULT 0,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  order_id VARCHAR(255),
+  artisan_id VARCHAR(255),
+  sale_type VARCHAR(50) DEFAULT 'offline_scan',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS product_name VARCHAR(255);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS total_amount DECIMAL(10, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS order_id VARCHAR(255);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS artisan_id VARCHAR(255);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS sale_type VARCHAR(50) DEFAULT 'offline_scan';
+
+-- 11. Reports & Complaints Table
+CREATE TABLE IF NOT EXISTS reports (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  report_type VARCHAR(50) NOT NULL DEFAULT 'product',
+  target_id VARCHAR(255) NOT NULL,
+  reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  reason VARCHAR(255) NOT NULL,
+  description TEXT,
+  status VARCHAR(50) DEFAULT 'open',
+  admin_notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS reporter_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE reports ALTER COLUMN target_id TYPE VARCHAR(255);
+
+-- 12. AI Usage Logs Table
+CREATE TABLE IF NOT EXISTS ai_usage_logs (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  feature VARCHAR(100) NOT NULL,
+  model VARCHAR(100) DEFAULT 'gemini-2.0-flash',
+  status VARCHAR(50) DEFAULT 'success',
+  prompt_length INTEGER DEFAULT 0,
+  response_length INTEGER DEFAULT 0,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS metadata JSONB;
+

@@ -16,14 +16,16 @@ import toast from 'react-hot-toast';
 export default function AIManagement() {
   const [aiProducts, setAiProducts] = useState([]);
   const [stats, setStats] = useState(null);
+  const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAIData = async () => {
     setLoading(true);
     try {
-      const [contentRes, statsRes] = await Promise.allSettled([
+      const [contentRes, statsRes, logsRes] = await Promise.allSettled([
         adminAPI.getAIContent(),
-        adminAPI.getAIStats()
+        adminAPI.getAIStats(),
+        adminAPI.getAILogs()
       ]);
       
       let hasData = false;
@@ -39,6 +41,10 @@ export default function AIManagement() {
         hasData = true;
       } else {
         console.warn('AI stats fetch rejected:', statsRes.reason);
+      }
+
+      if (logsRes.status === 'fulfilled') {
+        setLogs(logsRes.value.data || []);
       }
 
       if (!hasData && contentRes.status === 'rejected') {
@@ -209,6 +215,67 @@ export default function AIManagement() {
             <p>No AI catalog listings requiring review at this time.</p>
           </div>
         )}
+      </div>
+
+      {/* Database Audit: Real-Time AI Inference Logs Table */}
+      <div className="space-y-4 pt-4 border-t border-dark-700">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <span>Database Audit: Live AI Inference Logs (`ai_usage_logs`)</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">
+              {logs.length} logged
+            </span>
+          </h2>
+        </div>
+
+        <div className="card overflow-hidden">
+          {logs.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-dark-800/80 text-gray-400 border-b border-dark-600 uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Feature</th>
+                    <th className="py-3 px-4">Model</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Prompt Chars</th>
+                    <th className="py-3 px-4">Response Chars</th>
+                    <th className="py-3 px-4">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-600/50">
+                  {logs.slice(0, 20).map((l, i) => (
+                    <tr key={l.id || i} className="hover:bg-dark-700/30 transition-colors">
+                      <td className="py-2.5 px-4 font-semibold text-gold-400 capitalize">
+                        {l.feature?.replace('_', ' ')}
+                      </td>
+                      <td className="py-2.5 px-4 text-gray-300 font-mono text-[11px]">
+                        {l.model}
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${l.status === 'success' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                          {l.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 text-gray-400">
+                        {l.prompt_length || 0}
+                      </td>
+                      <td className="py-2.5 px-4 text-gray-400">
+                        {l.response_length || 0}
+                      </td>
+                      <td className="py-2.5 px-4 text-gray-400">
+                        {new Date(l.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center text-gray-500 text-xs">
+              No AI inference logs stored in database yet. Generate a story or analyze a product to record your first log!
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

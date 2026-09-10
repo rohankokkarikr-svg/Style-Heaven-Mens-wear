@@ -18,8 +18,31 @@
  */
 
 const gemini = require('../services/geminiService');
+const supabase = require('../config/supabase');
+const { safeQuery } = require('../config/supabase');
 
 const { SEVEN_CATEGORIES } = gemini;
+
+/**
+ * Persists an inference event into the database `ai_usage_logs` table
+ */
+async function logAIUsage({ userId, feature, model, status = 'success', promptLength = 0, responseLength = 0, metadata = {} }) {
+  try {
+    const entry = {
+      user_id: userId || null,
+      feature: feature || 'general',
+      model: model || process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+      status: status || 'success',
+      prompt_length: Number(promptLength) || 0,
+      response_length: Number(responseLength) || 0,
+      metadata: typeof metadata === 'object' ? metadata : {},
+      created_at: new Date().toISOString()
+    };
+    await safeQuery(() => supabase.from('ai_usage_logs').insert([entry]));
+  } catch (err) {
+    console.warn('[logAIUsage] DB insert notice:', err.message);
+  }
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // SMART FALLBACKS — Used when AI call fails or key is not configured
@@ -143,6 +166,16 @@ Rules:
 
     const catalog = validateCatalogFields({ ...result.data, isAI: result.isAI });
 
+    logAIUsage({
+      userId: req.user?.id,
+      feature: 'image_analysis',
+      model: gemini.getModelName(),
+      status: 'success',
+      promptLength: (description || '').length + (image_url ? 100 : 0),
+      responseLength: JSON.stringify(catalog).length,
+      metadata: { category: catalog.category, isAI: catalog.isAIGenerated }
+    });
+
     // Legacy field mapping for existing AIProductStudio compatibility
     return res.json({
       ...catalog,
@@ -179,10 +212,29 @@ Return ONLY the description text — no markdown, no labels, no explanation.`;
 
     try {
       const text = await gemini.generateText(prompt);
+      logAIUsage({
+        userId: req.user?.id,
+        feature: 'description',
+        model: gemini.getModelName(),
+        status: 'success',
+        promptLength: (simple_text || '').length,
+        responseLength: (text || '').length,
+        metadata: { language }
+      });
       return res.json({ professional_description: text });
     } catch {
+      const fallbackDesc = `A beautifully handcrafted piece made with love and skill by Indian artisans. ${simple_text}. Each item is unique, reflecting the rich tradition of Indian craftsmanship. This product supports local artisan communities and makes an excellent gift.`;
+      logAIUsage({
+        userId: req.user?.id,
+        feature: 'description',
+        model: gemini.getModelName(),
+        status: 'success',
+        promptLength: (simple_text || '').length,
+        responseLength: fallbackDesc.length,
+        metadata: { fallback: true, language }
+      });
       return res.json({
-        professional_description: `A beautifully handcrafted piece made with love and skill by Indian artisans. ${simple_text}. Each item is unique, reflecting the rich tradition of Indian craftsmanship. This product supports local artisan communities and makes an excellent gift.`,
+        professional_description: fallbackDesc,
       });
     }
   } catch (err) {
@@ -238,6 +290,17 @@ Rules: category must exactly match one of the 7 options. Do not invent historica
       : await gemini.generateStructuredJSON(prompt, fallback);
 
     const catalog = validateCatalogFields({ ...result.data, isAI: result.isAI });
+
+    logAIUsage({
+      userId: req.user?.id,
+      feature: 'catalog',
+      model: gemini.getModelName(),
+      status: 'success',
+      promptLength: (description || '').length + (image_url ? 100 : 0),
+      responseLength: JSON.stringify(catalog).length,
+      metadata: { category: catalog.category, isAI: result.isAI }
+    });
+
     return res.json({ catalog, isAIGenerated: result.isAI });
   } catch (err) {
     console.error('[generateFullCatalog] Error:', err.message);
@@ -305,6 +368,16 @@ Return ONLY valid JSON:
       result.data.confidence = 'low';
     }
 
+    logAIUsage({
+      userId: req.user?.id,
+      feature: 'category_detection',
+      model: gemini.getModelName(),
+      status: 'success',
+      promptLength: (description || '').length,
+      responseLength: 60,
+      metadata: { category: result.data?.category, confidence: result.data?.confidence }
+    });
+
     return res.json({ ...result.data, isAIGenerated: result.isAI });
   } catch (err) {
     console.error('[detectCategory] Error:', err.message);
@@ -350,6 +423,17 @@ Return ONLY valid JSON.`;
     };
 
     const result = await gemini.generateStructuredJSON(prompt, fallbackTranslations);
+
+    logAIUsage({
+      userId: req.user?.id,
+      feature: 'translation',
+      model: gemini.getModelName(),
+      status: 'success',
+      promptLength: (description || '').length,
+      responseLength: JSON.stringify(result.data).length,
+      metadata: { languages: targetLanguages }
+    });
+
     return res.json({ translations: result.data, isAIGenerated: result.isAI });
   } catch (err) {
     console.error('[translateProduct] Error:', err.message);
@@ -425,6 +509,16 @@ Important: Base the range on the actual cost of ₹${baseCost}. Do not invent ma
       }
     }
 
+    logAIUsage({
+      userId: req.user?.id,
+      feature: 'price_suggestion',
+      model: gemini.getModelName(),
+      status: 'success',
+      promptLength: 100,
+      responseLength: 100,
+      metadata: { suggestedPrice, category }
+    });
+
     return res.json({
       breakdown,
       aiRange: aiRange || { minimum: Math.round(suggestedPrice * 0.9), maximum: Math.round(suggestedPrice * 1.3) },
@@ -473,9 +567,27 @@ Only include information explicitly provided above.`;
 
     try {
       const story = await gemini.generateText(prompt);
+      logAIUsage({
+        userId: req.user?.id,
+        feature: 'story',
+        model: gemini.getModelName(),
+        status: 'success',
+        promptLength: (craft || '').length + (name || '').length,
+        responseLength: (story || '').length,
+        metadata: { artisan: name, craft }
+      });
       return res.json({ story, isAIGenerated: true });
     } catch {
       const fallback = `${name} is a skilled artisan from ${location || 'India'} specializing in ${craft}. With ${yearsExperience ? yearsExperience + ' years' : 'years'} of experience, they create authentic handcrafted products that reflect India's rich cultural heritage. ${familyHistory ? familyHistory + '.' : ''} Each piece is made with dedication to preserving traditional craftsmanship while creating meaningful products for modern customers.`;
+      logAIUsage({
+        userId: req.user?.id,
+        feature: 'story',
+        model: gemini.getModelName(),
+        status: 'success',
+        promptLength: (craft || '').length + (name || '').length,
+        responseLength: fallback.length,
+        metadata: { artisan: name, craft, fallback: true }
+      });
       return res.json({ story: fallback, isAIGenerated: false });
     }
   } catch (err) {
@@ -543,6 +655,15 @@ Return ONLY a valid JSON array. Do not invent numbers or external market data.`;
 
     const insights = Array.isArray(result.data) ? result.data : [String(result.data)];
 
+    logAIUsage({
+      userId: req.user?.id,
+      feature: 'insights',
+      model: gemini.getModelName(),
+      status: 'success',
+      promptLength: 100,
+      responseLength: 200
+    });
+
     return res.json({ insights, isAIGenerated: result.isAI });
   } catch (err) {
     console.error('[getAIInsights] Error:', err.message);
@@ -588,6 +709,17 @@ Rules:
     };
 
     const result = await gemini.generateStructuredJSON(prompt, fallback);
+
+    logAIUsage({
+      userId: req.user?.id,
+      feature: 'smart_search',
+      model: gemini.getModelName(),
+      status: 'success',
+      promptLength: (query || '').length,
+      responseLength: JSON.stringify(result.data).length,
+      metadata: { query }
+    });
+
     return res.json({ expansion: result.data, isAIGenerated: result.isAI });
   } catch (err) {
     console.error('[smartSearch] Error:', err.message);

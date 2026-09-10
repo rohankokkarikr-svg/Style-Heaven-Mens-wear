@@ -42,6 +42,7 @@ router.get('/payments', adminController.getPayments);
 // 8. AI Management
 router.get('/ai/content', adminController.getAIContent);
 router.get('/ai/stats', adminController.getAIUsageStats);
+router.get('/ai/logs', adminController.getAIUsageLogs);
 
 // 9. Reviews
 router.get('/reviews', adminController.getReviews);
@@ -50,6 +51,7 @@ router.delete('/reviews/:id', adminController.deleteReview);
 
 // 10. Reports
 router.get('/reports', adminController.getReports);
+router.post('/reports', adminController.createReport);
 router.put('/reports/:id/status', adminController.updateReportStatus);
 
 // 11. Analytics
