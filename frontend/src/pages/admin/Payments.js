@@ -422,40 +422,51 @@ export default function Payments() {
                       {/* Status & Live Real-Time Management */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Live Status Selector */}
-                          <div className="relative">
-                            <select
-                              value={p.status === 'paid' ? 'successful' : p.status}
-                              disabled={isUpdating}
-                              onChange={(e) => handleUpdateStatus(p.orderId, e.target.value)}
-                              className={`text-xs rounded-lg px-2.5 py-1 font-semibold border transition-all cursor-pointer bg-dark-800 ${
-                                (p.status === 'successful' || p.status === 'paid')
-                                  ? 'border-emerald-500/50 text-emerald-400 hover:border-emerald-400'
-                                  : p.status === 'failed'
-                                  ? 'border-red-500/50 text-red-400 hover:border-red-400'
-                                  : p.status === 'refunded'
-                                  ? 'border-blue-500/50 text-blue-400 hover:border-blue-400'
-                                  : 'border-yellow-500/50 text-yellow-400 hover:border-yellow-400'
-                              } focus:outline-none`}
-                            >
-                              <option value="pending" className="bg-dark-800 text-yellow-400">🟡 Pending</option>
-                              <option value="successful" className="bg-dark-800 text-emerald-400">🟢 Successful / Paid</option>
-                              <option value="failed" className="bg-dark-800 text-red-400">🔴 Failed</option>
-                              <option value="refunded" className="bg-dark-800 text-blue-400">🔵 Refunded</option>
-                            </select>
-                          </div>
+                          {p.rawPaymentStatus === 'pending_verification' || p.orderStatus === 'payment_verification_pending' ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-sm" title="Only the related artisan can confirm this UTR">
+                                <HiClock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                                <span>Awaiting Artisan UTR Confirmation</span>
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Live Status Selector */}
+                              <div className="relative">
+                                <select
+                                  value={p.status === 'paid' ? 'successful' : p.status}
+                                  disabled={isUpdating}
+                                  onChange={(e) => handleUpdateStatus(p.orderId, e.target.value)}
+                                  className={`text-xs rounded-lg px-2.5 py-1 font-semibold border transition-all cursor-pointer bg-dark-800 ${
+                                    (p.status === 'successful' || p.status === 'paid')
+                                      ? 'border-emerald-500/50 text-emerald-400 hover:border-emerald-400'
+                                      : p.status === 'failed'
+                                      ? 'border-red-500/50 text-red-400 hover:border-red-400'
+                                      : p.status === 'refunded'
+                                      ? 'border-blue-500/50 text-blue-400 hover:border-blue-400'
+                                      : 'border-yellow-500/50 text-yellow-400 hover:border-yellow-400'
+                                  } focus:outline-none`}
+                                >
+                                  <option value="pending" className="bg-dark-800 text-yellow-400">🟡 Pending</option>
+                                  <option value="successful" className="bg-dark-800 text-emerald-400">🟢 Successful / Paid</option>
+                                  <option value="failed" className="bg-dark-800 text-red-400">🔴 Failed</option>
+                                  <option value="refunded" className="bg-dark-800 text-blue-400">🔵 Refunded</option>
+                                </select>
+                              </div>
 
-                          {/* 1-Click Quick Action: Mark Paid if pending */}
-                          {isPending && (
-                            <button
-                              onClick={() => handleUpdateStatus(p.orderId, 'paid')}
-                              disabled={isUpdating}
-                              className="px-2 py-1 text-[10px] font-semibold rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/40 transition-all flex items-center gap-1 shadow-sm"
-                              title="1-Click Mark as Paid / Verified"
-                            >
-                              <HiCheck className="w-3 h-3" />
-                              <span>{isUpdating ? 'Saving...' : 'Mark Paid'}</span>
-                            </button>
+                              {/* 1-Click Quick Action: Mark Paid if pending */}
+                              {isPending && (
+                                <button
+                                  onClick={() => handleUpdateStatus(p.orderId, 'paid')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 text-[10px] font-semibold rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/40 transition-all flex items-center gap-1 shadow-sm"
+                                  title="1-Click Mark as Paid / Verified"
+                                >
+                                  <HiCheck className="w-3 h-3" />
+                                  <span>{isUpdating ? 'Saving...' : 'Mark Paid'}</span>
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>

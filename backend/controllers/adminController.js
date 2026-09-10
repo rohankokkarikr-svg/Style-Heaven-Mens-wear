@@ -621,6 +621,21 @@ exports.updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status, payment_status } = req.body;
 
+    // Access control: Only the related artisan can verify UTR and approve payment
+    if (payment_status === 'paid' || payment_status === 'successful') {
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('payment_status, status')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (existingOrder && (existingOrder.payment_status === 'pending_verification' || existingOrder.status === 'payment_verification_pending')) {
+        return res.status(403).json({
+          error: 'Access denied. Only the related artisan can verify the UTR and confirm this order.'
+        });
+      }
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .update({

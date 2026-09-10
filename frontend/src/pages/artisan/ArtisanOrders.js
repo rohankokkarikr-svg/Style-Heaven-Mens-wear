@@ -12,7 +12,10 @@ import {
   HiCheckCircle,
   HiClock,
   HiExternalLink,
-  HiMap
+  HiMap,
+  HiCheck,
+  HiX,
+  HiShieldCheck
 } from 'react-icons/hi';
 import { FaWhatsapp } from 'react-icons/fa';
 import toast from 'react-hot-toast';
@@ -24,6 +27,7 @@ export default function ArtisanOrders() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -58,8 +62,51 @@ export default function ArtisanOrders() {
       fetchOrders();
     };
     window.addEventListener('kala:sync:orders_updated', handleSync);
-    return () => window.removeEventListener('kala:sync:orders_updated', handleSync);
+    window.addEventListener('kala:sync:payments_updated', handleSync);
+    return () => {
+      window.removeEventListener('kala:sync:orders_updated', handleSync);
+      window.removeEventListener('kala:sync:payments_updated', handleSync);
+    };
   }, []);
+
+  // Exclusive Artisan UTR Confirmation & Order Acceptance Handler
+  const handleVerifyUtr = async (orderId, action) => {
+    if (!orderId || verifyingId) return;
+    setVerifyingId(orderId);
+
+    const isApprove = action === 'approve';
+    // Optimistic UI state update
+    setOrders(prev => prev.map(item => {
+      if (item.orders?.id === orderId) {
+        return {
+          ...item,
+          orders: {
+            ...item.orders,
+            payment_status: isApprove ? 'paid' : 'failed',
+            status: isApprove ? 'processing' : 'cancelled'
+          }
+        };
+      }
+      return item;
+    }));
+
+    try {
+      await artisanAPI.verifyPayment(orderId, { action });
+      if (isApprove) {
+        toast.success(`🎉 UTR Verified! Order #${orderId.substring(0, 8).toUpperCase()} confirmed for preparation! 🚀`);
+      } else {
+        toast.error(`Order #${orderId.substring(0, 8).toUpperCase()} rejected due to invalid UTR.`);
+      }
+      window.dispatchEvent(new CustomEvent('kala:sync:orders_updated', { detail: { orderId } }));
+      window.dispatchEvent(new CustomEvent('kala:sync:payments_updated', { detail: { orderId } }));
+    } catch (err) {
+      console.error('Failed to verify UTR:', err);
+      toast.error(err.response?.data?.error || 'Failed to verify UTR and confirm order');
+      fetchOrders();
+    } finally {
+      setVerifyingId(null);
+    }
+  };
 
   const handleStatusChange = async (orderId, newStatus) => {
     if (!orderId || !newStatus) return;
@@ -99,16 +146,24 @@ export default function ArtisanOrders() {
   };
 
   const STATUS_CONFIG = {
-    pending:    { label: 'Pending Packing', bg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40', icon: HiClock },
-    processing: { label: 'In Preparation',  bg: 'bg-blue-500/20 text-blue-400 border-blue-500/40',   icon: HiShoppingBag },
-    shipped:    { label: 'Out for Delivery',bg: 'bg-purple-500/20 text-purple-400 border-purple-500/40', icon: HiTruck },
-    delivered:  { label: 'Delivered',       bg: 'bg-green-500/20 text-green-400 border-green-500/40', icon: HiCheckCircle },
-    cancelled:  { label: 'Cancelled',       bg: 'bg-red-500/20 text-red-400 border-red-500/40',     icon: HiClock },
+    pending:                      { label: 'Pending Packing',          bg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40', icon: HiClock },
+    payment_verification_pending: { label: 'UTR Pending Verification', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',   icon: HiClock },
+    processing:                   { label: 'In Preparation',           bg: 'bg-blue-500/20 text-blue-400 border-blue-500/40',       icon: HiShoppingBag },
+    shipped:                      { label: 'Out for Delivery',         bg: 'bg-purple-500/20 text-purple-400 border-purple-500/40', icon: HiTruck },
+    delivered:                    { label: 'Delivered',                bg: 'bg-green-500/20 text-green-400 border-green-500/40',   icon: HiCheckCircle },
+    cancelled:                    { label: 'Cancelled',                bg: 'bg-red-500/20 text-red-400 border-red-500/40',         icon: HiClock },
   };
 
   const filteredOrders = orders.filter(item => {
     const status = item.orders?.status || 'pending';
-    if (filter !== 'all' && status !== filter) return false;
+    const utrNo = item.orders?.utr_number || item.orders?.transaction_id || item.orders?.shipping_address?.match(/(?:Ref\.?\s*No|UTR)[:\s]+([A-Za-z0-9_-]+)/i)?.[1] || null;
+    const isUtrPending = (item.orders?.payment_status === 'pending_verification' || item.orders?.status === 'payment_verification_pending') || (utrNo && item.orders?.payment_status !== 'paid' && item.orders?.status !== 'cancelled');
+
+    if (filter === 'utr_pending') {
+      if (!isUtrPending) return false;
+    } else if (filter !== 'all' && status !== filter) {
+      return false;
+    }
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -131,6 +186,10 @@ export default function ArtisanOrders() {
 
   const totalRevenue = orders.reduce((sum, item) => sum + ((item.price_at_time || 0) * (item.quantity || 1)), 0);
   const pendingCount = orders.filter(o => !o.orders?.status || o.orders?.status === 'pending').length;
+  const utrPendingCount = orders.filter(item => {
+    const utrNo = item.orders?.utr_number || item.orders?.transaction_id || item.orders?.shipping_address?.match(/(?:Ref\.?\s*No|UTR)[:\s]+([A-Za-z0-9_-]+)/i)?.[1] || null;
+    return (item.orders?.payment_status === 'pending_verification' || item.orders?.status === 'payment_verification_pending') || (utrNo && item.orders?.payment_status !== 'paid' && item.orders?.status !== 'cancelled');
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -174,7 +233,8 @@ export default function ArtisanOrders() {
           <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1">
             {[
               { id: 'all', label: `All Orders (${orders.length})` },
-              { id: 'pending', label: `Pending (${pendingCount})` },
+              ...(utrPendingCount > 0 ? [{ id: 'utr_pending', label: `🔑 UTR Verification (${utrPendingCount})` }] : []),
+              { id: 'pending', label: `Pending Dispatch (${pendingCount})` },
               { id: 'processing', label: 'Processing' },
               { id: 'shipped', label: 'Shipped' },
               { id: 'delivered', label: 'Delivered' },
@@ -424,6 +484,106 @@ export default function ArtisanOrders() {
                     </div>
                   </div>
                 </div>
+
+                {/* Exclusive Artisan UTR Verification & Order Confirmation Banner */}
+                {(() => {
+                  const utrNo = orderObj.utr_number || orderObj.transaction_id || orderObj.shipping_address?.match(/(?:Ref\.?\s*No|UTR)[:\s]+([A-Za-z0-9_-]+)/i)?.[1] || null;
+                  const isPendingUtr = (orderObj.payment_status === 'pending_verification' || orderObj.status === 'payment_verification_pending') || (utrNo && orderObj.payment_status !== 'paid' && orderObj.status !== 'cancelled');
+                  const isPaid = orderObj.payment_status === 'paid' || orderObj.payment_status === 'completed';
+
+                  if (isPendingUtr && utrNo) {
+                    return (
+                      <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-dark-800 to-amber-500/10 border-2 border-amber-500/40 space-y-3 shadow-lg shadow-amber-500/5 animate-in fade-in duration-300">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="p-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 text-base shrink-0">
+                              🔑
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                                  Customer Submitted UPI UTR / Ref. Number
+                                </span>
+                                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 font-semibold">
+                                  Action Required
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-300 mt-0.5">
+                                Please check your bank or UPI app statement for this UTR number. Only you (the related artisan) have access to confirm this payment.
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 self-start sm:self-auto flex items-center gap-1.5 font-mono">
+                            <HiClock className="w-3.5 h-3.5 animate-spin" /> Awaiting Your Confirmation
+                          </span>
+                        </div>
+
+                        {/* UTR Display Box */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-dark-950/80 p-3.5 rounded-lg border border-dark-700 gap-3">
+                          <div>
+                            <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider block">Submitted UTR / Transaction Ref:</span>
+                            <span className="font-mono text-lg font-extrabold text-gold-400 select-all tracking-widest">
+                              {utrNo}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(utrNo, 'UTR Number')}
+                            className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 hover:border-gold-500/50 self-start sm:self-auto"
+                            title="Copy UTR Number"
+                          >
+                            <HiClipboardCopy className="w-4 h-4 text-gold-400" /> Copy UTR
+                          </button>
+                        </div>
+
+                        {/* Artisan Verification Action Buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-amber-500/20">
+                          <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                            <HiShieldCheck className="w-4 h-4 text-amber-400" />
+                            <span><strong className="text-white">Exclusive Access:</strong> Admin cannot approve this. Only you can verify & confirm.</span>
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              disabled={verifyingId === orderObj.id}
+                              onClick={() => handleVerifyUtr(orderObj.id, 'reject')}
+                              className="px-3 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              <HiX className="w-3.5 h-3.5" /> Reject Invalid UTR
+                            </button>
+                            <button
+                              disabled={verifyingId === orderObj.id}
+                              onClick={() => handleVerifyUtr(orderObj.id, 'approve')}
+                              className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+                            >
+                              <HiCheck className="w-4 h-4" />
+                              {verifyingId === orderObj.id ? 'Confirming...' : 'Verify UTR & Confirm Order'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (isPaid && utrNo) {
+                    return (
+                      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <HiCheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="text-gray-300">
+                            Payment Verified & Order Confirmed by You • UTR: <strong className="font-mono text-emerald-300 select-all">{utrNo}</strong>
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(utrNo, 'UTR Number')}
+                          className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1"
+                        >
+                          <HiClipboardCopy className="w-3 h-3" /> Copy
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
 
                 {/* Artisan Order Fulfillment & Status Action Bar */}
                 <div className="pt-3.5 border-t border-dark-700 flex flex-wrap items-center justify-between gap-3 bg-dark-900/60 p-3.5 rounded-xl border border-dark-700/60">

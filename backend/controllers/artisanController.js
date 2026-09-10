@@ -251,7 +251,7 @@ exports.getMyOrders = async (req, res) => {
     const productIds = (products || []).map(p => p.id);
     if (productIds.length === 0) return res.json([]);
 
-    const { data: orderItems, error } = await supabase
+    let { data: orderItems, error } = await supabase
       .from('order_items')
       .select(`
         *,
@@ -265,15 +265,52 @@ exports.getMyOrders = async (req, res) => {
           phone,
           payment_method,
           payment_status,
+          transaction_id,
+          razorpay_payment_id,
           users(id, name, email, phone)
         ),
         products(id, name, price, image_url, category)
       `)
       .in('product_id', productIds);
 
+    if (error && (error.message.includes('column') || error.message.includes('does not exist'))) {
+      const fallbackRes = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          orders(
+            id,
+            status,
+            created_at,
+            user_id,
+            total_price,
+            shipping_address,
+            phone,
+            payment_method,
+            payment_status,
+            users(id, name, email, phone)
+          ),
+          products(id, name, price, image_url, category)
+        `)
+        .in('product_id', productIds);
+      orderItems = fallbackRes.data;
+      error = fallbackRes.error;
+    }
+
     if (error) throw error;
 
-    const sorted = (orderItems || []).sort((a, b) => {
+    // Attach extracted clean utr_number to order objects
+    const sorted = (orderItems || []).map(item => {
+      if (item.orders) {
+        let utr = item.orders.transaction_id || item.orders.razorpay_payment_id;
+        if (!utr && item.orders.shipping_address) {
+          const match = item.orders.shipping_address.match(/(?:Ref\.?\s*No|UTR)[:\s]+([A-Za-z0-9_-]+)/i);
+          if (match) utr = match[1].trim();
+        }
+        item.orders.utr_number = utr || null;
+      }
+      return item;
+    }).sort((a, b) => {
       const timeA = new Date(a.orders?.created_at || 0).getTime();
       const timeB = new Date(b.orders?.created_at || 0).getTime();
       return timeB - timeA;

@@ -63,6 +63,15 @@ const artisanOrAdmin = (req, res, next) => {
   }
 };
 
+const artisanOnly = (req, res, next) => {
+  const role = (req.user?.role || '').trim().toLowerCase();
+  if (role === 'artisan') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Access denied. Only the related artisan can perform this action, not admin.' });
+  }
+};
+
 const optionalProtect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer')) {
@@ -79,4 +88,4 @@ const optionalProtect = async (req, res, next) => {
   next();
 };
 
-module.exports = { protect, admin, artisan, artisanOrAdmin, optionalProtect };
+module.exports = { protect, admin, artisan, artisanOnly, artisanOrAdmin, optionalProtect };

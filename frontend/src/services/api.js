@@ -159,6 +159,7 @@ export const artisanAPI = {
   getMyStats:        ()       => api.get('/artisans/me/stats'),
   getMyOrders:       ()       => api.get('/artisans/me/orders'),
   updateOrderStatus: (id, d)  => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/status`, d); },
+  verifyPayment:     (id, d)  => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/verify-payment`, d); },
   updateProfile:     (data)   => api.put('/artisans/me', data),
   verify:            (id, d)  => api.patch(`/artisans/${id}/verify`, d),
   getAllAdmin:       ()       => api.get('/artisans/admin/all'),

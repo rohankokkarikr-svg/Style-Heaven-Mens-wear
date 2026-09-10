@@ -178,7 +178,53 @@ exports.sendOrderWhatsappNotification = async (adminPhone, order, customerName) 
 };
 
 /**
- * Sends a WhatsApp notification to Admin & Customer when UPI Ref. No. / UTR is submitted.
+ * Sends a WhatsApp notification directly to the related Artisan when customer submits UPI Ref. No. / UTR.
+ */
+exports.sendArtisanUtrSubmittedNotification = async (artisanPhone, artisanStore, order, customerName, refNo) => {
+  const itemsText = (order.items || [])
+    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size || 'Standard'}, Qty: ${item.quantity || 1}) - ₹${((item.price_at_time || item.product?.price || 0) * (item.quantity || 1)).toLocaleString()}`)
+    .join('\n');
+
+  const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+  const cleanRef = refNo || extractRefNo(order);
+
+  const messageBody = `🔔 *New Order Payment Received! Please Verify UTR*
+----------------------------------------
+🎨 *Assigned Artisan:* ${artisanStore || 'Artisan Partner'}
+📦 *Order ID:* #${order.id?.substring(0, 8)}
+👤 *Customer Name:* ${customerName}
+📞 *Customer Phone:* +91 ${order.phone}
+📍 *Shipping Address:* ${order.shipping_address || 'N/A'}
+🔑 *Customer Submitted UTR / Ref. No:* *${cleanRef}*
+💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
+💵 *Amount to Receive:* ₹${order.total_price?.toLocaleString()}
+
+🛒 *Your Ordered Items (${itemsCount} items):*
+${itemsText || 'No items listed'}
+========================================
+⚡ *Action Required by Artisan:*
+1. Check your UPI / Bank account for UTR *${cleanRef}*.
+2. Open your Artisan Portal (Orders) to *Verify UTR & Confirm Order*!
+(Note: Only you can confirm this order).
+----------------------------------------`;
+
+  const recipients = [artisanPhone];
+  if (order.phone && String(order.phone) !== String(artisanPhone)) {
+    recipients.push(order.phone);
+  }
+
+  const twilioRes = await sendWhatsappToRecipients(recipients, messageBody);
+  const directLink = getWhatsappDirectLink(artisanPhone, messageBody);
+
+  return {
+    ...twilioRes,
+    messageText: messageBody,
+    directLink
+  };
+};
+
+/**
+ * Sends a WhatsApp notification to Admin & Customer when UPI Ref. No. / UTR is submitted (fallback).
  */
 exports.sendRefNoSubmittedWhatsappNotification = async (adminPhone, order, customerName) => {
   const itemsText = (order.items || [])
@@ -201,7 +247,7 @@ exports.sendRefNoSubmittedWhatsappNotification = async (adminPhone, order, custo
 🛒 *Items in Order (${itemsCount} items):*
 ${itemsText || 'No items listed'}
 ========================================
-⌛ *Status:* Pending Admin Payment Verification
+⌛ *Status:* Pending Artisan Payment Verification
 ----------------------------------------`;
 
   const twilioRes = await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
@@ -215,32 +261,39 @@ ${itemsText || 'No items listed'}
 };
 
 /**
- * Sends a WhatsApp notification to Admin & Customer when an order payment is verified & approved.
+ * Sends a WhatsApp notification to Customer & Artisan when order payment is verified & confirmed by the Artisan.
  */
-exports.sendPaymentVerifiedWhatsappNotification = async (adminPhone, order, customerName) => {
+exports.sendPaymentVerifiedWhatsappNotification = async (artisanPhone, order, customerName, artisanStore) => {
   const itemsText = (order.items || [])
-    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size}, Qty: ${item.quantity}) - ₹${(item.price_at_time * item.quantity).toLocaleString()}`)
+    .map(item => `• ${item.product?.name || 'Item'} (Size: ${item.size || 'Standard'}, Qty: ${item.quantity || 1}) - ₹${((item.price_at_time || item.product?.price || 0) * (item.quantity || 1)).toLocaleString()}`)
     .join('\n');
 
   const itemsCount = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
   const refNo = extractRefNo(order);
 
-  const messageBody = `✅ *Payment Verified & Approved!*
+  const messageBody = `🎉 *Payment Verified & Order Confirmed by Artisan!*
 ----------------------------------------
+🎨 *Artisan:* ${artisanStore || 'Artisan Partner'}
 📦 *Order ID:* #${order.id?.substring(0, 8)}
 👤 *Customer Name:* ${customerName}
-📞 *Phone Number:* +91 ${order.phone}
-🔑 *Verified Ref. No / UTR:* ${refNo}
+📞 *Customer Phone:* +91 ${order.phone}
+🔑 *Verified UTR / Ref. No:* ${refNo}
 💰 *Payment Method:* ${getEffectivePaymentMethod(order)}
-💵 *Paid Amount:* ₹${order.total_price?.toLocaleString()}
+💵 *Verified Paid Amount:* ₹${order.total_price?.toLocaleString()}
 
-🛒 *Items to Process (${itemsCount} items):*
+🛒 *Handcrafted Items in Preparation (${itemsCount} items):*
 ${itemsText || 'No items listed'}
 ========================================
-🎉 *Order Status:* PAYMENT VERIFIED & CONFIRMED
+✨ *Status:* UTR CONFIRMED & ORDER IN PREPARATION
+The artisan has confirmed your payment and started preparing your order!
 ----------------------------------------`;
 
-  return await sendWhatsappToRecipients([adminPhone, order.phone], messageBody);
+  const recipients = [order.phone];
+  if (artisanPhone && String(artisanPhone) !== String(order.phone)) {
+    recipients.push(artisanPhone);
+  }
+
+  return await sendWhatsappToRecipients(recipients, messageBody);
 };
 
 /**

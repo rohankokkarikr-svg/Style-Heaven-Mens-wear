@@ -683,13 +683,20 @@ exports.updateOrderDetails = async (req, res) => {
 exports.payOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { payment_method, transaction_id, ref_no } = req.body;
-    const ref = (transaction_id || ref_no || '').trim();
+    const { payment_method, transaction_id, ref_no, utr_number } = req.body;
+    const ref = (utr_number || transaction_id || ref_no || '').trim();
 
-    // 1. Fetch order
+    // 1. Fetch order with order items and products to identify assigned artisan
     const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .select('*')
+      .select(`
+        *,
+        users (id, name, email, phone),
+        items:order_items (
+          quantity, price_at_time, size,
+          product:products (id, name, image_url, category, artisan_id)
+        )
+      `)
       .eq('id', id)
       .single();
 
@@ -697,7 +704,33 @@ exports.payOrder = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // 2. Update order as pending_verification
+    // 2. Identify the related artisan(s) for this order
+    const artisanIds = [...new Set(
+      (order.items || [])
+        .map(i => i.product?.artisan_id)
+        .filter(Boolean)
+    )];
+
+    let primaryArtisanPhone = null;
+    let primaryArtisanStore = null;
+
+    if (artisanIds.length > 0) {
+      const { data: artProfiles } = await supabase
+        .from('artisan_profiles')
+        .select('id, store_name, user_id, users(name, phone, email)')
+        .or(`id.in.(${artisanIds.map(id => `"${id}"`).join(',')}),user_id.in.(${artisanIds.map(id => `"${id}"`).join(',')})`);
+
+      if (artProfiles && artProfiles.length > 0) {
+        primaryArtisanPhone = artProfiles[0].users?.phone;
+        primaryArtisanStore = artProfiles[0].store_name || artProfiles[0].users?.name;
+      }
+    }
+
+    // Fallback phone if artisan profile phone not found
+    const targetArtisanPhone = primaryArtisanPhone || getSiteSettings().whatsappNumber;
+    const targetArtisanStore = primaryArtisanStore || 'Artisan Partner';
+
+    // 3. Update order as pending_verification with UTR number
     const updateData = {
       payment_status: 'pending_verification',
       payment_method: payment_method || order.payment_method || 'upi',
@@ -717,7 +750,7 @@ exports.payOrder = async (req, res) => {
       console.warn('Warning: payment_status or transaction_id column is missing. Falling back to status update.');
       const fallbackUpdate = {
         status: 'payment_verification_pending',
-        shipping_address: `${order.shipping_address} [Ref. No: ${ref || 'PENDING'}, Status: Pending Verification]`
+        shipping_address: `${order.shipping_address} [Ref. No: ${ref || 'PENDING'}, UTR: ${ref}, Status: Pending Artisan Verification]`
       };
       
       const fallbackResult = await supabase
@@ -733,45 +766,48 @@ exports.payOrder = async (req, res) => {
 
     if (updateError) throw updateError;
 
-    // Realtime broadcast payment update
+    // 4. Realtime broadcast so artisan sees the incoming UTR immediately
     try {
       const { broadcastSync } = require('../utils/realtime');
-      broadcastSync('PAYMENTS_UPDATED', { id, payment_status: 'paid', order: updatedOrder });
-      broadcastSync('ORDERS_UPDATED', { id, payment_status: 'paid', order: updatedOrder });
+      broadcastSync('PAYMENTS_UPDATED', { id, payment_status: 'pending_verification', utr_number: ref, order: updatedOrder });
+      broadcastSync('ORDERS_UPDATED', { id, status: 'payment_verification_pending', utr_number: ref, order: updatedOrder });
     } catch (syncErr) {
       console.warn('Realtime sync broadcast notice:', syncErr.message);
     }
 
-    // Trigger WhatsApp notification to Admin to alert about submitted UPI Ref No.
+    // 5. Send WhatsApp notification directly to the related Artisan with the UTR number
     let whatsappLink = null;
     let whatsappMessage = null;
     try {
       const settings = getSiteSettings();
       if (settings.orderNotifications) {
-        const { data: fullOrder } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            items:order_items (
-              quantity, price_at_time, size,
-              product:products (id, name, image_url, category)
-            )
-          `)
-          .eq('id', id)
-          .single();
-        const notifyOrder = fullOrder || updatedOrder || order;
-        if (!notifyOrder.payment_method) notifyOrder.payment_method = order.payment_method || 'upi';
-        const wsRes = await sendRefNoSubmittedWhatsappNotification(settings.whatsappNumber, notifyOrder, req.user?.name || 'Customer');
+        const { sendArtisanUtrSubmittedNotification } = require('../utils/whatsapp');
+        const customerName = req.user?.name || order.users?.name || 'Customer';
+
+        const wsRes = await sendArtisanUtrSubmittedNotification(
+          targetArtisanPhone,
+          targetArtisanStore,
+          order,
+          customerName,
+          ref
+        );
+
         if (wsRes) {
           whatsappLink = wsRes.directLink;
           whatsappMessage = wsRes.messageText;
         }
       }
     } catch (wsErr) {
-      console.error('WhatsApp notify error:', wsErr.message);
+      console.error('Artisan WhatsApp notify error:', wsErr.message);
     }
 
-    res.json({ ...updatedOrder, whatsappLink, whatsappMessage });
+    res.json({
+      ...updatedOrder,
+      whatsappLink,
+      whatsappMessage,
+      artisanPhone: targetArtisanPhone,
+      artisanStore: targetArtisanStore
+    });
   } catch (error) {
     console.error('Pay order error:', error);
     res.status(500).json({ error: 'Failed to update payment status' });
@@ -782,11 +818,67 @@ exports.verifyPayment = async (req, res) => {
   try {
     const { id } = req.params;
     const { action } = req.body; // 'approve' or 'reject'
+    const userId = req.user.id;
+    const userRole = (req.user.role || '').toLowerCase();
 
+    // 1. Strict Security: Block Admin! Only the related artisan can verify and confirm!
+    if (userRole === 'admin') {
+      return res.status(403).json({
+        error: 'Access denied. Only the related artisan can verify the UTR and confirm this order, not admin.'
+      });
+    }
+
+    if (userRole !== 'artisan') {
+      return res.status(403).json({
+        error: 'Access denied. Artisan privileges required.'
+      });
+    }
+
+    // 2. Fetch full order with products and items
+    const { data: order, error: fetchErr } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        users (id, name, email, phone),
+        items:order_items (
+          quantity, price_at_time, size,
+          product:products (id, name, image_url, category, artisan_id)
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // 3. Verify that the authenticated artisan is assigned to this order
+    const { data: artisanProf } = await supabase
+      .from('artisan_profiles')
+      .select('id, store_name, user_id, users(name, phone)')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const artisanProfileId = artisanProf?.id;
+    const orderArtisanIds = (order.items || [])
+      .map(i => i.product?.artisan_id)
+      .filter(Boolean);
+
+    const isRelatedArtisan = orderArtisanIds.some(
+      artId => artId === artisanProfileId || artId === userId
+    );
+
+    if (!isRelatedArtisan) {
+      return res.status(403).json({
+        error: 'Access denied. You are not the assigned artisan for this order.'
+      });
+    }
+
+    // 4. Update the order status upon artisan verification
     const isApprove = action === 'approve';
     const updateData = {
       payment_status: isApprove ? 'paid' : 'failed',
-      status: isApprove ? 'pending' : 'cancelled'
+      status: isApprove ? 'processing' : 'cancelled'
     };
 
     let { data: updatedOrder, error: updateError } = await supabase
@@ -798,7 +890,7 @@ exports.verifyPayment = async (req, res) => {
 
     if (updateError && (updateError.message.includes('column') || updateError.message.includes('does not exist'))) {
       const fallbackUpdate = {
-        status: isApprove ? 'pending' : 'cancelled'
+        status: isApprove ? 'processing' : 'cancelled'
       };
       const resFb = await supabase
         .from('orders')
@@ -812,7 +904,7 @@ exports.verifyPayment = async (req, res) => {
 
     if (updateError) throw updateError;
 
-    // Realtime broadcast payment verification
+    // 5. Broadcast real-time updates across customer and artisan portals
     try {
       const { broadcastSync } = require('../utils/realtime');
       broadcastSync('PAYMENTS_UPDATED', { id, status: updatedOrder?.status, payment_status: updatedOrder?.payment_status, order: updatedOrder });
@@ -821,37 +913,30 @@ exports.verifyPayment = async (req, res) => {
       console.warn('Realtime sync broadcast notice:', syncErr.message);
     }
 
-    // Send WhatsApp Notification to Admin
+    // 6. Send WhatsApp confirmation to the Customer
     try {
       const settings = getSiteSettings();
       if (settings.orderNotifications) {
-        const { data: fullOrder } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            items:order_items (
-              quantity, price_at_time, size,
-              product:products (id, name, image_url, category)
-            )
-          `)
-          .eq('id', id)
-          .single();
+        const { sendPaymentVerifiedWhatsappNotification, sendOrderCancelWhatsappNotification } = require('../utils/whatsapp');
+        const customerName = order.users?.name || 'Customer';
+        const artisanStore = artisanProf?.store_name || req.user.name || 'Artisan';
+        const artisanPhone = artisanProf?.users?.phone || req.user.phone;
 
-        if (fullOrder) {
-          const adminWhatsapp = settings.whatsappNumber;
-          const customerName = req.user?.name || 'Customer';
-          if (isApprove) {
-            await sendPaymentVerifiedWhatsappNotification(adminWhatsapp, fullOrder, customerName);
-          } else {
-            await sendOrderCancelWhatsappNotification(adminWhatsapp, fullOrder, customerName);
-          }
+        if (isApprove) {
+          await sendPaymentVerifiedWhatsappNotification(artisanPhone, order, customerName, artisanStore);
+        } else {
+          await sendOrderCancelWhatsappNotification(artisanPhone, order, customerName);
         }
       }
     } catch (wsErr) {
-      console.error('Failed to trigger WhatsApp verification notification:', wsErr.message);
+      console.error('Failed to trigger WhatsApp confirmation notification:', wsErr.message);
     }
 
-    res.json(updatedOrder);
+    res.json({
+      success: true,
+      message: isApprove ? 'UTR verified and order confirmed successfully!' : 'Order rejected due to invalid UTR',
+      order: updatedOrder
+    });
   } catch (err) {
     console.error('Verify payment error:', err);
     res.status(500).json({ error: 'Failed to verify payment' });

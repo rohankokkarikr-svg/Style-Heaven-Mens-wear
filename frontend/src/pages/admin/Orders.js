@@ -235,11 +235,17 @@ export default function Orders() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`text-[11px] font-semibold ${
-                        o.payment_status === 'paid' || o.payment_status === 'successful' ? 'text-green-400' : 'text-yellow-400'
-                      }`}>
-                        {o.payment_status || 'Pending'}
-                      </span>
+                      {o.payment_status === 'pending_verification' || o.status === 'payment_verification_pending' ? (
+                        <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 inline-block font-mono">
+                          ⏳ Awaiting Artisan UTR
+                        </span>
+                      ) : (
+                        <span className={`text-[11px] font-semibold ${
+                          o.payment_status === 'paid' || o.payment_status === 'successful' ? 'text-green-400' : 'text-yellow-400'
+                        }`}>
+                          {o.payment_status || 'Pending'}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
@@ -282,6 +288,17 @@ export default function Orders() {
                 Placed on {new Date(selectedOrder.created_at).toLocaleString('en-IN')}
               </p>
             </div>
+
+            {/* UTR Artisan Notice */}
+            {(selectedOrder.payment_status === 'pending_verification' || selectedOrder.status === 'payment_verification_pending') && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2 text-xs text-amber-300">
+                <span className="text-base">🔒</span>
+                <div>
+                  <strong className="font-semibold block">Awaiting Related Artisan's UTR Confirmation</strong>
+                  <span className="text-[11px] text-gray-300">Only the assigned artisan can verify the customer's payment UTR and confirm this order.</span>
+                </div>
+              </div>
+            )}
 
             {/* Quick Status Pill Bar */}
             <div className="p-3 bg-dark-750 rounded-xl border border-dark-600 space-y-2">
