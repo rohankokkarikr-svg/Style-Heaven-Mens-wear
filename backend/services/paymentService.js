@@ -182,5 +182,41 @@ exports.generateTransactionId = (orderId) => {
   return `SH${orderId?.substring(0, 8).toUpperCase() || ''}${timestamp}${random}`;
 };
 
+/**
+ * Verify Razorpay payment signature (used for client-side verification confirmation)
+ */
+exports.verifyRazorpaySignature = (razorpayOrderId, razorpayPaymentId, razorpaySignature) => {
+  try {
+    const body = razorpayOrderId + '|' + razorpayPaymentId;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest('hex');
+    return expectedSignature === razorpaySignature;
+  } catch (err) {
+    console.error('Signature verification error:', err.message);
+    return false;
+  }
+};
+
+/**
+ * Create a refund for a payment
+ * @param {string} razorpayPaymentId
+ * @param {number} amount - in INR (not paise)
+ * @param {object} notes
+ */
+exports.createRefund = async (razorpayPaymentId, amount, notes = {}) => {
+  try {
+    const refund = await razorpay.payments.refund(razorpayPaymentId, {
+      amount: Math.round(amount * 100), // Convert to paise
+      notes,
+    });
+    return { success: true, refund };
+  } catch (err) {
+    console.error('Razorpay refund error:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
 // Also export razorpay instance for direct use
 exports.razorpay = razorpay;

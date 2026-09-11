@@ -32,13 +32,18 @@ export default function ArtisanOrders() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      // Try dedicated orders endpoint first, fallback to getMyStats
+      // Try new artisan_orders based endpoint first (secure, uses artisan_id)
+      const res = await artisanAPI.getArtisanOrders();
+      if (res?.data && Array.isArray(res.data)) {
+        setOrders(res.data);
+        return;
+      }
+    } catch (e) { /* fallback */ }
+    try {
       const res = await artisanAPI.getMyOrders();
       if (res?.data && Array.isArray(res.data)) {
         setOrders(res.data);
-      } else {
-        const statsRes = await artisanAPI.getMyStats();
-        setOrders(statsRes?.data?.recentOrders || []);
+        return;
       }
     } catch {
       try {
@@ -58,14 +63,14 @@ export default function ArtisanOrders() {
 
   // Real-time listener: instantly reflect when a customer places or updates an order
   useEffect(() => {
-    const handleSync = () => {
-      fetchOrders();
-    };
+    const handleSync = () => { fetchOrders(); };
     window.addEventListener('kala:sync:orders_updated', handleSync);
     window.addEventListener('kala:sync:payments_updated', handleSync);
+    window.addEventListener('kala:sync:artisan_orders_updated', handleSync);
     return () => {
       window.removeEventListener('kala:sync:orders_updated', handleSync);
       window.removeEventListener('kala:sync:payments_updated', handleSync);
+      window.removeEventListener('kala:sync:artisan_orders_updated', handleSync);
     };
   }, []);
 
@@ -108,6 +113,24 @@ export default function ArtisanOrders() {
     }
   };
 
+  // New: Handle artisan sub-order status machine transition
+  const handleArtisanSubOrderStatus = async (artisanOrderId, newStatus) => {
+    if (!artisanOrderId || !newStatus) return;
+    setUpdatingId(artisanOrderId);
+    try {
+      await artisanAPI.updateArtisanSubOrderStatus(artisanOrderId, { status: newStatus });
+      toast.success(`✅ Status updated to "${newStatus}"!`);
+      // Optimistically update
+      setOrders(prev => prev.map(ao => ao.id === artisanOrderId ? { ...ao, status: newStatus } : ao));
+      window.dispatchEvent(new CustomEvent('kala:sync:artisan_orders_updated', { detail: { artisanOrderId, status: newStatus } }));
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update status');
+      fetchOrders();
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleStatusChange = async (orderId, newStatus) => {
     if (!orderId || !newStatus) return;
     setUpdatingId(orderId);
@@ -115,13 +138,7 @@ export default function ArtisanOrders() {
     // Optimistically update order status in state
     setOrders(prev => prev.map(item => {
       if (item.orders?.id === orderId) {
-        return {
-          ...item,
-          orders: {
-            ...item.orders,
-            status: newStatus
-          }
-        };
+        return { ...item, orders: { ...item.orders, status: newStatus } };
       }
       return item;
     }));
@@ -133,7 +150,7 @@ export default function ArtisanOrders() {
     } catch (err) {
       console.error('Failed to update order status:', err);
       toast.error(err.response?.data?.error || 'Failed to update order status');
-      fetchOrders(); // Revert on failure
+      fetchOrders();
     } finally {
       setUpdatingId(null);
     }

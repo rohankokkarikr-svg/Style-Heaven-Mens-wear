@@ -31,6 +31,7 @@ const Rewards = lazy(() => import('./pages/Rewards'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const PaymentGateway = lazy(() => import('./pages/PaymentGateway'));
+const OrderTracking = lazy(() => import('./pages/OrderTracking'));
 const ArtisanStore = lazy(() => import('./pages/ArtisanStore'));
 
 // Lazy-loaded Artisan Pages
@@ -172,6 +173,7 @@ function App() {
                                 {/* Protected User Routes */}
                                 <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
                                 <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
+                                <Route path="/orders/:id/tracking" element={<PrivateRoute><OrderTracking /></PrivateRoute>} />
                                 <Route path="/rewards" element={<PrivateRoute><Rewards /></PrivateRoute>} />
                                 <Route path="/leaderboard" element={<Leaderboard />} />
                                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />

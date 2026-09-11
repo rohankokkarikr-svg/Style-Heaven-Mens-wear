@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { orderAPI } from '../services/api';
+import { orderAPI, paymentAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
   HiLockClosed, HiShieldCheck, HiChevronLeft, HiClock, HiClipboardCopy, HiCheck, HiSparkles
@@ -21,6 +21,79 @@ export default function PaymentGateway() {
   const [submitted, setSubmitted] = useState(false);
   const [waLink, setWaLink] = useState(null);
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [razorpayLaunching, setRazorpayLaunching] = useState(false);
+
+  // Get razorpay data passed from Checkout via navigate state
+  const razorpayData = location.state?.razorpay || null;
+  const isRazorpayMethod = method === 'razorpay' || !!razorpayData;
+
+  // Load Razorpay script
+  const loadRazorpayScript = () => new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
+  // Launch Razorpay popup
+  const launchRazorpay = useCallback(async (rzpData, orderData) => {
+    setRazorpayLaunching(true);
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      toast.error('Payment gateway failed to load. Please try again.');
+      setRazorpayLaunching(false);
+      return;
+    }
+
+    const options = {
+      key: rzpData.key_id,
+      amount: rzpData.amount,
+      currency: 'INR',
+      name: 'KalaStyle AI',
+      description: `Order ${rzpData.description || orderData?.order_number || ''}`,
+      order_id: rzpData.order_id,
+      prefill: {
+        name: orderData?.users?.name || orderData?.shipping_name || '',
+        contact: orderData?.phone || '',
+        email: orderData?.users?.email || '',
+      },
+      theme: { color: '#D4AF37' },
+      modal: { ondismiss: () => { setRazorpayLaunching(false); toast.error('Payment cancelled'); } },
+      handler: async (response) => {
+        try {
+          toast.loading('Verifying payment...');
+          await paymentAPI.verify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            orderId,
+          });
+          toast.dismiss();
+          toast.success('Payment successful! 🎉');
+          setSubmitted(true);
+          navigate(`/orders/${orderId}/tracking`);
+        } catch (err) {
+          toast.dismiss();
+          toast.error('Payment verification failed. Please contact support.');
+          console.error('Razorpay verification error:', err);
+        } finally {
+          setRazorpayLaunching(false);
+        }
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  }, [orderId, navigate]);
+
+  // Auto-launch Razorpay if razorpayData is available from state
+  useEffect(() => {
+    if (razorpayData && order && !submitted) {
+      launchRazorpay(razorpayData, order);
+    }
+  }, [razorpayData, order]);
 
   useEffect(() => {
     if (!orderId) {

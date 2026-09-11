@@ -44,6 +44,10 @@ const io = new Server(server, {
 
 initRealtime(io);
 
+// Webhook routes MUST be registered BEFORE express.json() so they receive raw body
+// Razorpay webhook signature verification requires the raw unparsed body
+app.use('/api/payments', require('./routes/payments'));
+
 // Middleware
 app.use(cors());
 app.use(helmet({

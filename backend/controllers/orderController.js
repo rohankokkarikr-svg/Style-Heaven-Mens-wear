@@ -1,25 +1,41 @@
+/**
+ * backend/controllers/orderController.js
+ * ─────────────────────────────────────────────────────────────────
+ * KalaStyle AI — Complete Order Management Controller
+ * Supports multi-artisan orders, Razorpay, COD, tracking, cancellation, refunds.
+ */
+
 const supabase = require('../config/supabase');
 const path = require('path');
 const fs = require('fs');
-const { 
-  sendOrderWhatsappNotification, 
-  sendOrderCancelWhatsappNotification, 
-  sendOrderEditWhatsappNotification, 
-  sendPaymentVerifiedWhatsappNotification, 
+const {
+  sendOrderWhatsappNotification,
+  sendOrderCancelWhatsappNotification,
+  sendOrderEditWhatsappNotification,
+  sendPaymentVerifiedWhatsappNotification,
   sendRefNoSubmittedWhatsappNotification,
-  getEffectivePaymentMethod
+  getEffectivePaymentMethod,
 } = require('../utils/whatsapp');
+const {
+  createMasterOrder,
+  syncMasterOrderStatus,
+  processRefund,
+  restoreInventory,
+  finalizeCODDelivery,
+  createArtisanEarning,
+} = require('../services/orderService');
+const { isValidArtisanTransition, getEcomSettings } = require('../config/ecommerce');
+const { checkAndGrantReward, reverseRewardIfNeeded } = require('../services/rewardService');
+const { broadcastSync } = require('../utils/realtime');
+const { createRazorpayOrder: createRzpOrder, verifyRazorpaySignature } = require('../services/paymentService');
 
+// ── Site Settings (local JSON for WhatsApp toggle) ───────────────────────────
 const getSiteSettings = () => {
   const settingsFile = path.join(__dirname, '../data/site_settings.json');
-  const defaults = {
-    whatsappNumber: '917676558335',
-    orderNotifications: true
-  };
+  const defaults = { whatsappNumber: '917676558335', orderNotifications: true };
   try {
     if (fs.existsSync(settingsFile)) {
-      const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
-      return { ...defaults, ...settings };
+      return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile, 'utf8')) };
     }
   } catch (err) {
     console.warn('Could not read site settings:', err.message);
@@ -27,335 +43,164 @@ const getSiteSettings = () => {
   return defaults;
 };
 
+// ── 1. CREATE ORDER ──────────────────────────────────────────────────────────
+
+/**
+ * POST /api/orders/create  (also handles legacy POST /api/orders)
+ * Validates server-side, creates master order + artisan sub-orders + payment record.
+ */
 exports.createOrder = async (req, res) => {
   try {
-    const { items, total_price, shipping_address, phone, discount_amount, coupon_code } = req.body;
+    const {
+      items, shipping_address, phone, discount_amount, coupon_code,
+      payment_method, live_location_url,
+      // New structured address fields
+      shipping_name, shipping_city, shipping_state, shipping_pincode,
+    } = req.body;
     const user_id = req.user.id;
 
     if (!items || items.length === 0) {
-      return res.status(400).json({ error: 'No order items in cart' });
+      return res.status(400).json({ error: 'No order items provided' });
+    }
+    if (!phone) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+    if (!shipping_address) {
+      return res.status(400).json({ error: 'Shipping address is required' });
     }
 
-    // 0. Validate stock and product existence for all items before creating the order
-    for (const item of items) {
-      const { data: prod, error: prodError } = await supabase
-        .from('products')
-        .select('id, name, stock_quantity, is_in_stock')
-        .eq('id', item.product_id)
-        .maybeSingle();
-
-      if (prodError || !prod) {
-        return res.status(400).json({ 
-          error: `An item in your cart is no longer available. Please clear your cart and select from the new Kala collection.` 
-        });
-      }
-
-      if (prod.is_in_stock === false || (prod.stock_quantity !== undefined && prod.stock_quantity <= 0)) {
-        return res.status(400).json({ error: `"${prod.name}" is out of stock` });
-      }
-
-      if (prod.stock_quantity !== undefined && (item.quantity || 1) > prod.stock_quantity) {
-        return res.status(400).json({ 
-          error: `Insufficient stock for "${prod.name}". Only ${prod.stock_quantity} pieces left.` 
-        });
-      }
+    const method = (payment_method || 'cod').toLowerCase();
+    if (!['razorpay', 'cod', 'upi', 'upi_phonepe', 'upi_gpay', 'upi_paytm'].includes(method)) {
+      return res.status(400).json({ error: 'Invalid payment method' });
     }
 
-    // 0.5 Validate coupon if provided
-    if (coupon_code) {
-      const { data: coupon, error: couponError } = await supabase
-        .from('coupons')
-        .select('*')
-        .eq('code', coupon_code.trim().toUpperCase())
-        .single();
+    // Normalize: treat all upi/* as razorpay flow
+    const normalizedMethod = method.startsWith('upi') || method === 'razorpay' ? 'razorpay' : 'cod';
 
-      if (couponError || !coupon) {
-        return res.status(400).json({ error: 'Invalid coupon code' });
-      }
+    // Create master order via orderService (all price calc is server-side)
+    const result = await createMasterOrder({
+      userId: user_id,
+      items,
+      shippingData: {
+        name: shipping_name || req.user.name || '',
+        phone: String(phone).replace(/[^\d+]/g, '').substring(0, 20),
+        address: shipping_address,
+        city: shipping_city || '',
+        state: shipping_state || '',
+        pincode: shipping_pincode || '',
+      },
+      paymentMethod: normalizedMethod,
+      couponCode: coupon_code,
+      liveLocationUrl: live_location_url,
+    });
 
-      if (coupon.is_used) {
-        return res.status(400).json({ error: 'This coupon code has already been used' });
-      }
-
-      if (coupon.user_id !== user_id) {
-        return res.status(403).json({ error: 'This coupon code does not belong to you' });
-      }
-
-      if (new Date(coupon.expiry_date) < new Date()) {
-        return res.status(400).json({ error: 'This coupon code has expired' });
-      }
+    if (result.error) {
+      return res.status(400).json({ error: result.error });
     }
 
-    // 1. Create the order
-    const { payment_method, payment_status, live_location_url } = req.body;
-    let finalShippingAddress = shipping_address || '';
-    if (live_location_url && !finalShippingAddress.includes(live_location_url)) {
-      finalShippingAddress = `${finalShippingAddress}\n📍 Live Location: ${live_location_url}`;
-    }
+    const { order, artisanOrders, payment } = result;
 
-    let orderData = {
-      user_id,
-      total_price,
-      shipping_address: finalShippingAddress,
-      phone: String(phone || '').replace(/[^\d+]/g, '').substring(0, 20),
-      discount_amount: discount_amount || 0,
-      coupon_code: coupon_code ? coupon_code.trim().toUpperCase() : null,
-      status: 'pending',
-      payment_method: payment_method || 'cod',
-      payment_status: payment_status || 'pending'
-    };
-
-    let { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert([orderData])
-      .select()
-      .single();
-
-    // Fallback for missing columns (e.g. payment_method, payment_status, discount_amount, coupon_code)
-    if (orderError && (orderError.code === 'PGRST204' || (orderError.message && (orderError.message.includes('column') || orderError.message.includes('does not exist'))))) {
-      console.warn('Warning: Some columns are missing in Supabase. Attempting fallback inserts...');
-      
-      const fallbackOrderData = {
+    // For Razorpay: create Razorpay order
+    let razorpayOrderId = null;
+    let razorpayKeyId = null;
+    if (normalizedMethod === 'razorpay') {
+      const rzpResult = await createRzpOrder(order.total_amount, order.order_number, {
+        order_id: order.id,
         user_id,
-        total_price,
-        shipping_address: `${finalShippingAddress} [Method: ${payment_method || 'cod'}]`,
-        phone,
-        status: 'pending',
-        discount_amount: discount_amount || 0,
-        coupon_code: coupon_code ? coupon_code.trim().toUpperCase() : null
-      };
-      
-      const fallbackResult = await supabase
-        .from('orders')
-        .insert([fallbackOrderData])
-        .select()
-        .single();
-      
-      if (fallbackResult.error && (fallbackResult.error.message.includes('column') || fallbackResult.error.message.includes('does not exist'))) {
-        console.warn('Warning: discount_amount or coupon_code is also missing. Using base columns.');
-        const absoluteBaseData = {
-          user_id,
-          total_price,
-          shipping_address: `${finalShippingAddress} [Method: ${payment_method || 'cod'}]`,
-          phone,
-          status: 'pending'
-        };
-        const absoluteResult = await supabase
-          .from('orders')
-          .insert([absoluteBaseData])
-          .select()
-          .single();
-        
-        order = absoluteResult.data;
-        orderError = absoluteResult.error;
+      });
+      if (rzpResult.success) {
+        razorpayOrderId = rzpResult.order.id;
+        razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+        // Save razorpay_order_id to our DB
+        await supabase.from('orders').update({ razorpay_order_id: razorpayOrderId }).eq('id', order.id);
+        await supabase.from('payments').update({ provider_order_id: razorpayOrderId }).eq('order_id', order.id);
       } else {
-        order = fallbackResult.data;
-        orderError = fallbackResult.error;
+        console.error('[createOrder] Razorpay order creation failed:', rzpResult.error);
+        // Don't block order creation — payment can be retried
       }
     }
 
-    if (orderError) throw orderError;
-
-    if (order) {
-      if (!order.payment_method) {
-        order.payment_method = payment_method || 'cod';
-      }
-      order.live_location_url = live_location_url || (order.shipping_address?.match(/https:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com)\/[^\s,]+/i)?.[0]) || null;
-    }
-
-    // 2. Create order items (safely sanitize size to max 20 chars to fit DB schema)
-    const orderItems = items.map(item => ({
-      order_id: order.id,
-      product_id: item.product_id,
-      quantity: Number(item.quantity) || 1,
-      price_at_time: Number(item.price_at_time),
-      size: String(item.size || 'Standard').trim().substring(0, 20)
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
-
-    if (itemsError) throw itemsError;
-    
-    // Decrement product stock quantities
-    for (const item of items) {
-      try {
-        const { data: prod } = await supabase
-          .from('products')
-          .select('stock_quantity')
-          .eq('id', item.product_id)
-          .single();
-        
-        if (prod) {
-          const newStock = Math.max(0, (prod.stock_quantity || 0) - (item.quantity || 1));
-          const inStock = newStock > 0;
-          await supabase
-            .from('products')
-            .update({ stock_quantity: newStock, is_in_stock: inStock })
-            .eq('id', item.product_id);
-        }
-      } catch (err) {
-        console.error(`Failed to update stock for product ${item.product_id}:`, err);
-      }
-    }
-
-    // 2.5 Record in sales table for offline & online sales tracking
-    for (const item of items) {
-      try {
-        const qty = Number(item.quantity) || 1;
-        const price = Number(item.price_at_time) || 0;
-        const total = price * qty;
-        const today = new Date().toISOString().split('T')[0];
-
-        const saleRecord = {
-          product_id: String(item.product_id),
-          product_name: item.name || item.product_name || `Product #${item.product_id}`,
-          quantity: qty,
-          unit_price: price,
-          total_amount: total,
-          date: today,
-          order_id: String(order.id),
-          sale_type: 'online_order',
-          created_at: new Date().toISOString()
-        };
-
-        const { error: sErr } = await supabase.from('sales').insert([saleRecord]);
-        if (sErr) {
-          // Fallback if sales table uses base schema
-          await supabase.from('sales').insert([{
-            product_id: String(item.product_id),
-            quantity: qty,
-            date: today
-          }]);
-        }
-      } catch (errSale) {
-        console.warn('Notice recording order item in sales table:', errSale.message);
-      }
-    }
-    
-    // 3. Mark coupon as used if provided
-    if (coupon_code) {
-      await supabase
-        .from('coupons')
-        .update({ is_used: true })
-        .eq('code', coupon_code.trim().toUpperCase())
-        .eq('user_id', user_id);
-    }
-
-    // 4. Send WhatsApp Notification to the Admin (only if orderNotifications is enabled)
+    // Notifications
     let whatsappLink = null;
-    let whatsappMessage = null;
     try {
       const settings = getSiteSettings();
-      if (settings.orderNotifications) {
+      if (settings.orderNotifications && normalizedMethod === 'cod') {
         const { data: fullOrder } = await supabase
           .from('orders')
-          .select(`
-            *,
-            items:order_items (
-              quantity, price_at_time, size,
-              product:products (id, name, image_url, category)
-            )
-          `)
+          .select('*, items:order_items(quantity, price_at_time, size, product:products(id, name, image_url, category))')
           .eq('id', order.id)
           .single();
-
-        const orderForNotify = fullOrder || { ...order, items: orderItems };
-        if (!orderForNotify.payment_method) orderForNotify.payment_method = payment_method || 'cod';
-
-        const isUpi = getEffectivePaymentMethod(orderForNotify).includes('UPI');
-
-        if (!isUpi) {
-          const adminWhatsapp = settings.whatsappNumber;
-          const customerName = req.user?.name || 'Customer';
-          const wsRes = await sendOrderWhatsappNotification(adminWhatsapp, orderForNotify, customerName);
-          if (wsRes) {
-            whatsappLink = wsRes.directLink;
-            whatsappMessage = wsRes.messageText;
-          }
-        } else {
-          console.log('Online UPI order created: Skipping initial notification. 1 consolidated message will be sent when user submits Ref. No.');
-        }
-      } else {
-        console.log('Skipping WhatsApp order notification: orderNotifications is disabled in settings.');
+        const wsRes = await sendOrderWhatsappNotification(
+          settings.whatsappNumber, fullOrder || order, req.user?.name || 'Customer'
+        );
+        if (wsRes) whatsappLink = wsRes.directLink;
       }
     } catch (wsErr) {
-      console.error('Failed to trigger WhatsApp notification:', wsErr.message);
+      console.error('[createOrder] WhatsApp notification error:', wsErr.message);
     }
 
-    // 5. Send complete customer & delivery details directly to each related artisan
+    // Artisan notifications
     try {
-      const prodIds = orderItems.map(i => i.product_id).filter(Boolean);
-      if (prodIds.length > 0) {
-        const { data: dbProducts } = await supabase
-          .from('products')
-          .select('id, name, price, artisan_id')
-          .in('id', prodIds);
-
-        const artisanItemsMap = {};
-        for (const item of orderItems) {
-          const prod = (dbProducts || []).find(p => p.id === item.product_id);
-          const artId = prod?.artisan_id;
-          if (artId) {
-            if (!artisanItemsMap[artId]) artisanItemsMap[artId] = [];
-            artisanItemsMap[artId].push({ ...item, product: prod });
-          }
-        }
-
-        const { sendArtisanOrderNotification } = require('../utils/whatsapp');
-
-        for (const [artisanId, artItems] of Object.entries(artisanItemsMap)) {
-          const { data: artProfile } = await supabase
-            .from('artisan_profiles')
-            .select('id, store_name, user_id, users(name, phone, email)')
-            .or(`id.eq.${artisanId},user_id.eq.${artisanId}`)
-            .maybeSingle();
-
-          const artisanPhone = artProfile?.users?.phone;
-          const artisanStore = artProfile?.store_name || artProfile?.users?.name || 'Artisan';
-          const customerInfo = {
-            name: req.user?.name || 'Valued Customer',
-            phone: order.phone || req.user?.phone,
-            email: req.user?.email
-          };
-
-          if (artisanPhone) {
-            await sendArtisanOrderNotification(artisanPhone, artisanStore, order, artItems, customerInfo);
-          }
+      const { sendArtisanOrderNotification } = require('../utils/whatsapp');
+      for (const artOrder of (artisanOrders || [])) {
+        if (!artOrder.artisan_id) continue;
+        const { data: artProfile } = await supabase
+          .from('artisan_profiles')
+          .select('id, store_name, user_id, users(name, phone)')
+          .eq('id', artOrder.artisan_id)
+          .maybeSingle();
+        const artPhone = artProfile?.users?.phone;
+        if (artPhone) {
+          const artItems = (await supabase.from('order_items').select('*, products(id,name,price,image_url)').eq('order_id', order.id).eq('artisan_id', artOrder.artisan_id)).data || [];
+          await sendArtisanOrderNotification(artPhone, artProfile?.store_name || 'Artisan', order, artItems, { name: req.user?.name, phone: order.phone, email: req.user?.email });
         }
       }
-    } catch (artisanNotifyErr) {
-      console.error('Artisan order notification notice:', artisanNotifyErr.message);
+    } catch (artNotifyErr) {
+      console.error('[createOrder] Artisan notify error:', artNotifyErr.message);
     }
 
-    // 6. Realtime sync broadcast so all artisan and admin panels update immediately
-    try {
-      const { broadcastSync } = require('../utils/realtime');
-      broadcastSync('ORDERS_UPDATED', { action: 'create', orderId: order.id, order });
-      broadcastSync('PAYMENTS_UPDATED', { action: 'create', orderId: order.id, order });
-    } catch (syncErr) {
-      console.warn('Realtime order broadcast notice:', syncErr.message);
-    }
+    // Realtime broadcast
+    broadcastSync('ORDERS_UPDATED', { action: 'create', orderId: order.id });
+    broadcastSync('PAYMENTS_UPDATED', { action: 'create', orderId: order.id });
 
-    res.status(201).json({ ...order, whatsappLink, whatsappMessage });
+    res.status(201).json({
+      ...order,
+      artisan_orders: artisanOrders,
+      payment,
+      whatsappLink,
+      // Razorpay checkout data (only if applicable)
+      razorpay: razorpayOrderId ? {
+        order_id: razorpayOrderId,
+        key_id: razorpayKeyId,
+        amount: Math.round(order.total_amount * 100),
+        currency: 'INR',
+        name: 'KalaStyle AI',
+        description: `Order ${order.order_number}`,
+      } : null,
+    });
   } catch (error) {
-    console.error('Create Order Error:', error);
+    console.error('[createOrder] Error:', error);
     res.status(500).json({ error: error.message || 'Failed to create order' });
   }
 };
 
+// ── 2. GET MY ORDERS (Customer) ──────────────────────────────────────────────
 
 exports.getMyOrders = async (req, res) => {
   try {
-    // Fetch orders with their items and nested products
     const { data, error } = await supabase
       .from('orders')
       .select(`
         *,
         items:order_items (
-          quantity, price_at_time, size,
+          id, quantity, price_at_time, unit_price_snapshot, total_price, size,
+          product_name_snapshot, product_image_snapshot,
           product:products (id, name, image_url, category)
+        ),
+        artisan_orders (
+          id, artisan_id, status, subtotal, total_amount,
+          accepted_at, prepared_at, dispatched_at, out_for_delivery_at, delivered_at,
+          artisan:artisan_profiles (id, store_name, profile_image)
         )
       `)
       .eq('user_id', req.user.id)
@@ -364,584 +209,12 @@ exports.getMyOrders = async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (error) {
-    console.error(error);
+    console.error('[getMyOrders] Error:', error);
     res.status(500).json({ error: 'Server error fetching orders' });
   }
 };
 
-// Admin endpoints
-exports.getAllOrders = async (req, res) => {
-  try {
-    const { status } = req.query;
-    
-    let query = supabase
-      .from('orders')
-      .select(`
-        *,
-        users (id, name, email)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error fetching all orders' });
-  }
-};
-
-exports.updateOrderStatus = async (req, res) => {
-  try {
-    const { status, payment_status } = req.body;
-    const { id } = req.params;
-
-    if (!status && !payment_status) {
-      return res.status(400).json({ error: 'Status or payment status is required' });
-    }
-
-    const updates = {
-      ...(status ? { status } : {}),
-      ...(payment_status ? { payment_status } : {}),
-    };
-
-    const { data, error } = await supabase
-      .from('orders')
-      .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        users (id, name, email, phone),
-        order_items (
-          id, quantity, price_at_time, size,
-          products (id, name, image_url, category)
-        )
-      `)
-      .single();
-
-    if (error) throw error;
-
-    // Multi-device live broadcast sync across Admin, Artisan, and Shopper devices
-    try {
-      const { broadcastSync } = require('../utils/realtime');
-      broadcastSync('ORDERS_UPDATED', { id, status, payment_status, order: data });
-      broadcastSync('PAYMENTS_UPDATED', { id, status, payment_status, order: data });
-    } catch (bcErr) {
-      console.warn('Realtime broadcast notice:', bcErr.message);
-    }
-
-    // Send WhatsApp cancellation notification if status changed to cancelled
-    if (status === 'cancelled') {
-      try {
-        const settings = getSiteSettings();
-        if (settings.orderNotifications) {
-          const customerName = data?.users?.name || req.user?.name || 'Customer';
-          await sendOrderCancelWhatsappNotification(settings.whatsappNumber, data, customerName);
-        }
-      } catch (wsErr) {
-        console.error('Failed to trigger WhatsApp cancellation notification:', wsErr.message);
-      }
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error('updateOrderStatus error:', error);
-    res.status(500).json({ error: 'Failed to update order status' });
-  }
-};
-
-exports.cancelOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user_id = req.user.id;
-
-    // 1. Fetch order
-    const { data: order, error: fetchError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    // 2. Security Check: ensure it belongs to the logged-in user
-    if (order.user_id !== user_id) {
-      return res.status(403).json({ error: 'Unauthorized to cancel this order' });
-    }
-
-    // 3. Status check: pending or payment_verification_pending orders can be cancelled
-    if (order.status !== 'pending' && order.status !== 'payment_verification_pending') {
-      return res.status(400).json({ error: `Cannot cancel an order that is already ${order.status}` });
-    }
-
-    // 4. Timing Check: 12 hours limit
-    const createdTime = new Date(order.created_at);
-    const diffMs = Date.now() - createdTime.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-
-    if (diffHours > 12) {
-      return res.status(400).json({ error: 'Orders can only be cancelled within 12 hours of placement' });
-    }
-
-    // 5. Update status to 'cancelled'
-    const { data: updatedOrder, error: updateError } = await supabase
-      .from('orders')
-      .update({ status: 'cancelled' })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    // 6. Release coupon if used
-    if (order.coupon_code) {
-      await supabase
-        .from('coupons')
-        .update({ is_used: false })
-        .eq('code', order.coupon_code.trim().toUpperCase())
-        .eq('user_id', user_id);
-    }
-
-    let whatsappLink = null;
-    // 7. Send cancellation WhatsApp notification to the Admin (only if orderNotifications is enabled)
-    try {
-      const settings = getSiteSettings();
-      if (settings.orderNotifications) {
-        const { data: fullOrder } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            user:users (id, name, email),
-            items:order_items (
-              quantity, price_at_time, size,
-              product:products (id, name, image_url, category)
-            )
-          `)
-          .eq('id', id)
-          .single();
-
-        const notifyOrder = fullOrder || updatedOrder || order;
-        const adminWhatsapp = settings.whatsappNumber;
-        const customerName = notifyOrder?.user?.name || req.user?.name || 'Customer';
-        const wsRes = await sendOrderCancelWhatsappNotification(adminWhatsapp, notifyOrder, customerName);
-        if (wsRes) {
-          whatsappLink = wsRes.directLink;
-        }
-      } else {
-        console.log('Skipping WhatsApp cancellation notification: orderNotifications is disabled in settings.');
-      }
-    } catch (wsErr) {
-      console.error('Failed to trigger WhatsApp cancellation notification:', wsErr.message);
-    }
-
-    res.json({ ...updatedOrder, whatsappLink });
-  } catch (error) {
-    console.error('Cancel order error:', error);
-    res.status(500).json({ error: 'Failed to cancel order' });
-  }
-};
-
-exports.updateOrderDetails = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user_id = req.user.id;
-    const { shipping_address, phone, payment_method, item_sizes } = req.body;
-
-    // 1. Fetch order
-    const { data: order, error: fetchError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    // 2. Security Check: ensure it belongs to the logged-in user
-    if (order.user_id !== user_id) {
-      return res.status(403).json({ error: 'Unauthorized to edit this order' });
-    }
-
-    // 3. Status check: only pending orders can be edited
-    if (order.status !== 'pending') {
-      return res.status(400).json({ error: `Cannot edit an order that is already ${order.status}` });
-    }
-
-    // 4. Timing Check: 12 hours limit (same as cancellation window)
-    const createdTime = new Date(order.created_at);
-    const diffMs = Date.now() - createdTime.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-
-    if (diffHours > 12) {
-      return res.status(400).json({ error: 'Orders can only be edited within 12 hours of placement' });
-    }
-
-    // 5. Phone validation: must contain exactly 10 digits
-    const cleanPhone = (phone || '').replace(/\D/g, '');
-    if (cleanPhone.length !== 10) {
-      return res.status(400).json({ error: 'Phone number must contain exactly 10 digits' });
-    }
-
-    // 6. Build update payload
-    const updateData = {};
-    if (shipping_address) updateData.shipping_address = shipping_address;
-    updateData.phone = cleanPhone;
-    if (payment_method) updateData.payment_method = payment_method;
-
-    let updatedOrder = null;
-    let updateError = null;
-
-    const resPrimary = await supabase
-      .from('orders')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    updatedOrder = resPrimary.data;
-    updateError = resPrimary.error;
-
-    // Fallback if payment_method column is missing in Supabase orders table
-    if (updateError && (updateError.code === 'PGRST204' || (updateError.message && (updateError.message.includes('column') || updateError.message.includes('does not exist'))))) {
-      console.warn('Warning: payment_method column missing in orders table. Falling back to shipping_address & phone update.');
-      const fallbackData = {
-        phone: phone || order.phone,
-        shipping_address: payment_method ? `${shipping_address || order.shipping_address} [Payment Method: ${payment_method}]` : (shipping_address || order.shipping_address)
-      };
-
-      const resFallback = await supabase
-        .from('orders')
-        .update(fallbackData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      updatedOrder = resFallback.data;
-      updateError = resFallback.error;
-    }
-
-    if (updateError) {
-      console.error('Database order update error:', updateError);
-      throw updateError;
-    }
-
-    // 6. Update order items sizes if provided ({ itemId: newSize })
-    if (item_sizes && typeof item_sizes === 'object') {
-      for (const [itemId, newSize] of Object.entries(item_sizes)) {
-        if (newSize) {
-          await supabase
-            .from('order_items')
-            .update({ size: newSize })
-            .eq('id', itemId)
-            .eq('order_id', id);
-        }
-      }
-    }
-
-    // 7. Fetch full updated order with items
-    const { data: fullOrder } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        items:order_items (
-          id, quantity, price_at_time, size,
-          product:products (id, name, image_url, category, sizes)
-        )
-      `)
-      .eq('id', id)
-      .single();
-
-    const finalOrder = fullOrder || updatedOrder;
-
-    // 8. Send WhatsApp notification to Admin (only if orderNotifications is enabled)
-    try {
-      const settings = getSiteSettings();
-      if (settings.orderNotifications) {
-        const adminWhatsapp = settings.whatsappNumber;
-        const customerName = req.user?.name || 'Customer';
-        await sendOrderEditWhatsappNotification(adminWhatsapp, finalOrder, customerName);
-      }
-    } catch (wsErr) {
-      console.error('Failed to trigger WhatsApp order edit notification:', wsErr.message);
-    }
-
-    res.json(finalOrder);
-  } catch (error) {
-    console.error('Update order error:', error);
-    res.status(500).json({ error: 'Failed to update order details' });
-  }
-};
-
-exports.payOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { payment_method, transaction_id, ref_no, utr_number } = req.body;
-    const ref = (utr_number || transaction_id || ref_no || '').trim();
-
-    // 1. Fetch order with order items and products to identify assigned artisan
-    const { data: order, error: fetchError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        users (id, name, email, phone),
-        items:order_items (
-          quantity, price_at_time, size,
-          product:products (id, name, image_url, category, artisan_id)
-        )
-      `)
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    // 2. Identify the related artisan(s) for this order
-    const artisanIds = [...new Set(
-      (order.items || [])
-        .map(i => i.product?.artisan_id)
-        .filter(Boolean)
-    )];
-
-    let primaryArtisanPhone = null;
-    let primaryArtisanStore = null;
-
-    if (artisanIds.length > 0) {
-      const { data: artProfiles } = await supabase
-        .from('artisan_profiles')
-        .select('id, store_name, user_id, users(name, phone, email)')
-        .or(`id.in.(${artisanIds.map(id => `"${id}"`).join(',')}),user_id.in.(${artisanIds.map(id => `"${id}"`).join(',')})`);
-
-      if (artProfiles && artProfiles.length > 0) {
-        primaryArtisanPhone = artProfiles[0].users?.phone;
-        primaryArtisanStore = artProfiles[0].store_name || artProfiles[0].users?.name;
-      }
-    }
-
-    // Fallback phone if artisan profile phone not found
-    const targetArtisanPhone = primaryArtisanPhone || getSiteSettings().whatsappNumber;
-    const targetArtisanStore = primaryArtisanStore || 'Artisan Partner';
-
-    // 3. Update order as pending_verification with UTR number
-    const updateData = {
-      payment_status: 'pending_verification',
-      payment_method: payment_method || order.payment_method || 'upi',
-      transaction_id: ref || `REF_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-      status: 'payment_verification_pending'
-    };
-
-    let { data: updatedOrder, error: updateError } = await supabase
-      .from('orders')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    // Fallback if columns are missing
-    if (updateError && (updateError.message.includes('column') || updateError.message.includes('does not exist'))) {
-      console.warn('Warning: payment_status or transaction_id column is missing. Falling back to status update.');
-      const fallbackUpdate = {
-        status: 'payment_verification_pending',
-        shipping_address: `${order.shipping_address} [Ref. No: ${ref || 'PENDING'}, UTR: ${ref}, Status: Pending Artisan Verification]`
-      };
-      
-      const fallbackResult = await supabase
-        .from('orders')
-        .update(fallbackUpdate)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      updatedOrder = fallbackResult.data;
-      updateError = fallbackResult.error;
-    }
-
-    if (updateError) throw updateError;
-
-    // 4. Realtime broadcast so artisan sees the incoming UTR immediately
-    try {
-      const { broadcastSync } = require('../utils/realtime');
-      broadcastSync('PAYMENTS_UPDATED', { id, payment_status: 'pending_verification', utr_number: ref, order: updatedOrder });
-      broadcastSync('ORDERS_UPDATED', { id, status: 'payment_verification_pending', utr_number: ref, order: updatedOrder });
-    } catch (syncErr) {
-      console.warn('Realtime sync broadcast notice:', syncErr.message);
-    }
-
-    // 5. Send WhatsApp notification directly to the related Artisan with the UTR number
-    let whatsappLink = null;
-    let whatsappMessage = null;
-    try {
-      const settings = getSiteSettings();
-      if (settings.orderNotifications) {
-        const { sendArtisanUtrSubmittedNotification } = require('../utils/whatsapp');
-        const customerName = req.user?.name || order.users?.name || 'Customer';
-
-        const wsRes = await sendArtisanUtrSubmittedNotification(
-          targetArtisanPhone,
-          targetArtisanStore,
-          order,
-          customerName,
-          ref
-        );
-
-        if (wsRes) {
-          whatsappLink = wsRes.directLink;
-          whatsappMessage = wsRes.messageText;
-        }
-      }
-    } catch (wsErr) {
-      console.error('Artisan WhatsApp notify error:', wsErr.message);
-    }
-
-    res.json({
-      ...updatedOrder,
-      whatsappLink,
-      whatsappMessage,
-      artisanPhone: targetArtisanPhone,
-      artisanStore: targetArtisanStore
-    });
-  } catch (error) {
-    console.error('Pay order error:', error);
-    res.status(500).json({ error: 'Failed to update payment status' });
-  }
-};
-
-exports.verifyPayment = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { action } = req.body; // 'approve' or 'reject'
-    const userId = req.user.id;
-    const userRole = (req.user.role || '').toLowerCase();
-
-    // 1. Strict Security: Block Admin! Only the related artisan can verify and confirm!
-    if (userRole === 'admin') {
-      return res.status(403).json({
-        error: 'Access denied. Only the related artisan can verify the UTR and confirm this order, not admin.'
-      });
-    }
-
-    if (userRole !== 'artisan') {
-      return res.status(403).json({
-        error: 'Access denied. Artisan privileges required.'
-      });
-    }
-
-    // 2. Fetch full order with products and items
-    const { data: order, error: fetchErr } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        users (id, name, email, phone),
-        items:order_items (
-          quantity, price_at_time, size,
-          product:products (id, name, image_url, category, artisan_id)
-        )
-      `)
-      .eq('id', id)
-      .single();
-
-    if (fetchErr || !order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    // 3. Verify that the authenticated artisan is assigned to this order
-    const { data: artisanProf } = await supabase
-      .from('artisan_profiles')
-      .select('id, store_name, user_id, users(name, phone)')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    const artisanProfileId = artisanProf?.id;
-    const orderArtisanIds = (order.items || [])
-      .map(i => i.product?.artisan_id)
-      .filter(Boolean);
-
-    const isRelatedArtisan = orderArtisanIds.some(
-      artId => artId === artisanProfileId || artId === userId
-    );
-
-    if (!isRelatedArtisan) {
-      return res.status(403).json({
-        error: 'Access denied. You are not the assigned artisan for this order.'
-      });
-    }
-
-    // 4. Update the order status upon artisan verification
-    const isApprove = action === 'approve';
-    const updateData = {
-      payment_status: isApprove ? 'paid' : 'failed',
-      status: isApprove ? 'processing' : 'cancelled'
-    };
-
-    let { data: updatedOrder, error: updateError } = await supabase
-      .from('orders')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (updateError && (updateError.message.includes('column') || updateError.message.includes('does not exist'))) {
-      const fallbackUpdate = {
-        status: isApprove ? 'processing' : 'cancelled'
-      };
-      const resFb = await supabase
-        .from('orders')
-        .update(fallbackUpdate)
-        .eq('id', id)
-        .select()
-        .single();
-      updatedOrder = resFb.data;
-      updateError = resFb.error;
-    }
-
-    if (updateError) throw updateError;
-
-    // 5. Broadcast real-time updates across customer and artisan portals
-    try {
-      const { broadcastSync } = require('../utils/realtime');
-      broadcastSync('PAYMENTS_UPDATED', { id, status: updatedOrder?.status, payment_status: updatedOrder?.payment_status, order: updatedOrder });
-      broadcastSync('ORDERS_UPDATED', { id, status: updatedOrder?.status, payment_status: updatedOrder?.payment_status, order: updatedOrder });
-    } catch (syncErr) {
-      console.warn('Realtime sync broadcast notice:', syncErr.message);
-    }
-
-    // 6. Send WhatsApp confirmation to the Customer
-    try {
-      const settings = getSiteSettings();
-      if (settings.orderNotifications) {
-        const { sendPaymentVerifiedWhatsappNotification, sendOrderCancelWhatsappNotification } = require('../utils/whatsapp');
-        const customerName = order.users?.name || 'Customer';
-        const artisanStore = artisanProf?.store_name || req.user.name || 'Artisan';
-        const artisanPhone = artisanProf?.users?.phone || req.user.phone;
-
-        if (isApprove) {
-          await sendPaymentVerifiedWhatsappNotification(artisanPhone, order, customerName, artisanStore);
-        } else {
-          await sendOrderCancelWhatsappNotification(artisanPhone, order, customerName);
-        }
-      }
-    } catch (wsErr) {
-      console.error('Failed to trigger WhatsApp confirmation notification:', wsErr.message);
-    }
-
-    res.json({
-      success: true,
-      message: isApprove ? 'UTR verified and order confirmed successfully!' : 'Order rejected due to invalid UTR',
-      order: updatedOrder
-    });
-  } catch (err) {
-    console.error('Verify payment error:', err);
-    res.status(500).json({ error: 'Failed to verify payment' });
-  }
-};
+// ── 3. GET ORDER BY ID ───────────────────────────────────────────────────────
 
 exports.getOrderById = async (req, res) => {
   try {
@@ -952,53 +225,508 @@ exports.getOrderById = async (req, res) => {
         *,
         users (name, email),
         items:order_items (
-          quantity, price_at_time, size,
+          id, quantity, price_at_time, unit_price_snapshot, total_price, size,
+          product_name_snapshot, product_image_snapshot, artisan_id,
           product:products (id, name, image_url, category, artisan_id)
-        )
+        ),
+        artisan_orders (
+          id, artisan_id, status, subtotal, delivery_fee, total_amount,
+          accepted_at, prepared_at, ready_at, dispatched_at, out_for_delivery_at, delivered_at, rejection_reason,
+          artisan:artisan_profiles (id, store_name, profile_image, location)
+        ),
+        payment:payments (id, method, provider, status, amount, paid_at, refunded_at)
       `)
       .eq('id', id)
       .single();
 
-    if (error || !order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
+    if (error || !order) return res.status(404).json({ error: 'Order not found' });
 
     if (order.user_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Unauthorized access to this order' });
     }
 
-    // Populate artisan profiles for items in this order
-    const { parseArtisanUpi } = require('./authController');
-    let primaryArtisan = null;
+    res.json(order);
+  } catch (err) {
+    console.error('[getOrderById] Error:', err);
+    res.status(500).json({ error: 'Server error fetching order' });
+  }
+};
 
-    if (order.items && order.items.length > 0) {
-      for (const item of order.items) {
-        if (item.product?.artisan_id) {
-          try {
-            const { data: artProfile } = await supabase
-              .from('artisan_profiles')
-              .select('*')
-              .eq('id', item.product.artisan_id)
-              .maybeSingle();
-            
-            if (artProfile) {
-              const parsedArt = parseArtisanUpi(artProfile);
-              item.product.artisan = parsedArt;
-              if (!primaryArtisan) {
-                primaryArtisan = parsedArt;
-              }
-            }
-          } catch (e) {
-            console.error('Error fetching artisan for product:', e.message);
-          }
+// ── 4. GET ORDER TRACKING ────────────────────────────────────────────────────
+
+exports.getOrderTracking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select(`
+        id, order_number, order_status, status, payment_status, payment_method,
+        total_amount, total_price, created_at, updated_at,
+        shipping_name, shipping_address, shipping_city, shipping_state, shipping_pincode, phone,
+        artisan_orders (
+          id, artisan_id, status, subtotal, total_amount,
+          accepted_at, prepared_at, ready_at, dispatched_at, out_for_delivery_at, delivered_at,
+          cancelled_at, rejected_at, rejection_reason, created_at, updated_at,
+          artisan:artisan_profiles (id, store_name, profile_image, location)
+        ),
+        items:order_items (
+          id, quantity, size, product_name_snapshot, product_image_snapshot,
+          unit_price_snapshot, total_price, artisan_id
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error || !order) return res.status(404).json({ error: 'Order not found' });
+
+    if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+
+    res.json(order);
+  } catch (err) {
+    console.error('[getOrderTracking] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// ── 5. ALL ORDERS (Admin) ────────────────────────────────────────────────────
+
+exports.getAllOrders = async (req, res) => {
+  try {
+    const { status, payment_status, payment_method } = req.query;
+
+    let query = supabase
+      .from('orders')
+      .select(`
+        *,
+        users (id, name, email),
+        artisan_orders (id, artisan_id, status),
+        payment:payments (id, method, status, amount)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (status && status !== 'all') query = query.eq('order_status', status);
+    if (payment_status && payment_status !== 'all') query = query.eq('payment_status', payment_status);
+    if (payment_method && payment_method !== 'all') query = query.eq('payment_method', payment_method);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('[getAllOrders] Error:', error);
+    res.status(500).json({ error: 'Server error fetching orders' });
+  }
+};
+
+// ── 6. UPDATE ORDER STATUS (Admin/Artisan) ───────────────────────────────────
+
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { status, payment_status } = req.body;
+    const { id } = req.params;
+
+    if (!status && !payment_status) {
+      return res.status(400).json({ error: 'Status or payment_status is required' });
+    }
+
+    const updates = {
+      ...(status ? { status, order_status: status } : {}),
+      ...(payment_status ? { payment_status } : {}),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+      .select('*, users (id, name, email, phone)')
+      .single();
+
+    if (error) throw error;
+
+    broadcastSync('ORDERS_UPDATED', { id, status, payment_status, order: data });
+    broadcastSync('PAYMENTS_UPDATED', { id, status, payment_status });
+
+    if (status === 'cancelled') {
+      try {
+        const settings = getSiteSettings();
+        if (settings.orderNotifications) {
+          await sendOrderCancelWhatsappNotification(settings.whatsappNumber, data, data?.users?.name || 'Customer');
         }
+      } catch (wsErr) {
+        console.error('[updateOrderStatus] WhatsApp cancel error:', wsErr.message);
       }
     }
 
-    order.primary_artisan = primaryArtisan;
-    res.json(order);
+    res.json(data);
+  } catch (error) {
+    console.error('[updateOrderStatus] Error:', error);
+    res.status(500).json({ error: 'Failed to update order status' });
+  }
+};
+
+// ── 7. CANCEL ORDER (Customer) ───────────────────────────────────────────────
+
+exports.cancelOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('*, items:order_items(product_id, quantity)')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !order) return res.status(404).json({ error: 'Order not found' });
+    if (order.user_id !== user_id) return res.status(403).json({ error: 'Unauthorized to cancel this order' });
+
+    const cancelableStatuses = ['pending', 'payment_verification_pending', 'confirmed'];
+    const effectiveStatus = order.order_status || order.status;
+    if (!cancelableStatuses.includes(effectiveStatus)) {
+      return res.status(400).json({ error: `Cannot cancel an order with status: ${effectiveStatus}` });
+    }
+
+    // Check artisan_orders — if any is dispatched+, block cancellation
+    const { data: artisanOrders } = await supabase
+      .from('artisan_orders')
+      .select('status')
+      .eq('order_id', id);
+
+    const nonCancellable = ['dispatched', 'out_for_delivery', 'delivered'];
+    const hasDispatched = (artisanOrders || []).some(ao => nonCancellable.includes(ao.status));
+    if (hasDispatched) {
+      return res.status(400).json({ error: 'Cannot cancel: one or more items are already dispatched or delivered' });
+    }
+
+    // Cancellation window
+    const settings = await getEcomSettings();
+    const createdTime = new Date(order.created_at);
+    const diffHours = (Date.now() - createdTime.getTime()) / (1000 * 60 * 60);
+    if (diffHours > settings.cancellation_window_hours) {
+      return res.status(400).json({
+        error: `Orders can only be cancelled within ${settings.cancellation_window_hours} hours of placement`,
+      });
+    }
+
+    // Cancel master order
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from('orders')
+      .update({ status: 'cancelled', order_status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (updateError) throw updateError;
+
+    // Cancel artisan sub-orders
+    await supabase.from('artisan_orders').update({
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('order_id', id);
+
+    // Restore inventory
+    await restoreInventory(id);
+
+    // Release coupon
+    if (order.coupon_code) {
+      await supabase.from('coupons').update({ is_used: false })
+        .eq('code', order.coupon_code.trim().toUpperCase())
+        .eq('user_id', user_id);
+    }
+
+    // Handle refund for paid online orders
+    let refundInfo = null;
+    if (order.payment_status === 'paid' && order.payment_method === 'razorpay') {
+      const refundResult = await processRefund(id, null, 'Order cancelled by customer');
+      if (refundResult.success) {
+        refundInfo = refundResult.refund;
+      }
+    }
+
+    // Reverse reward if applicable
+    await reverseRewardIfNeeded(user_id);
+
+    // WhatsApp notification
+    let whatsappLink = null;
+    try {
+      const settings2 = getSiteSettings();
+      if (settings2.orderNotifications) {
+        const { data: fullOrder } = await supabase.from('orders').select('*, user:users(id,name,email), items:order_items(quantity, price_at_time, size, product:products(id,name,image_url))').eq('id', id).single();
+        const wsRes = await sendOrderCancelWhatsappNotification(settings2.whatsappNumber, fullOrder || updatedOrder, req.user?.name || 'Customer');
+        if (wsRes) whatsappLink = wsRes.directLink;
+      }
+    } catch (wsErr) {
+      console.error('[cancelOrder] WhatsApp error:', wsErr.message);
+    }
+
+    broadcastSync('ORDERS_UPDATED', { id, status: 'cancelled' });
+
+    res.json({ ...updatedOrder, whatsappLink, refund: refundInfo });
+  } catch (error) {
+    console.error('[cancelOrder] Error:', error);
+    res.status(500).json({ error: 'Failed to cancel order' });
+  }
+};
+
+// ── 8. UPDATE ORDER DETAILS (Customer) ──────────────────────────────────────
+
+exports.updateOrderDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const { shipping_address, phone, payment_method, item_sizes } = req.body;
+
+    const { data: order, error: fetchError } = await supabase
+      .from('orders').select('*').eq('id', id).single();
+
+    if (fetchError || !order) return res.status(404).json({ error: 'Order not found' });
+    if (order.user_id !== user_id) return res.status(403).json({ error: 'Unauthorized to edit this order' });
+
+    const effectiveStatus = order.order_status || order.status;
+    if (!['pending', 'confirmed'].includes(effectiveStatus)) {
+      return res.status(400).json({ error: `Cannot edit an order that is already ${effectiveStatus}` });
+    }
+
+    const settings = await getEcomSettings();
+    const diffHours = (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60);
+    if (diffHours > settings.cancellation_window_hours) {
+      return res.status(400).json({ error: `Orders can only be edited within ${settings.cancellation_window_hours} hours` });
+    }
+
+    const cleanPhone = String(phone || order.phone || '').replace(/\D/g, '');
+    if (cleanPhone.length < 10) return res.status(400).json({ error: 'Phone number must have at least 10 digits' });
+
+    const updateData = {};
+    if (shipping_address) updateData.shipping_address = shipping_address;
+    updateData.phone = cleanPhone.substring(0, 20);
+    if (payment_method) updateData.payment_method = payment_method;
+    updateData.updated_at = new Date().toISOString();
+
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from('orders').update(updateData).eq('id', id).select().single();
+    if (updateError) throw updateError;
+
+    if (item_sizes && typeof item_sizes === 'object') {
+      for (const [itemId, newSize] of Object.entries(item_sizes)) {
+        if (newSize) await supabase.from('order_items').update({ size: newSize }).eq('id', itemId).eq('order_id', id);
+      }
+    }
+
+    const { data: fullOrder } = await supabase.from('orders').select('*, items:order_items(id, quantity, price_at_time, size, product:products(id,name,image_url,category,sizes))').eq('id', id).single();
+
+    try {
+      const settings2 = getSiteSettings();
+      if (settings2.orderNotifications) {
+        await sendOrderEditWhatsappNotification(settings2.whatsappNumber, fullOrder || updatedOrder, req.user?.name || 'Customer');
+      }
+    } catch (wsErr) {
+      console.error('[updateOrderDetails] WhatsApp error:', wsErr.message);
+    }
+
+    res.json(fullOrder || updatedOrder);
+  } catch (error) {
+    console.error('[updateOrderDetails] Error:', error);
+    res.status(500).json({ error: 'Failed to update order details' });
+  }
+};
+
+// ── 9. PAY ORDER (legacy UTR flow — kept for backward compatibility) ──────────
+
+exports.payOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { payment_method, transaction_id, ref_no, utr_number } = req.body;
+    const ref = (utr_number || transaction_id || ref_no || '').trim();
+
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('*, users (id, name, email, phone), items:order_items(quantity, price_at_time, size, product:products(id, name, image_url, category, artisan_id))')
+      .eq('id', id).single();
+
+    if (fetchError || !order) return res.status(404).json({ error: 'Order not found' });
+
+    const artisanIds = [...new Set((order.items || []).map(i => i.product?.artisan_id).filter(Boolean))];
+    let primaryArtisanPhone = null;
+    let primaryArtisanStore = null;
+
+    if (artisanIds.length > 0) {
+      const { data: artProfiles } = await supabase
+        .from('artisan_profiles').select('id, store_name, user_id, users(name, phone)')
+        .in('id', artisanIds);
+      if (artProfiles?.length > 0) {
+        primaryArtisanPhone = artProfiles[0].users?.phone;
+        primaryArtisanStore = artProfiles[0].store_name || artProfiles[0].users?.name;
+      }
+    }
+
+    const targetArtisanPhone = primaryArtisanPhone || getSiteSettings().whatsappNumber;
+    const targetArtisanStore = primaryArtisanStore || 'Artisan Partner';
+
+    const updateData = {
+      payment_status: 'pending_verification',
+      payment_method: payment_method || order.payment_method || 'upi',
+      transaction_id: ref || `REF_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      status: 'payment_verification_pending',
+      order_status: 'payment_verification_pending',
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from('orders').update(updateData).eq('id', id).select().single();
+    if (updateError) throw updateError;
+
+    broadcastSync('PAYMENTS_UPDATED', { id, payment_status: 'pending_verification', utr_number: ref });
+    broadcastSync('ORDERS_UPDATED', { id, status: 'payment_verification_pending' });
+
+    let whatsappLink = null;
+    let whatsappMessage = null;
+    try {
+      const settings = getSiteSettings();
+      if (settings.orderNotifications) {
+        const { sendArtisanUtrSubmittedNotification } = require('../utils/whatsapp');
+        const wsRes = await sendArtisanUtrSubmittedNotification(
+          targetArtisanPhone, targetArtisanStore, order, req.user?.name || order.users?.name || 'Customer', ref
+        );
+        if (wsRes) { whatsappLink = wsRes.directLink; whatsappMessage = wsRes.messageText; }
+      }
+    } catch (wsErr) {
+      console.error('[payOrder] WhatsApp notify error:', wsErr.message);
+    }
+
+    res.json({ ...updatedOrder, whatsappLink, whatsappMessage, artisanPhone: targetArtisanPhone, artisanStore: targetArtisanStore });
+  } catch (error) {
+    console.error('[payOrder] Error:', error);
+    res.status(500).json({ error: 'Failed to update payment status' });
+  }
+};
+
+// ── 10. VERIFY PAYMENT (Artisan UTR verification) ────────────────────────────
+
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+    const userId = req.user.id;
+    const userRole = (req.user.role || '').toLowerCase();
+
+    if (userRole === 'admin') {
+      return res.status(403).json({ error: 'Only the related artisan can verify this payment, not admin.' });
+    }
+    if (userRole !== 'artisan') {
+      return res.status(403).json({ error: 'Artisan privileges required.' });
+    }
+
+    const { data: order, error: fetchErr } = await supabase
+      .from('orders')
+      .select('*, users(id, name, email, phone), items:order_items(quantity, price_at_time, size, product:products(id, name, image_url, category, artisan_id))')
+      .eq('id', id).single();
+
+    if (fetchErr || !order) return res.status(404).json({ error: 'Order not found' });
+
+    const { data: artisanProf } = await supabase
+      .from('artisan_profiles').select('id, store_name, user_id, users(name, phone)')
+      .eq('user_id', userId).maybeSingle();
+
+    const artisanProfileId = artisanProf?.id;
+    const orderArtisanIds = (order.items || []).map(i => i.product?.artisan_id).filter(Boolean);
+    const isRelatedArtisan = orderArtisanIds.some(artId => artId === artisanProfileId || artId === userId);
+
+    if (!isRelatedArtisan) {
+      return res.status(403).json({ error: 'Access denied. You are not the assigned artisan for this order.' });
+    }
+
+    const isApprove = action === 'approve';
+    const updateData = {
+      payment_status: isApprove ? 'paid' : 'failed',
+      status: isApprove ? 'confirmed' : 'cancelled',
+      order_status: isApprove ? 'confirmed' : 'cancelled',
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from('orders').update(updateData).eq('id', id).select().single();
+    if (updateError) throw updateError;
+
+    if (isApprove) {
+      // Update artisan_orders to pending (ready for artisan to start processing)
+      await supabase.from('artisan_orders').update({ status: 'pending', updated_at: new Date().toISOString() }).eq('order_id', id);
+      // Update payment record
+      await supabase.from('payments').update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('order_id', id);
+    } else {
+      // Restore inventory on rejection
+      await restoreInventory(id);
+    }
+
+    broadcastSync('PAYMENTS_UPDATED', { id, status: updatedOrder?.payment_status });
+    broadcastSync('ORDERS_UPDATED', { id, status: updatedOrder?.status });
+
+    try {
+      const settings = getSiteSettings();
+      if (settings.orderNotifications) {
+        const customerName = order.users?.name || 'Customer';
+        const artisanStore = artisanProf?.store_name || req.user.name || 'Artisan';
+        const artisanPhone = artisanProf?.users?.phone;
+        if (isApprove) {
+          await sendPaymentVerifiedWhatsappNotification(artisanPhone, order, customerName, artisanStore);
+        } else {
+          await sendOrderCancelWhatsappNotification(artisanPhone, order, customerName);
+        }
+      }
+    } catch (wsErr) {
+      console.error('[verifyPayment] WhatsApp notify error:', wsErr.message);
+    }
+
+    res.json({ success: true, message: isApprove ? 'UTR verified and order confirmed!' : 'Order rejected', order: updatedOrder });
   } catch (err) {
-    console.error('Get order by id error:', err);
-    res.status(500).json({ error: 'Server error fetching order details' });
+    console.error('[verifyPayment] Error:', err);
+    res.status(500).json({ error: 'Failed to verify payment' });
+  }
+};
+
+// ── 11. GET CALCULATE TOTAL (price preview before checkout) ─────────────────
+
+exports.calculateTotal = async (req, res) => {
+  try {
+    const { items, coupon_code } = req.body;
+    if (!items || items.length === 0) return res.status(400).json({ error: 'No items provided' });
+
+    const { calculateOrderTotals, validateCoupon } = require('../services/orderService');
+    const { calculateDeliveryFee } = require('../config/ecommerce');
+
+    const totalsResult = await calculateOrderTotals(items);
+    if (totalsResult.error) return res.status(400).json({ error: totalsResult.error });
+
+    const { items: enrichedItems, subtotal } = totalsResult;
+    const deliveryFee = await calculateDeliveryFee(subtotal);
+    const couponResult = await validateCoupon(coupon_code, req.user?.id, subtotal);
+    const discount = couponResult.error ? 0 : (couponResult.discount || 0);
+    const total = Math.max(0, subtotal + deliveryFee - discount);
+
+    res.json({ subtotal, delivery_fee: deliveryFee, discount, total, items: enrichedItems });
+  } catch (err) {
+    console.error('[calculateTotal] Error:', err);
+    res.status(500).json({ error: 'Failed to calculate total' });
+  }
+};
+
+// ── 12. ADMIN REFUND ─────────────────────────────────────────────────────────
+
+exports.initiateRefund = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, reason } = req.body;
+
+    const result = await processRefund(id, amount || null, reason || 'Admin initiated refund');
+    if (result.error) return res.status(400).json({ error: result.error });
+
+    broadcastSync('PAYMENTS_UPDATED', { orderId: id, status: 'refunded' });
+    broadcastSync('ORDERS_UPDATED', { orderId: id, order_status: 'cancelled' });
+
+    res.json({ success: true, refund: result.refund });
+  } catch (err) {
+    console.error('[initiateRefund] Error:', err);
+    res.status(500).json({ error: 'Failed to initiate refund' });
   }
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orderAPI } from '../services/api';
-import { HiShoppingBag, HiPencilAlt, HiLocationMarker } from 'react-icons/hi';
+import { HiShoppingBag, HiPencilAlt, HiLocationMarker, HiTruck } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import EditOrderModal from '../components/EditOrderModal';
@@ -14,8 +14,8 @@ export default function Orders() {
   const [editingOrder, setEditingOrder] = useState(null);
 
   const isCancelable = (order) => {
-    const st = order.status?.toLowerCase();
-    if (st !== 'pending' && st !== 'payment_verification_pending') return false;
+    const st = (order.order_status || order.status || '').toLowerCase();
+    if (!['pending', 'payment_verification_pending', 'confirmed'].includes(st)) return false;
     const ageMs = Date.now() - new Date(order.created_at).getTime();
     const ageHours = ageMs / (1000 * 60 * 60);
     return ageHours <= 12;
@@ -266,6 +266,12 @@ export default function Orders() {
                 {isCancelable(order) ? `⏱️ ${getRemainingTimeText(order.created_at)}` : ''}
               </span>
               <div className="flex items-center gap-2.5 flex-wrap">
+                <Link
+                  to={`/orders/${order.id}/tracking`}
+                  className="px-3 py-2 text-xs font-semibold text-blue-400 hover:text-blue-300 border border-blue-500/30 hover:border-blue-500/60 bg-blue-500/5 hover:bg-blue-500/10 rounded-lg transition-all flex items-center gap-1.5 no-underline"
+                >
+                  <HiTruck className="w-3.5 h-3.5" /> Track Order
+                </Link>
                 <a
                   href={buildWhatsappLink(order)}
                   target="_blank"

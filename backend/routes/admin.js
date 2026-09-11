@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, admin } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
+const { initiateRefund } = require('../controllers/orderController');
 
 // All /api/admin routes are strictly protected by JWT authentication & Admin role verification
 router.use(protect);
@@ -35,6 +36,11 @@ router.delete('/categories/:id', adminController.deleteCategory);
 // 6. Orders
 router.get('/orders', adminController.getOrders);
 router.put('/orders/:id/status', adminController.updateOrderStatus);
+router.post('/orders/:id/refund', initiateRefund);
+
+// 6b. Artisan Orders & Earnings
+router.get('/artisan-orders', adminController.getAdminArtisanOrders);
+router.get('/artisan-earnings', adminController.getAdminArtisanEarnings);
 
 // 7. Payments
 router.get('/payments', adminController.getPayments);

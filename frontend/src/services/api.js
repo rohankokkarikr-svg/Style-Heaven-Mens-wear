@@ -99,17 +99,26 @@ export const productAPI = {
   generateBarcode: (id) => api.post(`/products/${id}/barcode`),
 };
 
-// ─── Orders ──────────────────────────────────────
+// ─── Orders ──────────────────────────────────────────────────────
 export const orderAPI = {
   create:             (data)     => { apiCache.invalidateOrders(); return api.post('/orders', data); },
+  createOrder:        (data)     => { apiCache.invalidateOrders(); return api.post('/orders/create', data); },
+  calculateTotal:     (data)     => api.post('/orders/calculate-total', data),
   getMyOrders:        ()         => api.get('/orders/my'),
   getAll:             (params)   => api.get('/orders', { params }),
   getById:            (id)       => api.get(`/orders/${id}`),
+  getTracking:        (id)       => api.get(`/orders/${id}/tracking`),
   updateStatus:       (id, data) => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/status`, data); },
   updateOrderDetails: (id, data) => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/edit`, data); },
   cancelOrder:        (id)       => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/cancel`); },
   pay:                (id, data) => api.put(`/orders/${id}/pay`, data),
   verifyPayment:      (id, data) => api.put(`/orders/${id}/verify-payment`, data),
+  refund:             (id, data) => api.post(`/orders/${id}/refund`, data),
+};
+
+// ─── Payments ─────────────────────────────────────────────────────
+export const paymentAPI = {
+  verify: (data) => api.post('/payments/verify', data),
 };
 
 // ─── Sales / Barcode ─────────────────────────────
@@ -151,18 +160,23 @@ export const settingsAPI = {
   update: (data)   => { apiCache.invalidateSettings(); return api.put('/settings', data); },
 };
 
-// ─── Artisans ────────────────────────────────────
+// ─── Artisans ────────────────────────────────────────────────────
 export const artisanAPI = {
-  getAll:            ()       => cachedGet('/artisans', {}, 60000),
-  getById:           (id)     => cachedGet(`/artisans/${id}`, {}, 60000),
-  getMyProfile:      ()       => api.get('/artisans/me'),
-  getMyStats:        ()       => api.get('/artisans/me/stats'),
-  getMyOrders:       ()       => api.get('/artisans/me/orders'),
-  updateOrderStatus: (id, d)  => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/status`, d); },
-  verifyPayment:     (id, d)  => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/verify-payment`, d); },
-  updateProfile:     (data)   => api.put('/artisans/me', data),
-  verify:            (id, d)  => api.patch(`/artisans/${id}/verify`, d),
-  getAllAdmin:       ()       => api.get('/artisans/admin/all'),
+  getAll:                   ()       => cachedGet('/artisans', {}, 60000),
+  getById:                  (id)     => cachedGet(`/artisans/${id}`, {}, 60000),
+  getMyProfile:             ()       => api.get('/artisans/me'),
+  getMyStats:               ()       => api.get('/artisans/me/stats'),
+  getMyOrders:              ()       => api.get('/artisans/me/orders'),
+  // New: artisan_orders based endpoint (secure, uses artisan_id)
+  getArtisanOrders:         ()       => api.get('/artisans/orders'),
+  updateArtisanSubOrderStatus: (id, d) => { apiCache.invalidateOrders(); return api.patch(`/artisans/orders/${id}/status`, d); },
+  getEarnings:              ()       => api.get('/artisans/earnings'),
+  // Legacy compat
+  updateOrderStatus:        (id, d)  => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/status`, d); },
+  verifyPayment:            (id, d)  => { apiCache.invalidateOrders(); return api.put(`/orders/${id}/verify-payment`, d); },
+  updateProfile:            (data)   => api.put('/artisans/me', data),
+  verify:                   (id, d)  => api.patch(`/artisans/${id}/verify`, d),
+  getAllAdmin:               ()       => api.get('/artisans/admin/all'),
 };
 
 
@@ -198,6 +212,9 @@ export const adminAPI = {
   deleteCategory:       (id)       => api.delete(`/admin/categories/${id}`),
   getOrders:            (params)   => api.get('/admin/orders', { params }),
   updateOrderStatus:    (id, data) => api.put(`/admin/orders/${id}/status`, data),
+  refundOrder:          (id, data) => api.post(`/admin/orders/${id}/refund`, data),
+  getArtisanOrders:     (params)   => api.get('/admin/artisan-orders', { params }),
+  getArtisanEarnings:   (params)   => api.get('/admin/artisan-earnings', { params }),
   getPayments:          ()         => api.get('/admin/payments'),
   updatePaymentStatus:  (id, data) => api.put(`/admin/orders/${id}/status`, data),
   getAIContent:         ()         => api.get('/admin/ai/content'),
@@ -220,5 +237,3 @@ export const adminAPI = {
 
 export default api;
 export { apiCache };
-
-

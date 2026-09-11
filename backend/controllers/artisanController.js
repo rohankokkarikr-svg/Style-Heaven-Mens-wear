@@ -1,6 +1,10 @@
 const supabase = require('../config/supabase');
 const { safeQuery } = require('../config/supabase');
 const { parseArtisanUpi, formatBioWithUpi } = require('./authController');
+const { isValidArtisanTransition } = require('../config/ecommerce');
+const { syncMasterOrderStatus, finalizeCODDelivery, createArtisanEarning } = require('../services/orderService');
+const { checkAndGrantReward } = require('../services/rewardService');
+const { broadcastSync } = require('../utils/realtime');
 
 // GET /api/artisans - all verified artisans (public)
 exports.getArtisans = async (req, res) => {
@@ -361,5 +365,211 @@ exports.getAllArtisans = async (req, res) => {
   } catch (err) {
     console.error('getAllArtisans error:', err);
     res.status(500).json({ error: 'Failed to fetch artisans' });
+  }
+};
+
+// ── ARTISAN SUB-ORDER MANAGEMENT ─────────────────────────────────────────────
+
+/**
+ * GET /api/artisans/orders
+ * Fetch artisan_orders for the logged-in artisan ONLY (secure by artisan_id).
+ */
+exports.getMyArtisanOrders = async (req, res) => {
+  try {
+    let { data: profile } = await supabase
+      .from('artisan_profiles')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (!profile) return res.status(404).json({ error: 'Artisan profile not found' });
+
+    const { data: artisanOrders, error } = await supabase
+      .from('artisan_orders')
+      .select(`
+        *,
+        order:orders (
+          id, order_number, total_amount, total_price, payment_method, payment_status,
+          shipping_address, shipping_name, shipping_city, shipping_state, shipping_pincode,
+          phone, created_at, order_status, status, coupon_code,
+          user:users (id, name, email, phone)
+        ),
+        items:order_items (
+          id, quantity, price_at_time, unit_price_snapshot, total_price, size,
+          product_name_snapshot, product_image_snapshot, artisan_id,
+          product:products (id, name, image_url, price, category)
+        )
+      `)
+      .eq('artisan_id', profile.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Filter order_items to only this artisan's items
+    const result = (artisanOrders || []).map(ao => ({
+      ...ao,
+      items: (ao.items || []).filter(item => item.artisan_id === profile.id),
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('getMyArtisanOrders error:', err);
+    res.status(500).json({ error: 'Failed to fetch artisan orders' });
+  }
+};
+
+/**
+ * PATCH /api/artisans/orders/:id/status
+ * Update artisan_order status following the status machine.
+ * Only the assigned artisan can update their own artisan_order.
+ */
+exports.updateArtisanOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, rejection_reason } = req.body;
+
+    if (!status) return res.status(400).json({ error: 'Status is required' });
+
+    // Get artisan profile
+    const { data: profile } = await supabase
+      .from('artisan_profiles')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (!profile) return res.status(404).json({ error: 'Artisan profile not found' });
+
+    // Fetch the artisan_order and verify ownership
+    const { data: artOrder, error: fetchErr } = await supabase
+      .from('artisan_orders')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !artOrder) return res.status(404).json({ error: 'Artisan order not found' });
+
+    if (artOrder.artisan_id !== profile.id) {
+      return res.status(403).json({ error: 'Access denied: this order does not belong to you' });
+    }
+
+    // Validate status transition
+    if (!isValidArtisanTransition(artOrder.status, status)) {
+      return res.status(400).json({
+        error: `Invalid transition: ${artOrder.status} → ${status}. Allowed: ${require('../config/ecommerce').ARTISAN_STATUS_TRANSITIONS[artOrder.status]?.join(', ') || 'none'}`,
+      });
+    }
+
+    // Build update object with timestamp fields
+    const now = new Date().toISOString();
+    const timestampMap = {
+      accepted: 'accepted_at',
+      preparing: 'prepared_at',
+      ready_for_pickup: 'ready_at',
+      dispatched: 'dispatched_at',
+      out_for_delivery: 'out_for_delivery_at',
+      delivered: 'delivered_at',
+      cancelled: 'cancelled_at',
+      rejected: 'rejected_at',
+    };
+
+    const updateData = { status, updated_at: now };
+    if (timestampMap[status]) updateData[timestampMap[status]] = now;
+    if (status === 'rejected' && rejection_reason) updateData.rejection_reason = rejection_reason;
+
+    const { data: updated, error: updateErr } = await supabase
+      .from('artisan_orders')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    // Special handling for delivered (COD finalization + earnings + reward)
+    if (status === 'delivered') {
+      const { data: masterOrder } = await supabase
+        .from('orders')
+        .select('user_id, payment_method, payment_status')
+        .eq('id', artOrder.order_id)
+        .single();
+
+      // Sync master order status
+      const newMasterStatus = await syncMasterOrderStatus(artOrder.order_id);
+
+      // COD: mark payment as paid when all artisan orders delivered
+      if (masterOrder?.payment_method === 'cod' && newMasterStatus === 'delivered') {
+        await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', artOrder.order_id);
+        await supabase.from('payments').update({ status: 'paid', paid_at: now }).eq('order_id', artOrder.order_id);
+      }
+
+      // Create artisan earning record
+      await createArtisanEarning(id, artOrder, profile.id);
+
+      // Check reward for customer
+      if (masterOrder?.user_id) {
+        const rewardResult = await checkAndGrantReward(masterOrder.user_id);
+        if (rewardResult.granted) {
+          console.log(`[artisanController] 🎁 Reward granted to user ${masterOrder.user_id}`);
+        }
+      }
+    }
+
+    // Sync master order status for any transition
+    if (status !== 'delivered') {
+      await syncMasterOrderStatus(artOrder.order_id);
+    }
+
+    // Broadcast realtime
+    broadcastSync('ORDERS_UPDATED', { artisanOrderId: id, status, orderId: artOrder.order_id });
+    broadcastSync('ARTISAN_ORDERS_UPDATED', { id, status });
+
+    res.json({ success: true, artisan_order: updated });
+  } catch (err) {
+    console.error('updateArtisanOrderStatus error:', err);
+    res.status(500).json({ error: 'Failed to update artisan order status' });
+  }
+};
+
+/**
+ * GET /api/artisans/earnings
+ * Fetch artisan earnings from artisan_earnings table.
+ */
+exports.getMyEarnings = async (req, res) => {
+  try {
+    const { data: profile } = await supabase
+      .from('artisan_profiles')
+      .select('id, earnings_total')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (!profile) return res.status(404).json({ error: 'Artisan profile not found' });
+
+    const { data: earnings, error } = await supabase
+      .from('artisan_earnings')
+      .select(`
+        *,
+        order:orders (id, order_number, created_at, shipping_name, payment_method),
+        artisan_order:artisan_orders (id, status, delivered_at)
+      `)
+      .eq('artisan_id', profile.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const totals = (earnings || []).reduce(
+      (acc, e) => ({
+        gross: acc.gross + (e.gross_amount || 0),
+        commission: acc.commission + (e.platform_commission || 0),
+        net: acc.net + (e.net_earning || 0),
+        settled: e.settlement_status === 'settled' ? acc.settled + (e.net_earning || 0) : acc.settled,
+        pending: e.settlement_status === 'pending' ? acc.pending + (e.net_earning || 0) : acc.pending,
+      }),
+      { gross: 0, commission: 0, net: 0, settled: 0, pending: 0 }
+    );
+
+    res.json({ earnings: earnings || [], totals });
+  } catch (err) {
+    console.error('getMyEarnings error:', err);
+    res.status(500).json({ error: 'Failed to fetch earnings' });
   }
 };

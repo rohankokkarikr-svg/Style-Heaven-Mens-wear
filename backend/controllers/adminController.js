@@ -1194,3 +1194,75 @@ exports.updateSettings = async (req, res) => {
     res.status(500).json({ error: 'Failed to update settings' });
   }
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// 16. ARTISAN ORDERS (Admin view of all artisan sub-orders)
+// ════════════════════════════════════════════════════════════════════════════
+
+exports.getAdminArtisanOrders = async (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = supabase
+      .from('artisan_orders')
+      .select(`
+        *,
+        artisan:artisan_profiles (id, store_name, profile_image, user_id, users(name, email, phone)),
+        order:orders (id, order_number, total_amount, payment_method, payment_status, created_at,
+          shipping_name, shipping_address, shipping_city, phone,
+          user:users (id, name, email, phone))
+      `)
+      .order('created_at', { ascending: false });
+
+    if (status && status !== 'all') query = query.eq('status', status);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('getAdminArtisanOrders error:', err);
+    res.status(500).json({ error: 'Failed to fetch artisan orders' });
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// 17. ARTISAN EARNINGS (Admin settlement view)
+// ════════════════════════════════════════════════════════════════════════════
+
+exports.getAdminArtisanEarnings = async (req, res) => {
+  try {
+    const { settlement_status } = req.query;
+    let query = supabase
+      .from('artisan_earnings')
+      .select(`
+        *,
+        artisan:artisan_profiles (id, store_name, user_id, users(name, email)),
+        order:orders (id, order_number, created_at, payment_method),
+        artisan_order:artisan_orders (id, status, delivered_at)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (settlement_status && settlement_status !== 'all') {
+      query = query.eq('settlement_status', settlement_status);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const totals = (data || []).reduce(
+      (acc, e) => ({
+        gross: acc.gross + (e.gross_amount || 0),
+        commission: acc.commission + (e.platform_commission || 0),
+        net: acc.net + (e.net_earning || 0),
+        pending: e.settlement_status === 'pending' ? acc.pending + (e.net_earning || 0) : acc.pending,
+        settled: e.settlement_status === 'settled' ? acc.settled + (e.net_earning || 0) : acc.settled,
+      }),
+      { gross: 0, commission: 0, net: 0, pending: 0, settled: 0 }
+    );
+
+    res.json({ earnings: data || [], totals });
+  } catch (err) {
+    console.error('getAdminArtisanEarnings error:', err);
+    res.status(500).json({ error: 'Failed to fetch artisan earnings' });
+  }
+};
+

@@ -10,3 +10,8 @@ backend/.env
 .env.*.local
 *.env
 !.env.example
+*.zip
+*.tar.gz
+*.rar
+*.7z
+

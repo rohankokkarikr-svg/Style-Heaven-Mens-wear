@@ -393,3 +393,63 @@ ${itemsText || 'Craft item'}
   return await sendWhatsappToRecipients([artisanPhone], messageBody);
 };
 
+// ── sendCODOrderNotification ─────────────────────────────────────────────────
+// Called when a COD order is placed. Notifies artisan to prepare.
+const sendCODOrderNotification = async (artisanPhone, storeName, order, artisanItems, customer) => {
+  const itemsText = (artisanItems || [])
+    .map(i => `• ${i.product_name_snapshot || i.products?.name || 'Item'} (Qty: ${i.quantity}, Size: ${i.size || 'Std'}) — ₹${(i.total_price || 0).toLocaleString('en-IN')}`)
+    .join('\n');
+
+  const messageBody = `💵 *COD ORDER - KalaStyle AI*
+----------------------------------------
+🆔 *Order:* ${order.order_number || order.id?.substring(0, 8)}
+🏪 *Artisan:* ${storeName}
+👤 *Customer:* ${customer?.name || 'Customer'}
+📞 *Phone:* +91 ${customer?.phone || order.phone || ''}
+📍 *Address:* ${order.shipping_address || 'N/A'}
+💰 *COD Amount:* ₹${(order.total_amount || order.total_price || 0).toLocaleString('en-IN')}
+🛒 *Items:*
+${itemsText}
+========================================
+💵 COLLECT ₹${(order.total_amount || order.total_price || 0).toLocaleString('en-IN')} CASH AT DELIVERY
+⚡ Mark "Delivered" in dashboard after cash collection!`;
+
+  return await sendWhatsappToRecipients([artisanPhone], messageBody);
+};
+
+// ── sendDeliveredNotification ─────────────────────────────────────────────────
+// Called when artisan marks order as delivered.
+const sendDeliveredNotification = async (customerPhone, customerName, order) => {
+  const messageBody = `✅ *ORDER DELIVERED — KalaStyle AI*
+----------------------------------------
+🎉 Your order has been delivered!
+🆔 *Order:* ${order.order_number || order.id?.substring(0, 8)}
+👤 *Customer:* ${customerName}
+💰 *Total:* ₹${(order.total_amount || order.total_price || 0).toLocaleString('en-IN')}
+========================================
+Thank you for shopping with KalaStyle AI! 🎨
+Please leave a review to help the artisan grow.`;
+
+  return await sendWhatsappToRecipients([customerPhone], messageBody);
+};
+
+// ── sendRefundInitiatedNotification ──────────────────────────────────────────
+const sendRefundInitiatedNotification = async (customerPhone, customerName, order, refundAmount) => {
+  const messageBody = `🔄 *REFUND INITIATED — KalaStyle AI*
+----------------------------------------
+Hi ${customerName}, your refund has been initiated.
+🆔 *Order:* ${order.order_number || order.id?.substring(0, 8)}
+💰 *Refund Amount:* ₹${refundAmount.toLocaleString('en-IN')}
+⏱️ Refund will be credited in 5-7 business days.
+========================================
+If you have questions, reply to this message or visit our website.`;
+
+  return await sendWhatsappToRecipients([customerPhone], messageBody);
+};
+
+module.exports = {
+  ...module.exports,
+  sendCODOrderNotification,
+  sendDeliveredNotification,
+  sendRefundInitiatedNotification,
+};
