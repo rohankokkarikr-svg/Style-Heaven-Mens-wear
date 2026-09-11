@@ -5,7 +5,6 @@ import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { productAPI, reviewAPI, artisanAPI } from '../services/api';
-import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import ReviewModal from '../components/ReviewModal';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
@@ -48,22 +47,14 @@ export default function ProductDetail() {
     setLoading(true);
     try {
       let found = null;
-      // 1. Try Backend API first for live DB product and artisan data
+      // 1. Fetch from Backend API for live DB product and artisan data
       try {
         const { data } = await productAPI.getById(id);
         if (data && (data.id || data.name)) {
           found = data;
         }
       } catch (apiErr) {
-        console.warn('Backend product API notice, checking catalog fallback:', apiErr.message);
-      }
-
-      // 2. Fallback to local catalog if not found in backend
-      if (!found) {
-        const localMatch = HANDICRAFT_PRODUCTS.find((p) => p.id === id || String(p.id) === String(id));
-        if (localMatch) {
-          found = { ...localMatch };
-        }
+        console.warn('Backend product API notice:', apiErr.message);
       }
 
       if (found) {
@@ -87,15 +78,9 @@ export default function ProductDetail() {
         throw new Error('Product not found');
       }
     } catch (err) {
-      console.warn('Product load error, using catalog fallback:', err.message);
-      const fallback = HANDICRAFT_PRODUCTS.find((p) => p.id === id) || HANDICRAFT_PRODUCTS[0];
-      if (fallback) {
-        setProduct(fallback);
-        setSelectedImage((fallback.images && fallback.images[0]) || fallback.image_url);
-      } else {
-        toast.error('Product not found');
-        navigate('/products');
-      }
+      console.warn('Product load error:', err.message);
+      toast.error('Product not found');
+      navigate('/products');
     } finally {
       setLoading(false);
     }
@@ -139,22 +124,14 @@ export default function ProductDetail() {
     const fetchRelated = async () => {
       setLoadingRelated(true);
       try {
-        // Find in local catalog matching category or material
-        const matching = HANDICRAFT_PRODUCTS.filter(
-          (p) =>
-            p.id !== product.id &&
-            ((p.category && p.category === product.category) ||
-              (p.material && p.material === product.material))
-        ).slice(0, 4);
-
-        if (matching.length > 0) {
-          setRelatedProducts(matching);
+        const { data } = await productAPI.getAll({ category: product.category });
+        if (Array.isArray(data)) {
+          setRelatedProducts(data.filter((p) => p.id !== product.id).slice(0, 4));
         } else {
-          // Fallback to random 4 handicraft items
-          setRelatedProducts(HANDICRAFT_PRODUCTS.filter((p) => p.id !== product.id).slice(0, 4));
+          setRelatedProducts([]);
         }
       } catch (err) {
-        console.error('Failed to fetch related products', err);
+        setRelatedProducts([]);
       } finally {
         setLoadingRelated(false);
       }

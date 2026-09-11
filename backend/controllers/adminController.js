@@ -7,18 +7,14 @@
 
 const supabase = require('../config/supabase');
 const { safeQuery } = require('../config/supabase');
-const { HANDICRAFT_CATEGORIES, HANDICRAFT_PRODUCTS } = require('../data/handicraftsData');
+const { HANDICRAFT_CATEGORIES } = require('../data/handicraftsData');
 const { invalidateCache } = require('./productController');
 const { broadcastSync } = require('../utils/realtime');
 
 // ── In-Memory Activity & AI Log Fallbacks ────────────────────────────────────
-let inMemoryActivityLogs = [
-  { id: '1', admin_name: 'Platform Admin', action: 'System Initialized', target_type: 'System', target_id: 'sys-01', details: { note: 'Admin Control Center operational' }, created_at: new Date(Date.now() - 3600000).toISOString() }
-];
+let inMemoryActivityLogs = [];
 
-let inMemoryNotifications = [
-  { id: '1', title: 'Welcome to KalaStyle AI', message: 'The marketplace has been upgraded with AI Smart Catalog capabilities.', target_audience: 'all', created_at: new Date().toISOString() }
-];
+let inMemoryNotifications = [];
 
 let inMemoryReports = [];
 
@@ -297,7 +293,7 @@ exports.getProducts = async (req, res) => {
     const { data, error } = await safeQuery(() => query);
     if (error) throw error;
 
-    let products = (data && data.length > 0) ? data : HANDICRAFT_PRODUCTS;
+    let products = data || [];
     if (search) {
       const s = search.toLowerCase();
       products = products.filter(p =>

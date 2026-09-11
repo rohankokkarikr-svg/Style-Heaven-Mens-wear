@@ -8,7 +8,6 @@ import {
 import { FaTrophy } from 'react-icons/fa';
 import { authAPI, productAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
@@ -119,13 +118,13 @@ export default function Rewards() {
     setLoadingProducts(true);
     try {
       const { data: prods } = await productAPI.getAll({ limit: 6 });
-      if (Array.isArray(prods) && prods.length > 0) {
+      if (Array.isArray(prods)) {
         setSampleProducts(prods.slice(0, 6));
       } else {
-        setSampleProducts(HANDICRAFT_PRODUCTS.slice(0, 6));
+        setSampleProducts([]);
       }
     } catch {
-      setSampleProducts(HANDICRAFT_PRODUCTS.slice(0, 6));
+      setSampleProducts([]);
     } finally {
       setLoadingProducts(false);
     }

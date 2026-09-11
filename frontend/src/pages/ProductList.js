@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
 import { productAPI, categoryAPI } from '../services/api';
-import { HANDICRAFT_CATEGORIES, HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
+import { HANDICRAFT_CATEGORIES } from '../constants/handicraftsData';
 import {
   HiFilter,
   HiX,
@@ -69,15 +69,14 @@ export default function ProductList() {
       if (searchQuery) params.search = searchQuery;
 
       const { data } = await productAPI.getAll(params);
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setProducts(data);
       } else {
-        // Use client handicraft dataset
-        setProducts(HANDICRAFT_PRODUCTS);
+        setProducts([]);
       }
     } catch (err) {
-      console.warn('Backend products fetch notice, using handicraft catalog:', err.message);
-      setProducts(HANDICRAFT_PRODUCTS);
+      console.warn('Backend products fetch notice:', err.message);
+      setProducts([]);
     } finally {
       setLoading(false);
     }

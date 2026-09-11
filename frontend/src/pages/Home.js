@@ -9,7 +9,6 @@ import IndianHandicraftsSection from '../components/IndianHandicraftsSection';
 import Testimonials from '../components/Testimonials';
 import Footer from '../components/Footer';
 import { productAPI, artisanAPI } from '../services/api';
-import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import { useSettings, DEFAULT_DISCOUNT_BANNER } from '../context/SettingsContext';
 import toast from 'react-hot-toast';
 
@@ -25,13 +24,13 @@ export default function Home() {
     if (!isBackground) setLoading(true);
     try {
       const { data } = await productAPI.getFeatured();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setFeatured(data);
       } else {
-        setFeatured(HANDICRAFT_PRODUCTS.slice(0, 8));
+        setFeatured([]);
       }
     } catch {
-      setFeatured(HANDICRAFT_PRODUCTS.slice(0, 8));
+      setFeatured([]);
     }
     try {
       const { data } = await artisanAPI.getAll();
@@ -109,7 +108,10 @@ export default function Home() {
             ) : featured.length > 0 ? (
               featured.map((p) => <ProductCard key={p.id} product={p} />)
             ) : (
-              HANDICRAFT_PRODUCTS.slice(0, 8).map((p) => <ProductCard key={p.id} product={p} />)
+              <div className="col-span-full text-center py-12 px-4 bg-dark-800/40 rounded-2xl border border-dark-700/60">
+                <p className="text-gray-400 font-serif text-base sm:text-lg">No featured handicrafts listed yet.</p>
+                <p className="text-gray-500 text-xs sm:text-sm mt-1">Check back soon for authentic artisan arrivals!</p>
+              </div>
             )}
           </div>
           <div className="mt-8 text-center md:hidden">

@@ -8,13 +8,6 @@ import { getAvatarUrl } from '../utils/avatarUtils';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
-const FALLBACK_REVIEWS = [
-  { id: 'f1', customer_name: 'Priya Sharma', image_url: null, rating: 5, review_text: 'The Pure Katan Banarasi Silk Saree arrived in breathtaking quality with authentic Zari weaving. Supporting real Indian weavers directly feels wonderful.', product_name: 'Pure Katan Banarasi Silk Saree' },
-  { id: 'f2', customer_name: 'Rajesh Iyer',  image_url: null, rating: 5, review_text: 'The Channapatna wooden crafts and lacquer finish are 100% genuine and safe for children. True royal heritage craftsmanship.', product_name: 'Handcrafted Wooden Ambari Elephant' },
-  { id: 'f3', customer_name: 'Meenakshi Sundaram', image_url: null, rating: 5, review_text: 'The 22K gold foil Tanjore painting with teak frame exceeded all expectations. Packaged with extreme care and museum quality.', product_name: 'Royal Tanjore 22K Gold Foil Painting' },
-  { id: 'f4', customer_name: 'Ananya Roy', image_url: null, rating: 5, review_text: 'Authentic Kashmiri Pashmina with exquisite Sozni needle embroidery. The warmth and softness are unmatched.', product_name: 'Kashmiri Hand-Embroidered Pashmina Shawl' },
-];
-
 export default function Testimonials() {
   const [reviews, setReviews] = useState([]);
 
@@ -22,15 +15,19 @@ export default function Testimonials() {
     reviewAPI.getApproved()
       .then(res => {
         const data = res.data;
-        setReviews(Array.isArray(data) && data.length > 0 ? data : FALLBACK_REVIEWS);
+        setReviews(Array.isArray(data) ? data : []);
       })
       .catch(err => {
         console.error('Failed to load reviews', err);
-        setReviews(FALLBACK_REVIEWS);
+        setReviews([]);
       });
   }, []);
 
-  const displayReviews = reviews.length > 0 ? reviews : FALLBACK_REVIEWS;
+  if (!reviews || reviews.length === 0) {
+    return null;
+  }
+
+  const displayReviews = reviews;
 
   return (
     <section className="relative py-24 bg-dark-900 overflow-hidden">

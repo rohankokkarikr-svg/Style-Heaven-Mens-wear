@@ -1,6 +1,5 @@
 const { safeQuery, formatSupabaseError } = require('../config/supabase');
 const supabase = require('../config/supabase');
-const { HANDICRAFT_PRODUCTS } = require('../data/handicraftsData');
 
 let productCache = {
   all: { data: null, timestamp: 0 },
@@ -89,9 +88,9 @@ exports.getProducts = async (req, res) => {
       return await query;
     });
 
-    let filteredData = (data && data.length > 0) ? data : HANDICRAFT_PRODUCTS;
+    let filteredData = data || [];
 
-    // Further sanitize fallback or raw data: shoppers only see approved, visible products
+    // Further sanitize raw data: shoppers only see approved, visible products
     if (!artisan_id) {
       filteredData = filteredData.filter(p => !p.is_hidden && (p.status === 'approved' || (!p.status && p.is_in_stock)));
     }
@@ -102,8 +101,8 @@ exports.getProducts = async (req, res) => {
 
     res.json(filteredData);
   } catch (error) {
-    console.error('Products Fetch Notice, returning handicrafts dataset:', error.message);
-    res.json(HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && (p.status === 'approved' || !p.status)));
+    console.error('Products Fetch Error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch products' });
   }
 };
 
@@ -126,9 +125,6 @@ exports.getFeaturedProducts = async (req, res) => {
     if (error) throw error;
     
     let filteredData = (data || []).filter(p => !p.is_hidden && (p.status === 'approved' || !p.status)).slice(0, 8);
-    if (filteredData.length === 0) {
-      filteredData = HANDICRAFT_PRODUCTS.filter(p => !p.is_hidden && (p.status === 'approved' || !p.status)).slice(0, 8);
-    }
     
     productCache.featured = { data: filteredData, timestamp: Date.now() };
     
@@ -193,22 +189,9 @@ exports.getProductById = async (req, res) => {
       return res.json(data);
     }
 
-    // Check local handicrafts catalog
-    const localMatch = HANDICRAFT_PRODUCTS.find(
-      (p) => p.id === req.params.id || String(p.id) === String(req.params.id)
-    );
-    if (localMatch) {
-      return res.json(localMatch);
-    }
-
     res.status(404).json({ error: 'Product not found' });
   } catch (error) {
-    const localMatch = HANDICRAFT_PRODUCTS.find(
-      (p) => p.id === req.params.id || String(p.id) === String(req.params.id)
-    );
-    if (localMatch) {
-      return res.json(localMatch);
-    }
+    console.error('getProductById Error:', error);
     res.status(500).json({ error: 'Server Error' });
   }
 };
