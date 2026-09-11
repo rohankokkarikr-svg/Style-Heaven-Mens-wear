@@ -51,8 +51,8 @@ export default function AdminLayout() {
         { name: 'Products', path: '/admin/products', icon: HiCollection },
         { name: 'Categories', path: '/admin/categories', icon: HiFolder },
         { name: 'Orders', path: '/admin/orders', icon: HiShoppingBag },
-        { name: 'Shipping Cost', path: '/admin/shipping', icon: HiTruck, highlight: true, badge: 'NEW' },
         { name: 'Payments', path: '/admin/payments', icon: HiCurrencyRupee },
+        { name: 'Shipping Cost', path: '/admin/shipping', icon: HiTruck, highlight: true, badge: 'NEW' },
       ]
     },
     {
