@@ -617,7 +617,7 @@ router.post('/initialize-order', protect, async (req, res) => {
       order_id: rzpOrder.id,
       amount: rzpOrder.amount,
       currency: rzpOrder.currency,
-      key_id: keyId,
+      key_id: rzpResult.key_id || keyId,
     });
   } catch (err) {
     console.error('[initialize-order] Exception:', err);
@@ -662,7 +662,7 @@ const createOrderDirect = async (req, res) => {
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
-      key_id: process.env.RAZORPAY_KEY_ID || '',
+      key_id: rzpResult.key_id || process.env.RAZORPAY_KEY_ID || 'rzp_live_TamouXgJy9WoAl',
     });
   } catch (err) {
     console.error('[create-order-direct] Exception:', err.message);

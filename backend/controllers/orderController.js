@@ -110,7 +110,7 @@ exports.createOrder = async (req, res) => {
       });
       if (rzpResult.success) {
         razorpayOrderId = rzpResult.order.id;
-        razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+        razorpayKeyId = rzpResult.key_id || process.env.RAZORPAY_KEY_ID || 'rzp_live_TamouXgJy9WoAl';
         // Save razorpay_order_id to our DB
         await supabase.from('orders').update({ razorpay_order_id: razorpayOrderId }).eq('id', order.id);
         await supabase.from('payments').update({ provider_order_id: razorpayOrderId }).eq('order_id', order.id);

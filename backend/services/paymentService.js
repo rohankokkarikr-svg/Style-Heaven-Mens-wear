@@ -55,7 +55,7 @@ exports.createRazorpayOrder = async (amount, receipt, notes = {}, isPaise = fals
 
     try {
       const order = await razorpay.orders.create(options);
-      return { success: true, order };
+      return { success: true, order, key_id: activeKeyId || 'rzp_live_TamouXgJy9WoAl' };
     } catch (primaryErr) {
       const primaryMsg = primaryErr?.error?.description || primaryErr?.description || primaryErr?.message || '';
       // If primary auth failed (e.g. outdated/mismatched server env keys), fallback to confirmed live keys
@@ -66,7 +66,7 @@ exports.createRazorpayOrder = async (amount, receipt, notes = {}, isPaise = fals
           key_secret: '6UYg42iNEWzF2u0ViKHoBnNc',
         });
         const order = await fallbackRzp.orders.create(options);
-        return { success: true, order };
+        return { success: true, order, key_id: 'rzp_live_TamouXgJy9WoAl' };
       }
       throw primaryErr;
     }
