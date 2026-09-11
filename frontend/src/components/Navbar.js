@@ -387,6 +387,15 @@ export default function Navbar() {
 
               {user && (
                 <>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setMobileDrawerOpen(false)}
+                      className="flex items-center gap-2.5 py-2 px-3 rounded-xl text-xs text-gold-300 font-bold bg-gold-500/15 border border-gold-500/30 hover:bg-gold-500/25 mb-1"
+                    >
+                      <HiChartBar className="w-4 h-4 text-gold-400" /> Admin Control Center
+                    </Link>
+                  )}
                   <Link
                     to="/profile"
                     onClick={() => setMobileDrawerOpen(false)}
