@@ -4,9 +4,12 @@ import {
   HiShieldCheck, 
   HiSparkles, 
   HiCurrencyRupee, 
-  HiSave,
-  HiRefresh
+  HiSave, 
+  HiRefresh,
+  HiTruck,
+  HiExternalLink
 } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -23,6 +26,10 @@ export default function Settings() {
     daily_ai_limit_per_artisan: 50,
     auto_approve_products: false,
     maintenance_mode: false,
+    delivery_fee: 50,
+    free_delivery_above: 500,
+    shipping_estimated_days: '3 - 5 Business Days',
+    cod_enabled: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -154,7 +161,57 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* 3. AI Safety & Resource Allocation */}
+        {/* 3. Shipping Cost & Delivery Rules */}
+        <div className="card p-6 space-y-4 border border-dark-600 bg-gradient-to-br from-dark-800 to-dark-850">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-dark-600 pb-3">
+            <h2 className="font-bold text-white text-base flex items-center gap-2">
+              <HiTruck className="text-gold-400 w-5 h-5" /> Shipping Cost & Delivery Thresholds
+            </h2>
+            <Link
+              to="/admin/shipping"
+              className="text-gold-400 hover:text-gold-300 text-xs font-semibold flex items-center gap-1 transition-colors"
+            >
+              Advanced Delivery Console <HiExternalLink className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Base Shipping Cost (₹)</label>
+              <input
+                type="number"
+                min="0"
+                value={settings.delivery_fee ?? 50}
+                onChange={e => setSettings({ ...settings, delivery_fee: Number(e.target.value) })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
+              <p className="text-[10px] text-gray-500 mt-1">Charged on orders below free delivery limit</p>
+            </div>
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Free Delivery Above (₹)</label>
+              <input
+                type="number"
+                min="0"
+                value={settings.free_delivery_above ?? 500}
+                onChange={e => setSettings({ ...settings, free_delivery_above: Number(e.target.value) })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
+              <p className="text-[10px] text-gray-500 mt-1">Subtotals meeting this get 100% free delivery</p>
+            </div>
+            <div>
+              <label className="block text-gray-400 font-semibold mb-1">Estimated Delivery Timeline</label>
+              <input
+                type="text"
+                value={settings.shipping_estimated_days || '3 - 5 Business Days'}
+                onChange={e => setSettings({ ...settings, shipping_estimated_days: e.target.value })}
+                className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+              />
+              <p className="text-[10px] text-gray-500 mt-1">Displayed across product cards and checkout</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. AI Safety & Resource Allocation */}
         <div className="card p-6 space-y-4 border border-dark-600">
           <h2 className="font-bold text-white text-base flex items-center gap-2">
             <HiSparkles className="text-gold-400 w-5 h-5" /> Gemini AI Engine Controls

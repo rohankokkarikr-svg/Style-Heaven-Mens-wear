@@ -1156,7 +1156,21 @@ exports.updateSettings = async (req, res) => {
       ...(updates.hero_slides ? { hero_slides: updates.hero_slides, heroSlides: updates.hero_slides } : {}),
       ...(updates.discountBanner ? { discountBanner: updates.discountBanner, discount_banner: updates.discountBanner } : {}),
       ...(updates.discount_banner ? { discount_banner: updates.discount_banner, discountBanner: updates.discount_banner } : {}),
+      ...(updates.delivery_fee !== undefined ? { delivery_fee: Number(updates.delivery_fee) || 0 } : {}),
+      ...(updates.free_delivery_above !== undefined ? { free_delivery_above: Number(updates.free_delivery_above) || 0 } : {}),
+      ...(updates.shipping_estimated_days !== undefined ? { shipping_estimated_days: updates.shipping_estimated_days } : {}),
+      ...(updates.cod_enabled !== undefined ? { cod_enabled: Boolean(updates.cod_enabled) } : {}),
+      ...(updates.cod_min_order_value !== undefined ? { cod_min_order_value: Number(updates.cod_min_order_value) || 0 } : {}),
+      ...(updates.cod_max_order_value !== undefined ? { cod_max_order_value: Number(updates.cod_max_order_value) || 0 } : {}),
     };
+
+    // Invalidate ecommerce cache so orders immediately calculate using updated rates
+    try {
+      const { invalidateEcomCache } = require('../config/ecommerce');
+      if (typeof invalidateEcomCache === 'function') invalidateEcomCache();
+    } catch {
+      // Ignore if not loaded
+    }
 
     // Also sync to local JSON backup if available
     try {

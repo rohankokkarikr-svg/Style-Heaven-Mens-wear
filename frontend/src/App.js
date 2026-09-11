@@ -65,6 +65,7 @@ const HeroSettings = lazy(() => import('./pages/admin/HeroSettings'));
 const DiscountBanner = lazy(() => import('./pages/admin/DiscountBanner'));
 const ActivityLogs = lazy(() => import('./pages/admin/ActivityLogs'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
+const ShippingCost = lazy(() => import('./pages/admin/ShippingCost'));
 
 // Lightweight, sleek loading fallback
 const PageLoader = () => (
@@ -132,6 +133,7 @@ function App() {
                       <Route path="hero-settings" element={<HeroSettings />} />
                       <Route path="discount-banner" element={<DiscountBanner />} />
                       <Route path="activity" element={<ActivityLogs />} />
+                      <Route path="shipping" element={<ShippingCost />} />
                       <Route path="settings" element={<Settings />} />
                     </Route>
 

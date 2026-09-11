@@ -76,6 +76,12 @@ const DEFAULT_SETTINGS = {
   footerTagline: "Empowering India's generational artisans, master handloom weavers, and traditional craftsmen with AI-driven direct commerce.",
   heroSlides: DEFAULT_HERO_SLIDES,
   discountBanner: DEFAULT_DISCOUNT_BANNER,
+  delivery_fee: 50,
+  free_delivery_above: 500,
+  shipping_estimated_days: '3 - 5 Business Days',
+  cod_enabled: true,
+  cod_min_order_value: 100,
+  cod_max_order_value: 5000,
 };
 
 const supabase = require('../config/supabase');
@@ -141,6 +147,12 @@ exports.getSettings = async (req, res) => {
             ? supaData.heroSlides
             : local.heroSlides),
       discountBanner: supaData?.discount_banner || supaData?.discountBanner || local.discountBanner || DEFAULT_DISCOUNT_BANNER,
+      delivery_fee: supaData?.delivery_fee !== undefined ? Number(supaData.delivery_fee) : (local.delivery_fee !== undefined ? Number(local.delivery_fee) : DEFAULT_SETTINGS.delivery_fee),
+      free_delivery_above: supaData?.free_delivery_above !== undefined ? Number(supaData.free_delivery_above) : (local.free_delivery_above !== undefined ? Number(local.free_delivery_above) : DEFAULT_SETTINGS.free_delivery_above),
+      shipping_estimated_days: supaData?.shipping_estimated_days || local.shipping_estimated_days || DEFAULT_SETTINGS.shipping_estimated_days,
+      cod_enabled: supaData?.cod_enabled !== undefined ? Boolean(supaData.cod_enabled) : (local.cod_enabled !== undefined ? Boolean(local.cod_enabled) : DEFAULT_SETTINGS.cod_enabled),
+      cod_min_order_value: supaData?.cod_min_order_value !== undefined ? Number(supaData.cod_min_order_value) : (local.cod_min_order_value !== undefined ? Number(local.cod_min_order_value) : DEFAULT_SETTINGS.cod_min_order_value),
+      cod_max_order_value: supaData?.cod_max_order_value !== undefined ? Number(supaData.cod_max_order_value) : (local.cod_max_order_value !== undefined ? Number(local.cod_max_order_value) : DEFAULT_SETTINGS.cod_max_order_value),
     };
 
     res.json(merged);
@@ -174,7 +186,21 @@ exports.updateSettings = async (req, res) => {
       ...(updates.hero_slides ? { hero_slides: updates.hero_slides, heroSlides: updates.hero_slides } : {}),
       ...(updates.discountBanner ? { discountBanner: updates.discountBanner, discount_banner: updates.discountBanner } : {}),
       ...(updates.discount_banner ? { discount_banner: updates.discount_banner, discountBanner: updates.discount_banner } : {}),
+      ...(updates.delivery_fee !== undefined ? { delivery_fee: Number(updates.delivery_fee) || 0 } : {}),
+      ...(updates.free_delivery_above !== undefined ? { free_delivery_above: Number(updates.free_delivery_above) || 0 } : {}),
+      ...(updates.shipping_estimated_days !== undefined ? { shipping_estimated_days: updates.shipping_estimated_days } : {}),
+      ...(updates.cod_enabled !== undefined ? { cod_enabled: Boolean(updates.cod_enabled) } : {}),
+      ...(updates.cod_min_order_value !== undefined ? { cod_min_order_value: Number(updates.cod_min_order_value) || 0 } : {}),
+      ...(updates.cod_max_order_value !== undefined ? { cod_max_order_value: Number(updates.cod_max_order_value) || 0 } : {}),
     };
+
+    // Invalidate ecommerce cache
+    try {
+      const { invalidateEcomCache } = require('../config/ecommerce');
+      if (typeof invalidateEcomCache === 'function') invalidateEcomCache();
+    } catch {
+      // Ignore if not loaded
+    }
 
     const updated = { ...current, ...normalizedUpdates };
     writeSettings(updated);
