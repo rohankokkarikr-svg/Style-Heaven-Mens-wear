@@ -555,6 +555,76 @@ router.get('/:orderId', protect, async (req, res) => {
   }
 });
 
+// ─── 5B. INITIALIZE / RE-INITIALIZE RAZORPAY ORDER ─────────────────────────────
+/**
+ * POST /api/payments/initialize-order
+ * Customer endpoint to ensure Razorpay order session is generated on-demand
+ * for an existing order if missing or retrying payment.
+ */
+router.post('/initialize-order', protect, async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ error: 'orderId is required' });
+
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (error || !order) return res.status(404).json({ error: 'Order not found' });
+
+    if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized to access this order' });
+    }
+
+    if (order.payment_status === 'paid') {
+      return res.status(400).json({ error: 'Order is already paid' });
+    }
+
+    const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_TamouXgJy9WoAl';
+    const totalAmount = Number(order.total_amount || order.total_price || 0);
+    const amountInPaise = Math.round(totalAmount * 100);
+
+    // If order already has a valid razorpay_order_id, return it directly
+    if (order.razorpay_order_id) {
+      return res.json({
+        order_id: order.razorpay_order_id,
+        amount: amountInPaise,
+        currency: 'INR',
+        key_id: keyId,
+      });
+    }
+
+    // Otherwise, generate a Razorpay order right now
+    const rzpResult = await createRazorpayOrder(
+      amountInPaise,
+      order.order_number || `rcpt_${Date.now()}`,
+      { order_id: order.id, user_id: order.user_id },
+      true
+    );
+
+    if (!rzpResult.success) {
+      console.error('[initialize-order] Razorpay error:', rzpResult.error);
+      return res.status(500).json({ error: rzpResult.error || 'Failed to create Razorpay payment session' });
+    }
+
+    const rzpOrder = rzpResult.order;
+    await supabase.from('orders').update({ razorpay_order_id: rzpOrder.id }).eq('id', order.id);
+    await supabase.from('payments').update({ provider_order_id: rzpOrder.id }).eq('order_id', order.id);
+
+    return res.json({
+      order_id: rzpOrder.id,
+      amount: rzpOrder.amount,
+      currency: rzpOrder.currency,
+      key_id: keyId,
+    });
+  } catch (err) {
+    console.error('[initialize-order] Exception:', err);
+    res.status(500).json({ error: err.message || 'Failed to initialize payment session' });
+  }
+});
+
 // ─── 6. DIRECT / STANDALONE RAZORPAY ENDPOINTS ─────────────────────────────
 /**
  * Direct Razorpay order creation

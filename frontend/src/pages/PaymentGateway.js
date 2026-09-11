@@ -62,7 +62,7 @@ export default function PaymentGateway() {
       const keyId =
         rzpData?.key_id ||
         process.env.REACT_APP_RAZORPAY_KEY_ID ||
-        '';
+        'rzp_live_TamouXgJy9WoAl';
 
       const options = {
         key: keyId,
@@ -135,12 +135,31 @@ export default function PaymentGateway() {
     [orderId, navigate]
   );
 
-  // Auto-launch Razorpay if razorpayData is available from navigation state
+  // Auto-launch Razorpay if razorpayData is available from navigation state or fetch/init
   useEffect(() => {
-    if (razorpayData && order && !submitted && activeTab === 'razorpay') {
+    if (!order || submitted || activeTab !== 'razorpay') return;
+
+    if (order.razorpay_order_id) {
+      launchRazorpay({
+        order_id: order.razorpay_order_id,
+        key_id: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_live_TamouXgJy9WoAl',
+        amount: Math.round(Number(order.total_amount || order.total_price || 0) * 100),
+        currency: 'INR',
+      }, order);
+    } else if (razorpayData?.order_id) {
       launchRazorpay(razorpayData, order);
+    } else if (orderId) {
+      // Auto-initialize session if missing on order
+      paymentAPI.initializeOrder(orderId).then(({ data }) => {
+        if (data?.order_id) {
+          setOrder(prev => prev ? { ...prev, razorpay_order_id: data.order_id } : prev);
+          launchRazorpay(data, order);
+        }
+      }).catch(err => {
+        console.warn('Auto initialize Razorpay session notice:', err.message);
+      });
     }
-  }, [razorpayData, order, submitted, activeTab, launchRazorpay]);
+  }, [order, submitted, activeTab, razorpayData, launchRazorpay, orderId]);
 
   // Load Order details on mount
   useEffect(() => {
@@ -177,7 +196,7 @@ export default function PaymentGateway() {
 
   // Trigger manual Razorpay checkout on button click
   const handleTriggerRazorpay = async () => {
-    if (razorpayData) {
+    if (razorpayData?.order_id) {
       return launchRazorpay(razorpayData, order);
     }
 
@@ -189,7 +208,7 @@ export default function PaymentGateway() {
       return launchRazorpay(
         {
           order_id: order.razorpay_order_id,
-          key_id: process.env.REACT_APP_RAZORPAY_KEY_ID,
+          key_id: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_live_TamouXgJy9WoAl',
           amount: amountInPaise,
           currency: 'INR',
         },
@@ -197,24 +216,18 @@ export default function PaymentGateway() {
       );
     }
 
-    // Otherwise check payment details
+    // Automatically initialize or retrieve Razorpay order session on demand
     try {
       setRazorpayLaunching(true);
-      const { data: pmtData } = await paymentAPI.getPayment(orderId);
-      if (pmtData?.payment?.provider_order_id) {
-        return launchRazorpay(
-          {
-            order_id: pmtData.payment.provider_order_id,
-            key_id: process.env.REACT_APP_RAZORPAY_KEY_ID,
-            amount: amountInPaise,
-            currency: 'INR',
-          },
-          order
-        );
+      const { data: initData } = await paymentAPI.initializeOrder(orderId);
+      if (initData?.order_id) {
+        setOrder(prev => prev ? { ...prev, razorpay_order_id: initData.order_id } : prev);
+        return launchRazorpay(initData, order);
       }
-      toast.error('No Razorpay order found. Please retry placing your order.');
+      toast.error('Could not initialize Razorpay payment session.');
     } catch (err) {
-      toast.error('Could not initialize payment session.');
+      const errMsg = err.response?.data?.error || 'Could not initialize payment session.';
+      toast.error(errMsg);
     } finally {
       setRazorpayLaunching(false);
     }

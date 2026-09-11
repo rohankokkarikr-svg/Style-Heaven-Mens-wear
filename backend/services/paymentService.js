@@ -4,14 +4,19 @@ const crypto = require('crypto');
 
 // Lazy initializer so missing env vars during test/build do not crash the server on startup
 let razorpayInstance = null;
+let activeKeyId = null;
+let activeKeySecret = null;
+
 const getRazorpay = () => {
-  const key_id = process.env.RAZORPAY_KEY_ID;
-  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  const key_id = process.env.RAZORPAY_KEY_ID || 'rzp_live_TamouXgJy9WoAl';
+  const key_secret = process.env.RAZORPAY_KEY_SECRET || '6UYg42iNEWzF2u0ViKHoBnNc';
   if (!key_id || !key_secret) {
     return null;
   }
-  if (!razorpayInstance) {
+  if (!razorpayInstance || activeKeyId !== key_id || activeKeySecret !== key_secret) {
     razorpayInstance = new Razorpay({ key_id, key_secret });
+    activeKeyId = key_id;
+    activeKeySecret = key_secret;
   }
   return razorpayInstance;
 };
@@ -51,8 +56,9 @@ exports.createRazorpayOrder = async (amount, receipt, notes = {}, isPaise = fals
     const order = await razorpay.orders.create(options);
     return { success: true, order };
   } catch (error) {
-    console.error('Razorpay order creation failed:', error?.message || error);
-    return { success: false, error: error?.message || 'Failed to create order' };
+    const errMsg = error?.error?.description || error?.description || error?.message || (typeof error === 'string' ? error : 'Failed to create Razorpay order');
+    console.error('Razorpay order creation failed:', errMsg, error);
+    return { success: false, error: errMsg };
   }
 };
 
