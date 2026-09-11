@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { HiMicrophone, HiSparkles, HiCheck, HiX, HiRefresh, HiChevronRight, HiChevronLeft, HiGlobe, HiCurrencyRupee, HiPhotograph } from 'react-icons/hi';
-import { aiAPI, productAPI, categoryAPI, apiCache } from '../../services/api';
+import { aiAPI, productAPI, categoryAPI, adminAPI, apiCache } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -109,6 +109,8 @@ export default function AIProductStudio() {
 
   // Dynamic Categories from Admin updates
   const [availableCategories, setAvailableCategories] = useState(SEVEN_CATEGORIES);
+  const [artisansList, setArtisansList] = useState([]);
+  const [selectedArtisanId, setSelectedArtisanId] = useState('');
 
   useEffect(() => {
     categoryAPI.getAll().then(({ data }) => {
@@ -117,6 +119,18 @@ export default function AIProductStudio() {
       }
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      adminAPI.getArtisans().then(({ data }) => {
+        if (data && data.length > 0) {
+          setArtisansList(data);
+          const defaultArtisan = data.find(a => a.users?.role === 'artisan' || a.id !== user?.artisan_profile?.id) || data[0];
+          setSelectedArtisanId(defaultArtisan?.id || user?.artisan_profile?.id || '');
+        }
+      }).catch(() => {});
+    }
+  }, [user]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -325,6 +339,13 @@ export default function AIProductStudio() {
       if (!finalUrl && imageFile) finalUrl = await uploadToCloudinary(imageFile);
 
       const price = parseFloat(finalPrice) || catalog?.priceMin || 999;
+      const targetArtisanId = user?.role === 'admin'
+        ? (selectedArtisanId || user?.artisan_profile?.id || user?.id)
+        : (user?.artisan_profile?.id || user?.id);
+
+      const chosenArtisan = artisansList.find(a => a.id === targetArtisanId);
+      const targetArtisanName = chosenArtisan?.store_name || user?.artisan_profile?.store_name || user?.name;
+
       const productData = {
         name:           catalog.productName,
         description:    catalog.fullDescription || catalog.shortDescription,
@@ -338,8 +359,8 @@ export default function AIProductStudio() {
         image_url:      finalUrl || '',
         sizes:          ['Free Size'],
         stock_quantity: 10,
-        artisan_id:     user?.artisan_profile?.id || user?.id,
-        artisan_name:   user?.name,
+        artisan_id:     targetArtisanId,
+        artisan_name:   targetArtisanName,
         status:         isDraft ? 'draft' : 'pending',
         ai_generated:   catalog.isAIGenerated,
       };
@@ -350,7 +371,7 @@ export default function AIProductStudio() {
         detail: { payload: { action: 'create' } }
       }));
       toast.success(isDraft ? 'Saved as draft!' : 'Product submitted for admin review! 🎉');
-      navigate('/artisan/products');
+      navigate(user?.role === 'admin' ? '/admin/products' : '/artisan/products');
     } catch (err) {
       console.error('Publish error:', err);
       toast.error('Publish failed. Please try again.');
@@ -758,6 +779,41 @@ export default function AIProductStudio() {
               ))}
             </div>
           </div>
+
+          {/* Artisan Attribution Display / Selector */}
+          {user?.role === 'admin' ? (
+            <div className="p-4 rounded-xl bg-dark-750 border border-gold-500/40 space-y-2">
+              <label className="text-xs font-bold text-gold-400 block uppercase tracking-wider flex items-center gap-1.5">
+                <span>👑 Admin Action: Assign to Artisan Store</span>
+              </label>
+              <select
+                value={selectedArtisanId}
+                onChange={(e) => setSelectedArtisanId(e.target.value)}
+                className="w-full bg-dark-900 border border-dark-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500"
+              >
+                {artisansList.map((art) => (
+                  <option key={art.id} value={art.id}>
+                    {art.store_name} ({art.artisan_type || 'Artisan'}) {art.users?.name ? `— by ${art.users.name}` : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-gray-400">
+                This listing will be attributed to this artisan store and will show up in their artisan dashboard.
+              </p>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl bg-dark-800/80 border border-gold-500/30 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded bg-gold-500 text-dark-950 font-black text-[10px] tracking-wider uppercase">ARTISAN STORE</span>
+                <span className="text-gray-200">
+                  Publishing to: <strong className="text-gold-400 font-bold">{user?.artisan_profile?.store_name || user?.name}</strong>
+                </span>
+              </div>
+              <span className="text-gray-400 text-[11px]">
+                {user?.artisan_profile?.artisan_type || 'Artisan'}
+              </span>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => handlePublish(true)} disabled={isPublishing}

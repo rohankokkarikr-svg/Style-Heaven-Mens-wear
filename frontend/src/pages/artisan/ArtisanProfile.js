@@ -32,7 +32,7 @@ export default function ArtisanProfile() {
     const toastId = toast.loading('Generating authentic artisan story with AI... ✨');
     try {
       const res = await aiAPI.generateArtisanStory({
-        name: form.store_name || user?.name || 'Master Artisan',
+        name: form.store_name || user?.name || 'Artisan Studio',
         location: form.location || 'Varanasi',
         craft: form.specialization || form.artisan_type || 'Traditional Indian Handicrafts',
         yearsExperience: form.years_of_experience || '20',
@@ -55,7 +55,7 @@ export default function ArtisanProfile() {
   };
 
   const handleQuickFillHeritage = () => {
-    set('store_name', form.store_name || 'Master Artisan');
+    set('store_name', form.store_name || user?.name || 'Artisan Studio');
     set('location', form.location || 'Varanasi');
     set('years_of_experience', form.years_of_experience || '20');
     set('bio', 'Carrying forward ancestral Indian craft traditions with unwavering dedication to perfection and authentic handmade heritage.');
@@ -322,7 +322,7 @@ export default function ArtisanProfile() {
 
         <div>
           <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Store Name *</label>
-          <input className="input-field" value={field('store_name')} onChange={e => set('store_name', e.target.value)} placeholder="e.g. Master Artisan / Lakshmi Handlooms" required />
+          <input className="input-field" value={field('store_name')} onChange={e => set('store_name', e.target.value)} placeholder="e.g. Lakshmi Handlooms / Ramesh Crafts" required />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -436,12 +436,12 @@ export default function ArtisanProfile() {
                     field('profile_image') ||
                     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop'
                   }
-                  alt={field('store_name') || 'Master Artisan'}
+                  alt={field('store_name') || user?.name || 'Artisan Store'}
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="space-y-1 flex-1 min-w-0">
-                <h5 className="text-sm font-bold text-white">{field('store_name') || 'Master Artisan'}</h5>
+                <h5 className="text-sm font-bold text-white">{field('store_name') || user?.name || 'Artisan Store'}</h5>
                 <p className="text-xs text-gold-400 font-medium">
                   Based in {field('location') || 'Varanasi'}, • {field('years_of_experience') || 20}+ Years of Heritage
                 </p>

@@ -67,7 +67,7 @@ exports.getMyProfile = async (req, res) => {
         .insert([{
           user_id: req.user.id,
           store_name: req.user.name || 'Artisan Studio',
-          artisan_type: 'Master Artisan',
+          artisan_type: 'Artisan',
           verification_status: 'pending'
         }])
         .select()
@@ -123,7 +123,7 @@ exports.updateMyProfile = async (req, res) => {
         .insert([{
           user_id: req.user.id,
           store_name: store_name || req.user.name,
-          artisan_type: artisan_type || 'Master Artisan',
+          artisan_type: artisan_type || 'Artisan',
           specialization,
           location,
           bio: bioWithUpi,
@@ -162,7 +162,7 @@ exports.getMyStats = async (req, res) => {
         .insert([{
           user_id: req.user.id,
           store_name: req.user.name || 'Artisan Studio',
-          artisan_type: 'Master Artisan',
+          artisan_type: 'Artisan',
           verification_status: 'pending'
         }])
         .select('id, earnings_total, verification_status, store_name')

@@ -280,7 +280,7 @@ exports.getProducts = async (req, res) => {
     const { search, category, status } = req.query;
     let query = supabase
       .from('products')
-      .select('*, artisan_profiles(id, store_name, location)')
+      .select('*, artisan_profiles(id, store_name, location, artisan_type)')
       .order('created_at', { ascending: false });
 
     if (category && category !== 'all') {
@@ -331,6 +331,7 @@ exports.updateProduct = async (req, res) => {
       tags,
       is_handmade,
       barcode,
+      artisan_id,
     } = req.body;
 
     const updateData = {};
@@ -352,6 +353,7 @@ exports.updateProduct = async (req, res) => {
     if (rejection_reason !== undefined) updateData.rejection_reason = rejection_reason;
     if (material !== undefined) updateData.material = material;
     if (style !== undefined) updateData.style = style;
+    if (artisan_id !== undefined) updateData.artisan_id = artisan_id;
     if (sizes !== undefined) {
       updateData.sizes = Array.isArray(sizes)
         ? sizes
@@ -373,7 +375,7 @@ exports.updateProduct = async (req, res) => {
       .from('products')
       .update(updateData)
       .eq('id', id)
-      .select('*, artisan_profiles(id, store_name, location)')
+      .select('*, artisan_profiles(id, store_name, location, artisan_type)')
       .single();
 
     if (error) {

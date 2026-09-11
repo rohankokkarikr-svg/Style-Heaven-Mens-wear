@@ -45,6 +45,7 @@ export default function Products() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchParams, setSearchParams] = useSearchParams();
   const editQueryId = searchParams.get('edit');
+  const [artisansList, setArtisansList] = useState([]);
   
   // Rejection modal state
   const [rejectModal, setRejectModal] = useState(null);
@@ -158,6 +159,12 @@ export default function Products() {
   };
 
   useEffect(() => {
+    adminAPI.getArtisans().then(({ data }) => {
+      if (data && data.length > 0) setArtisansList(data);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (editQueryId && products.length > 0) {
       const target = products.find(p => String(p.id) === String(editQueryId));
       if (target) {
@@ -197,7 +204,8 @@ export default function Products() {
       description: p.description || '',
       tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || ''),
       is_handmade: p.is_handmade !== false,
-      barcode: p.barcode || ''
+      barcode: p.barcode || '',
+      artisan_id: p.artisan_id || p.artisan_profiles?.id || ''
     });
   };
 
@@ -271,11 +279,17 @@ export default function Products() {
           ? editFormData.tags.split(',').map(t => t.trim()).filter(Boolean)
           : editFormData.tags,
         is_handmade: Boolean(editFormData.is_handmade),
-        barcode: editFormData.barcode ? editFormData.barcode.trim() : null
+        barcode: editFormData.barcode ? editFormData.barcode.trim() : null,
+        artisan_id: editFormData.artisan_id || null
       };
 
       const { data } = await adminAPI.updateProduct(editProduct.id, payload);
-      const updated = data?.product || { ...editProduct, ...payload };
+      const chosenArtisan = artisansList.find(a => a.id === payload.artisan_id);
+      const updated = data?.product || {
+        ...editProduct,
+        ...payload,
+        artisan_profiles: chosenArtisan || editProduct.artisan_profiles
+      };
 
       setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, ...updated } : p));
       if (previewProduct?.id === editProduct.id) {
@@ -702,6 +716,26 @@ export default function Products() {
 
                 {/* Right Column: Details & Pricing (7 cols) */}
                 <div className="md:col-span-7 space-y-4">
+                  {/* Linked Artisan Store Assignment */}
+                  <div>
+                    <label className="font-bold text-gold-400 block mb-1 flex items-center justify-between">
+                      <span>Artisan Store Assignment</span>
+                      <span className="text-[10px] text-gray-400 font-normal">Controls which artisan owns this product</span>
+                    </label>
+                    <select
+                      value={editFormData.artisan_id || ''}
+                      onChange={e => setEditFormData({ ...editFormData, artisan_id: e.target.value })}
+                      className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
+                    >
+                      <option value="">-- No artisan assigned --</option>
+                      {artisansList.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.store_name} ({a.artisan_type || 'Artisan'}) {a.users?.name ? `— by ${a.users.name}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Title */}
                   <div>
                     <label className="font-bold text-gray-300 block mb-1">Product Title *</label>

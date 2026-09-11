@@ -210,7 +210,7 @@ export default function ProductDetail() {
   const cleanArtisanBio =
     (rawArtisanBio.split('__UPI_META__:')[0] || '').trim() ||
     'Carrying forward ancestral Indian craft traditions with unwavering dedication to perfection and authentic handmade heritage.';
-  const artisanName = artisanProfile.store_name || product?.artisan_name || 'Master Artisan';
+  const artisanName = artisanProfile.store_name || product?.artisan_name || 'Independent Artisan';
   const artisanAvatar =
     artisanProfile.profile_image ||
     product?.artisan_avatar ||
@@ -724,7 +724,7 @@ export default function ProductDetail() {
 
             {activeTab === 'artisan' && (
               <div className="space-y-4">
-                <h3 className="text-xl font-serif font-bold text-white">About the Master Craftsman</h3>
+                <h3 className="text-xl font-serif font-bold text-white">About the Artisan</h3>
                 <div className="flex flex-col sm:flex-row items-start gap-6">
                   <img
                     src={artisanAvatar}

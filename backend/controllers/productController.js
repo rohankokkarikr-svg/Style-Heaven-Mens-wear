@@ -175,11 +175,11 @@ exports.getProductById = async (req, res) => {
         const { parseArtisanUpi } = require('./authController');
         const parsed = parseArtisanUpi(data.artisan_profiles);
         data.artisan_profiles = parsed;
-        data.artisan_name = parsed.store_name || data.artisan_name || 'Master Craftsman';
+        data.artisan_name = parsed.store_name || data.artisan_name || 'Independent Artisan';
         data.artisan_avatar = parsed.profile_image || data.artisan_avatar;
         data.artisan_location = parsed.location || data.artisan_location;
         data.artisan_bio = parsed.bio || data.artisan_bio;
-        data.artisan_type = parsed.artisan_type || data.artisan_type || 'Master Artisan';
+        data.artisan_type = parsed.artisan_type || data.artisan_type || 'Artisan';
         data.artisan_specialization = parsed.specialization || data.artisan_specialization;
         if (parsed.years_of_experience) {
           data.years_of_experience = parsed.years_of_experience;
@@ -206,31 +206,52 @@ exports.createProduct = async (req, res) => {
       status
     } = req.body;
 
-    // Reliably resolve artisan_id from authenticated user session
-    let targetArtisanId = artisan_id;
-    if (req.user) {
-      let { data: profile } = await supabase
-        .from('artisan_profiles')
-        .select('id')
-        .eq('user_id', req.user.id)
-        .maybeSingle();
+    // Reliably resolve artisan_id from authenticated user session or body
+    let targetArtisanId = artisan_id || null;
 
-      if (!profile) {
-        // Auto-create profile if missing so product is never orphaned
-        const { data: newProfile } = await supabase
+    if (req.user) {
+      if (req.user.role === 'artisan') {
+        // Authenticated artisan always attributes product to their own artisan profile
+        let { data: profile } = await supabase
           .from('artisan_profiles')
-          .insert([{
-            user_id: req.user.id,
-            store_name: req.user.name || 'Artisan Craft Studio',
-            artisan_type: 'Master Artisan',
-            verification_status: 'pending'
-          }])
           .select('id')
-          .single();
-        if (newProfile?.id) targetArtisanId = newProfile.id;
-        else targetArtisanId = req.user.id;
-      } else {
-        targetArtisanId = profile.id;
+          .eq('user_id', req.user.id)
+          .maybeSingle();
+
+        if (!profile) {
+          // Auto-create profile if missing so product is never orphaned
+          const { data: newProfile } = await supabase
+            .from('artisan_profiles')
+            .insert([{
+              user_id: req.user.id,
+              store_name: req.user.name || 'Artisan Studio',
+              artisan_type: 'Artisan',
+              verification_status: 'verified'
+            }])
+            .select('id')
+            .single();
+          targetArtisanId = newProfile?.id || req.user.id;
+        } else {
+          targetArtisanId = profile.id;
+        }
+      } else if (req.user.role === 'admin') {
+        // If admin specified an artisan_id, honor it!
+        if (artisan_id) {
+          let { data: targetProfile } = await supabase
+            .from('artisan_profiles')
+            .select('id')
+            .or(`id.eq.${artisan_id},user_id.eq.${artisan_id}`)
+            .maybeSingle();
+          targetArtisanId = targetProfile?.id || artisan_id;
+        } else {
+          // If admin didn't specify, check if admin has an artisan profile or use first artisan
+          let { data: profile } = await supabase
+            .from('artisan_profiles')
+            .select('id')
+            .eq('user_id', req.user.id)
+            .maybeSingle();
+          targetArtisanId = profile?.id || null;
+        }
       }
     }
 
