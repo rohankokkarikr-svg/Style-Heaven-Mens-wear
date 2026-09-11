@@ -140,7 +140,18 @@ exports.login = async (req, res) => {
       userQuery = userQuery.eq('email', identifier.toLowerCase());
     } else {
       const cleanPhone = identifier.replace(/\D/g, '');
-      userQuery = userQuery.or(`email.eq.${cleanPhone},phone.eq.${cleanPhone},email.eq.${identifier},phone.eq.${identifier}`);
+      const last10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+      const orConditions = [
+        `email.eq.${identifier}`,
+        `phone.eq.${identifier}`,
+        cleanPhone ? `phone.eq.${cleanPhone}` : null,
+        cleanPhone ? `phone.eq.+${cleanPhone}` : null,
+        last10 ? `phone.eq.${last10}` : null,
+        last10 ? `phone.eq.+91${last10}` : null,
+        last10 ? `phone.eq.91${last10}` : null,
+        cleanPhone ? `email.eq.${cleanPhone}` : null,
+      ].filter(Boolean);
+      userQuery = userQuery.or(orConditions.join(','));
     }
 
     const { data: users, error } = await userQuery.limit(1);

@@ -547,6 +547,14 @@ router.get('/:orderId', protect, async (req, res) => {
         payment_method: order.payment_method,
         payment_status: order.payment_status,
       },
+      payment: payment || null,
+    });
+  } catch (err) {
+    console.error('[get-payment] Error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve payment details' });
+  }
+});
+
 // ─── 6. DIRECT / STANDALONE RAZORPAY ENDPOINTS ─────────────────────────────
 /**
  * Direct Razorpay order creation
