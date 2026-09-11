@@ -134,6 +134,7 @@ function App() {
                       <Route path="discount-banner" element={<DiscountBanner />} />
                       <Route path="activity" element={<ActivityLogs />} />
                       <Route path="shipping" element={<ShippingCost />} />
+                      <Route path="shipping-cost" element={<ShippingCost />} />
                       <Route path="settings" element={<Settings />} />
                     </Route>
 

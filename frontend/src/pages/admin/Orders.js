@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   HiSearch, 
   HiFilter, 
@@ -105,13 +106,22 @@ export default function Orders() {
             Monitor customer orders, track artisan fulfillment, and update delivery milestones.
           </p>
         </div>
-        <button
-          onClick={fetchOrders}
-          className="btn-secondary self-start sm:self-auto flex items-center gap-2 text-xs py-2"
-        >
-          <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Orders
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <Link
+            to="/admin/shipping"
+            className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-3 border border-gold-500/40 text-gold-400 hover:text-white"
+          >
+            <HiTruck className="w-4 h-4" />
+            <span>Shipping Cost Rules</span>
+          </Link>
+          <button
+            onClick={fetchOrders}
+            className="btn-secondary flex items-center gap-2 text-xs py-2"
+          >
+            <HiRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Orders
+          </button>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}

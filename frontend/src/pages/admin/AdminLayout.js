@@ -51,6 +51,7 @@ export default function AdminLayout() {
         { name: 'Products', path: '/admin/products', icon: HiCollection },
         { name: 'Categories', path: '/admin/categories', icon: HiFolder },
         { name: 'Orders', path: '/admin/orders', icon: HiShoppingBag },
+        { name: 'Shipping Cost', path: '/admin/shipping', icon: HiTruck, highlight: true, badge: 'NEW' },
         { name: 'Payments', path: '/admin/payments', icon: HiCurrencyRupee },
       ]
     },
@@ -161,11 +162,15 @@ export default function AdminLayout() {
                   >
                     <item.icon className={`w-4 h-4 shrink-0 ${active ? 'text-gold-400' : 'text-gray-400'}`} />
                     <span className="truncate">{item.name}</span>
-                    {item.highlight && (
+                    {item.badge ? (
+                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                        {item.badge}
+                      </span>
+                    ) : item.highlight ? (
                       <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-gold-500/20 text-gold-400 font-bold border border-gold-500/30">
                         AI
                       </span>
-                    )}
+                    ) : null}
                   </Link>
                 );
               })}

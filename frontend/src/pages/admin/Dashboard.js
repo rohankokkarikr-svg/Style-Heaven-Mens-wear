@@ -14,7 +14,8 @@ import {
   HiXCircle,
   HiPlus,
   HiBell,
-  HiEye
+  HiEye,
+  HiTruck
 } from 'react-icons/hi';
 import { adminAPI } from '../../services/api';
 
@@ -166,12 +167,13 @@ export default function Dashboard() {
       {/* Quick Action Matrix */}
       <div className="card p-6 space-y-4">
         <h2 className="text-base font-semibold text-white">⚡ Quick Actions</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           {[
             { label: 'Add Category', path: '/admin/categories', icon: HiPlus, color: 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20' },
             { label: 'Pending Artisans', path: '/admin/artisans?status=pending', icon: HiUserGroup, color: 'text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20' },
             { label: 'Review Products', path: '/admin/products', icon: HiCollection, color: 'text-purple-400 bg-purple-500/10 hover:bg-purple-500/20' },
             { label: 'Manage Orders', path: '/admin/orders', icon: HiShoppingBag, color: 'text-green-400 bg-green-500/10 hover:bg-green-500/20' },
+            { label: 'Shipping Cost', path: '/admin/shipping', icon: HiTruck, color: 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30' },
             { label: 'Broadcast Alert', path: '/admin/notifications', icon: HiBell, color: 'text-pink-400 bg-pink-500/10 hover:bg-pink-500/20' },
             { label: 'AI Review', path: '/admin/ai', icon: HiSparkles, color: 'text-gold-400 bg-gold-500/10 hover:bg-gold-500/20' },
           ].map((a, i) => (
@@ -185,6 +187,33 @@ export default function Dashboard() {
             </Link>
           ))}
         </div>
+      </div>
+
+      {/* Shipping & Delivery Quick Management Banner */}
+      <div className="card p-5 border border-gold-500/30 bg-gradient-to-r from-dark-800 via-dark-800 to-gold-500/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-gold-400 shrink-0 shadow-gold shadow-gold/5">
+            <HiTruck className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-white font-bold text-sm">Shipping Cost & Delivery Rules</h3>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                Admin Exclusive
+              </span>
+            </div>
+            <p className="text-gray-400 text-xs mt-0.5">
+              Set standard shipping rate (e.g. ₹50), free delivery order thresholds (e.g. Free above ₹500), and Cash on Delivery parameters.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/admin/shipping"
+          className="btn-primary text-xs py-2.5 px-4 flex items-center gap-2 shrink-0 self-start md:self-auto shadow-gold"
+        >
+          <HiTruck className="w-4 h-4" />
+          <span>Open Shipping Cost Manager →</span>
+        </Link>
       </div>
 
       {/* Operational Breakdown Grid */}
