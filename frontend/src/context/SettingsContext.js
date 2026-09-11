@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { settingsAPI } from '../services/api';
 import { supabase } from '../lib/supabase';
 
-const SETTINGS_CACHE_KEY = 'sh_settings_v5_synced';
+const SETTINGS_CACHE_KEY = 'sh_settings_v6_shipping';
 
 // Clean up old legacy keys that cause stale demo data on mobile and desktop browsers
 try {
@@ -12,6 +12,7 @@ try {
   localStorage.removeItem('sh_settings_v2');
   localStorage.removeItem('sh_settings_v3');
   localStorage.removeItem('sh_settings_v4_synced');
+  localStorage.removeItem('sh_settings_v5_synced');
 } catch {}
 
 export const DEFAULT_HERO_SLIDES = [
@@ -86,6 +87,12 @@ const DEFAULT_SETTINGS = {
   footerTagline: "Empowering India's generational artisans, master handloom weavers, and traditional craftsmen with AI-driven direct commerce.",
   heroSlides: DEFAULT_HERO_SLIDES,
   discountBanner: DEFAULT_DISCOUNT_BANNER,
+  delivery_fee: 50,
+  free_delivery_above: 500,
+  shipping_estimated_days: '3 - 5 Business Days',
+  cod_enabled: true,
+  cod_min_order_value: 100,
+  cod_max_order_value: 5000,
 };
 
 const SettingsContext = createContext({
@@ -106,6 +113,12 @@ export const SettingsProvider = ({ children }) => {
           ...parsed,
           heroSlides: Array.isArray(parsed.heroSlides) && parsed.heroSlides.length > 0 ? parsed.heroSlides : DEFAULT_HERO_SLIDES,
           discountBanner: parsed.discountBanner ? { ...DEFAULT_DISCOUNT_BANNER, ...parsed.discountBanner } : DEFAULT_DISCOUNT_BANNER,
+          delivery_fee: parsed.delivery_fee !== undefined ? Number(parsed.delivery_fee) : 50,
+          free_delivery_above: parsed.free_delivery_above !== undefined ? Number(parsed.free_delivery_above) : 500,
+          shipping_estimated_days: parsed.shipping_estimated_days || '3 - 5 Business Days',
+          cod_enabled: parsed.cod_enabled !== undefined ? Boolean(parsed.cod_enabled) : true,
+          cod_min_order_value: parsed.cod_min_order_value !== undefined ? Number(parsed.cod_min_order_value) : 100,
+          cod_max_order_value: parsed.cod_max_order_value !== undefined ? Number(parsed.cod_max_order_value) : 5000,
         };
       }
     } catch {}
@@ -165,6 +178,12 @@ export const SettingsProvider = ({ children }) => {
       discountBanner: loadedData?.discountBanner || loadedData?.discount_banner
         ? { ...DEFAULT_DISCOUNT_BANNER, ...(loadedData?.discountBanner || loadedData?.discount_banner) }
         : DEFAULT_DISCOUNT_BANNER,
+      delivery_fee: loadedData?.delivery_fee !== undefined ? Number(loadedData.delivery_fee) : DEFAULT_SETTINGS.delivery_fee,
+      free_delivery_above: loadedData?.free_delivery_above !== undefined ? Number(loadedData.free_delivery_above) : DEFAULT_SETTINGS.free_delivery_above,
+      shipping_estimated_days: loadedData?.shipping_estimated_days || DEFAULT_SETTINGS.shipping_estimated_days,
+      cod_enabled: loadedData?.cod_enabled !== undefined ? Boolean(loadedData.cod_enabled) : DEFAULT_SETTINGS.cod_enabled,
+      cod_min_order_value: loadedData?.cod_min_order_value !== undefined ? Number(loadedData.cod_min_order_value) : DEFAULT_SETTINGS.cod_min_order_value,
+      cod_max_order_value: loadedData?.cod_max_order_value !== undefined ? Number(loadedData.cod_max_order_value) : DEFAULT_SETTINGS.cod_max_order_value,
     };
 
     setSettings(merged);

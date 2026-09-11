@@ -1,11 +1,18 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { HiTrash, HiArrowRight } from 'react-icons/hi';
+import { useSettings } from '../context/SettingsContext';
+import { HiTrash, HiArrowRight, HiTruck } from 'react-icons/hi';
 
 export default function Cart() {
   const { items, removeFromCart, updateQuantity, totalPrice } = useCart();
+  const { settings } = useSettings();
   const navigate = useNavigate();
+
+  const deliveryFee = Number(settings?.delivery_fee !== undefined ? settings.delivery_fee : 50);
+  const freeAbove = Number(settings?.free_delivery_above !== undefined ? settings.free_delivery_above : 500);
+  const shipping = totalPrice >= freeAbove ? 0 : deliveryFee;
+  const finalTotal = totalPrice + shipping;
 
   if (items.length === 0) {
     return (
@@ -17,9 +24,6 @@ export default function Cart() {
       </div>
     );
   }
-
-  const shipping = totalPrice > 2000 ? 0 : 150;
-  const finalTotal = totalPrice + shipping;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
@@ -82,13 +86,24 @@ export default function Cart() {
                 <span>Subtotal ({items.length} items)</span>
                 <span className="text-white">₹{totalPrice.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span>Shipping</span>
                 {shipping === 0 ? (
-                  <span className="text-green-400">Free</span>
+                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                    <HiTruck className="w-4 h-4" /> FREE
+                  </span>
                 ) : (
-                  <span className="text-white">₹{shipping}</span>
+                  <span className="text-white font-medium">₹{shipping}</span>
                 )}
+              </div>
+              {shipping > 0 && freeAbove > totalPrice && (
+                <div className="p-2.5 rounded-lg bg-gold-500/10 border border-gold-500/20 text-[11px] text-gold-300">
+                  Add <strong className="text-white">₹{(freeAbove - totalPrice).toLocaleString()}</strong> more to unlock <strong className="text-emerald-400">FREE Shipping!</strong>
+                </div>
+              )}
+              <div className="text-[11px] text-gray-400 flex items-center gap-1.5 pt-1">
+                <HiTruck className="w-3.5 h-3.5 text-gold-400" />
+                <span>Estimated Delivery: <strong className="text-gray-200">{settings?.shipping_estimated_days || '3-5 Business Days'}</strong></span>
               </div>
             </div>
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { productAPI, reviewAPI, artisanAPI } from '../services/api';
 import { HANDICRAFT_PRODUCTS } from '../constants/handicraftsData';
 import ReviewModal from '../components/ReviewModal';
@@ -27,6 +28,11 @@ export default function ProductDetail() {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { isAuthenticated, isAdmin } = useAuth();
+  const { settings } = useSettings();
+
+  const deliveryFee = Number(settings?.delivery_fee !== undefined ? settings.delivery_fee : 50);
+  const freeAbove = Number(settings?.free_delivery_above !== undefined ? settings.free_delivery_above : 500);
+  const timeline = settings?.shipping_estimated_days || '3 - 5 Business Days';
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -464,7 +470,11 @@ export default function ProductDetail() {
                     )}
                   </div>
                   <span className="text-[11px] text-gray-400 mt-1 block">
-                    Inclusive of all taxes • Free express shipping
+                    Inclusive of all taxes • {product.price >= freeAbove ? (
+                      <span className="text-emerald-400 font-medium">✓ Free Express Shipping</span>
+                    ) : (
+                      <span>Shipping: <strong className="text-gray-200">₹{deliveryFee}</strong> (Free on orders ≥ ₹{freeAbove})</span>
+                    )}
                   </span>
                 </div>
 
@@ -546,9 +556,10 @@ export default function ProductDetail() {
                 </div>
 
                 {/* Shipping info small bar */}
-                <div className="flex items-center justify-between text-xs text-gray-400 px-2">
-                  <span className="flex items-center gap-1.5">
-                    <HiTruck className="text-gold-400 w-4 h-4" /> Dispatches within 24–48 hours
+                <div className="flex flex-wrap items-center justify-between text-xs text-gray-400 px-2 gap-2">
+                  <span className="flex items-center gap-1.5 text-gold-300 font-medium">
+                    <HiTruck className="text-gold-400 w-4 h-4" /> 
+                    {product.price >= freeAbove ? 'Free Shipping' : `Shipping: ₹${deliveryFee}`} • {timeline}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <HiShieldCheck className="text-gold-400 w-4 h-4" /> 7 Days Return Policy
@@ -794,9 +805,19 @@ export default function ProductDetail() {
               <div className="space-y-4">
                 <h3 className="text-xl font-serif font-bold text-white">Shipping & Returns</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700">
-                    <h4 className="font-semibold text-gold-400 mb-1">🚚 Shipping Information</h4>
-                    <p className="text-xs text-gray-300">{product.shipping_info || 'Free delivery across India within 3-5 business days.'}</p>
+                  <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700 space-y-1.5">
+                    <h4 className="font-semibold text-gold-400 mb-1 flex items-center gap-1.5">
+                      <HiTruck className="w-4 h-4" /> Shipping Information
+                    </h4>
+                    <p className="text-xs text-gray-300">
+                      Standard Delivery: <strong className="text-white">₹{deliveryFee}</strong> across India ({timeline}).
+                    </p>
+                    <p className="text-xs text-emerald-400 font-semibold">
+                      ✓ Free Shipping on orders of ₹{freeAbove} and above!
+                    </p>
+                    {product.shipping_info && (
+                      <p className="text-[11px] text-gray-400 pt-1">{product.shipping_info}</p>
+                    )}
                   </div>
                   <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700">
                     <h4 className="font-semibold text-gold-400 mb-1">🔄 Return Policy</h4>

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { orderAPI, couponAPI } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -123,6 +124,7 @@ function parseNominatimAddress(addr = {}) {
 export default function Checkout() {
   const { items, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const [step, setStep]                   = useState(1);
@@ -326,7 +328,10 @@ export default function Checkout() {
 
   if (items.length === 0) return null;
 
-  const shipping = totalPrice > 2000 || (isCouponApplied && discountType === 'free_shipping') ? 0 : 150;
+  const deliveryFee = Number(settings?.delivery_fee !== undefined ? settings.delivery_fee : 50);
+  const freeAbove = Number(settings?.free_delivery_above !== undefined ? settings.free_delivery_above : 500);
+  const isFreeShipping = totalPrice >= freeAbove || (isCouponApplied && discountType === 'free_shipping');
+  const shipping = isFreeShipping ? 0 : deliveryFee;
   let discountAmount = 0;
 
   if (isCouponApplied) {
@@ -508,6 +513,9 @@ export default function Checkout() {
 
       const orderData = {
         total_price: finalTotal,
+        subtotal: totalPrice,
+        delivery_fee: shipping,
+        shipping_fee: shipping,
         discount_amount: discountAmount,
         coupon_code: isCouponApplied ? couponCode : null,
         shipping_address: fullAddress,
