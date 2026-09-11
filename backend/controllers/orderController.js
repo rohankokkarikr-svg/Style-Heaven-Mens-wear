@@ -257,10 +257,10 @@ exports.getOrderById = async (req, res) => {
 exports.getOrderTracking = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data: order, error } = await supabase
+    let query = supabase
       .from('orders')
       .select(`
-        id, order_number, order_status, status, payment_status, payment_method,
+        id, user_id, order_number, order_status, status, payment_status, payment_method,
         total_amount, total_price, created_at, updated_at,
         shipping_name, shipping_address, shipping_city, shipping_state, shipping_pincode, phone,
         artisan_orders (
@@ -273,20 +273,54 @@ exports.getOrderTracking = async (req, res) => {
           id, quantity, size, product_name_snapshot, product_image_snapshot,
           unit_price_snapshot, total_price, artisan_id
         )
-      `)
-      .eq('id', id)
-      .single();
+      `);
 
-    if (error || !order) return res.status(404).json({ error: 'Order not found' });
+    // Support lookup by UUID id or order_number
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('order_number', id);
+    }
 
-    if (order.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Unauthorized access' });
+    const { data: order, error } = await query.maybeSingle();
+
+    if (error || !order) {
+      console.warn(`[getOrderTracking] Order ${id} not found:`, error?.message);
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const isBuyer = String(order.user_id) === String(req.user.id);
+    const isAdmin = (req.user.role || '').toLowerCase() === 'admin';
+    const isArtisan = (order.artisan_orders || []).some(
+      (ao) => String(ao.artisan_id) === String(req.user.id)
+    );
+
+    if (!isBuyer && !isAdmin && !isArtisan) {
+      console.warn(`[getOrderTracking] User ${req.user.id} unauthorized for order ${id}`);
+      return res.status(403).json({ error: 'Unauthorized access to this order tracking' });
+    }
+
+    // Fallback: If artisan_orders is empty, synthesize from order details
+    if (!order.artisan_orders || order.artisan_orders.length === 0) {
+      order.artisan_orders = [{
+        id: order.id,
+        artisan_id: null,
+        status: order.order_status || order.status || 'pending',
+        subtotal: order.total_amount || order.total_price || 0,
+        total_amount: order.total_amount || order.total_price || 0,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+        artisan: {
+          store_name: 'KalaStyle Artisan',
+          profile_image: null,
+        },
+      }];
     }
 
     res.json(order);
   } catch (err) {
     console.error('[getOrderTracking] Error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error fetching order tracking' });
   }
 };
 

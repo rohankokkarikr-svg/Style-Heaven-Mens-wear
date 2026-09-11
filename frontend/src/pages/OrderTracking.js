@@ -98,7 +98,19 @@ export default function OrderTracking() {
       const { data } = await orderAPI.getTracking(id);
       setOrder(data);
     } catch (err) {
-      toast.error('Failed to load order tracking');
+      // Automatic fallback: attempt to load order via getById
+      try {
+        const { data: fallbackData } = await orderAPI.getById(id);
+        if (fallbackData) {
+          setOrder(fallbackData);
+          return;
+        }
+      } catch (fallbackErr) {
+        // Fallback also failed
+      }
+      console.error('Failed to load order tracking:', err);
+      const msg = err.response?.data?.error || 'Failed to load order tracking';
+      toast.error(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
