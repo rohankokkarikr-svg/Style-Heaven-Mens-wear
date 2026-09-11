@@ -111,8 +111,8 @@ export default function Orders() {
     }
     if (!pm) return 'Cash on Delivery (COD)';
     const pmLower = pm.toLowerCase();
-    if (pmLower.includes('upi') || pmLower.includes('phonepe') || pmLower.includes('online')) {
-      return 'UPI / PhonePe QR';
+    if (pmLower.includes('upi') || pmLower.includes('razorpay') || pmLower.includes('phonepe') || pmLower.includes('online')) {
+      return 'Razorpay (UPI / Online)';
     }
     if (pmLower.includes('cod')) {
       return 'Cash on Delivery (COD)';
