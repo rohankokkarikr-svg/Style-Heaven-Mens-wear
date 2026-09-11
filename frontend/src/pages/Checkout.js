@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import {
   HiShieldCheck, HiTruck, HiUser, HiPhone, HiLocationMarker,
   HiCheckCircle, HiArrowRight, HiArrowLeft, HiTag, HiExclamationCircle,
-  HiLockClosed, HiReceiptTax, HiCash, HiRefresh, HiMap, HiX, HiExternalLink
+  HiLockClosed, HiReceiptTax, HiCash, HiRefresh, HiMap, HiX, HiExternalLink, HiCreditCard
 } from 'react-icons/hi';
 
 /* ─── Field error ─── */
@@ -515,8 +515,12 @@ export default function Checkout() {
         latitude: activeLat || null,
         longitude: activeLng || null,
         phone: form.phone.replace(/\D/g, ''),
-        payment_method: paymentMethod === 'cod' ? 'cod' : 'upi_phonepe',
+        payment_method: paymentMethod === 'cod' ? 'cod' : 'razorpay',
         payment_status: 'pending',
+        shipping_name: form.fullName,
+        shipping_city: form.city,
+        shipping_state: form.state,
+        shipping_pincode: form.pinCode,
         items: items.map(i => ({
           product_id:    i.product.id,
           quantity:      i.quantity,
@@ -553,17 +557,19 @@ export default function Checkout() {
           console.warn('Auto open WhatsApp popup blocked by browser:', e);
         }
       } else {
-        // Show simulated loading popup
+        clearCart();
         setShowLoadingPopup(true);
-        setPopupText("Setting up secure payment gateway handshake...");
+        setPopupText("Preparing secure payment gateway...");
         
         setTimeout(() => {
-          setPopupText("Opening PhonePe QR Payment Gateway...");
+          setPopupText("Opening Razorpay Secure Checkout...");
           setTimeout(() => {
             setShowLoadingPopup(false);
-            navigate(`/payment-gateway?orderId=${createdOrder.id}&method=phonepe`);
-          }, 1000);
-        }, 1200);
+            navigate(`/payment-gateway?orderId=${createdOrder.id}&method=razorpay`, {
+              state: { razorpay: createdOrder.razorpay }
+            });
+          }, 500);
+        }, 700);
       }
     } catch (err) {
       const errMsg = err.response?.data?.error || 'Failed to place order. Please try again.';
@@ -1140,7 +1146,7 @@ export default function Checkout() {
                         </button>
                       </div>
 
-                      {/* UPI Option */}
+                      {/* Razorpay Online / UPI Option */}
                       <div className={`border rounded-xl transition-all ${
                         paymentMethod === 'upi' ? 'border-gold-500 bg-gold-500/10' : 'border-dark-600'
                       }`}>
@@ -1148,13 +1154,16 @@ export default function Checkout() {
                           className="flex items-center justify-between w-full p-4 text-left cursor-pointer">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-dark-900 flex items-center justify-center text-gray-400">
-                              <svg viewBox="0 0 24 24" className="w-6 h-6 text-gold-400" fill="currentColor">
-                                <path d="M12 2L3 17h6v5h6v-5h6L12 2zm0 4.5l5.25 8.75H14v5h-4v-5H6.75L12 6.5z" />
-                              </svg>
+                              <HiCreditCard className="w-5 h-5 text-gold-400" />
                             </div>
                             <div>
-                              <p className="font-bold text-sm text-white">UPI / PhonePe QR Payment</p>
-                              <p className="text-gray-400 text-xs mt-0.5">Scan PhonePe QR Code & Enter 12-digit Ref. No.</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-sm text-white">UPI / Online Payment</p>
+                                <span className="bg-gold-500/20 text-gold-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-gold-500/30">
+                                  Razorpay Secured
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-xs mt-0.5">Pay via UPI (GPay, PhonePe, Paytm, QR), Cards, or NetBanking</p>
                             </div>
                           </div>
                           <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -1171,7 +1180,7 @@ export default function Checkout() {
                       <p className="text-xs text-gray-450 leading-relaxed">
                         {paymentMethod === 'cod'
                           ? `You will pay ₹${finalTotal.toLocaleString()} in cash when your order is delivered.`
-                          : `Pay ₹${finalTotal.toLocaleString()} securely online via UPI. You will be redirected to the gateway to complete the transaction.`}
+                          : `Pay ₹${finalTotal.toLocaleString()} securely online via Razorpay Standard Checkout. 100% encrypted & verified.`}
                       </p>
                     </div>
                   </div>

@@ -2,11 +2,19 @@ const Razorpay = require('razorpay');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Lazy initializer so missing env vars during test/build do not crash the server on startup
+let razorpayInstance = null;
+const getRazorpay = () => {
+  const key_id = process.env.RAZORPAY_KEY_ID;
+  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!key_id || !key_secret) {
+    return null;
+  }
+  if (!razorpayInstance) {
+    razorpayInstance = new Razorpay({ key_id, key_secret });
+  }
+  return razorpayInstance;
+};
 
 // Merchant UPI ID for direct UPI transfers (fallback)
 const MERCHANT_UPI_ID = process.env.MERCHANT_UPI_ID || 'styleheaven@upi';
@@ -17,10 +25,16 @@ const MERCHANT_NAME = process.env.MERCHANT_NAME || 'KalaStyle AI Artisan Marketp
  */
 exports.createRazorpayOrder = async (amount, receipt, notes = {}) => {
   try {
+    const razorpay = getRazorpay();
+    if (!razorpay) {
+      console.warn('[paymentService] Razorpay credentials missing (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET)');
+      return { success: false, error: 'Razorpay keys not configured' };
+    }
+
     const options = {
       amount: Math.round(amount * 100), // Convert to paise
       currency: 'INR',
-      receipt,
+      receipt: String(receipt || Date.now()).substring(0, 40),
       notes,
       payment_capture: 1,
     };
@@ -28,8 +42,8 @@ exports.createRazorpayOrder = async (amount, receipt, notes = {}) => {
     const order = await razorpay.orders.create(options);
     return { success: true, order };
   } catch (error) {
-    console.error('Razorpay order creation failed:', error);
-    return { success: false, error: error.message };
+    console.error('Razorpay order creation failed:', error?.message || error);
+    return { success: false, error: error?.message || 'Failed to create order' };
   }
 };
 
@@ -38,17 +52,13 @@ exports.createRazorpayOrder = async (amount, receipt, notes = {}) => {
  * This works with all UPI apps: GPay, PhonePe, Paytm, BHIM
  */
 exports.generateUPIURI = (amount, transactionId, orderId) => {
-  // Standard UPI Pay URI format
   const upiId = MERCHANT_UPI_ID;
   const name = encodeURIComponent(MERCHANT_NAME);
   const txnId = encodeURIComponent(transactionId);
   const txnNote = encodeURIComponent(`Order #${orderId}`);
   const amt = amount.toFixed(2);
 
-  // UPI Intent URI
-  const upiURI = `upi://pay?pa=${upiId}&pn=${name}&am=${amt}&tr=${txnId}&tn=${txnNote}&cu=INR`;
-
-  return upiURI;
+  return `upi://pay?pa=${upiId}&pn=${name}&am=${amt}&tr=${txnId}&tn=${txnNote}&cu=INR`;
 };
 
 /**
@@ -75,36 +85,35 @@ exports.generateQRCode = async (upiURI) => {
  * Get UPI app deep links for intent-based payments
  */
 exports.getUPIDeepLinks = (upiURI, amount, transactionId) => {
-  const encodedURI = encodeURIComponent(upiURI);
-
   return {
-    // Google Pay
     gpay: `tez://upi/pay?${upiURI.split('?')[1]}`,
-    // PhonePe
     phonepe: `phonepe://pay?${upiURI.split('?')[1]}`,
-    // Paytm
     paytm: `paytmmp://upi/pay?${upiURI.split('?')[1]}`,
-    // BHIM
     bhim: `bhim://upi/pay?${upiURI.split('?')[1]}`,
-    // Generic UPI
     generic: upiURI,
   };
 };
 
 /**
- * Verify Razorpay payment signature
+ * Verify Razorpay payment signature using timing-safe comparison
  */
 exports.verifyRazorpaySignature = (orderId, paymentId, signature) => {
   try {
-    const body = orderId + '|' + paymentId;
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret || !orderId || !paymentId || !signature) return false;
+    const body = `${orderId}|${paymentId}`;
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', secret)
       .update(body)
       .digest('hex');
 
-    return expectedSignature === signature;
+    if (expectedSignature.length !== signature.length) return false;
+    return crypto.timingSafeEqual(
+      Buffer.from(expectedSignature, 'utf8'),
+      Buffer.from(signature, 'utf8')
+    );
   } catch (error) {
-    console.error('Signature verification error:', error);
+    console.error('Signature verification error:', error?.message || error);
     return false;
   }
 };
@@ -114,17 +123,20 @@ exports.verifyRazorpaySignature = (orderId, paymentId, signature) => {
  */
 exports.verifyWebhookSignature = (body, signature, secret) => {
   try {
+    const webhookSecret = secret || process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret || !body || !signature) return false;
     const expectedSignature = crypto
-      .createHmac('sha256', secret)
+      .createHmac('sha256', webhookSecret)
       .update(body)
       .digest('hex');
 
+    if (expectedSignature.length !== signature.length) return false;
     return crypto.timingSafeEqual(
-      Buffer.from(expectedSignature, 'hex'),
-      Buffer.from(signature, 'hex')
+      Buffer.from(expectedSignature, 'utf8'),
+      Buffer.from(signature, 'utf8')
     );
   } catch (error) {
-    console.error('Webhook verification error:', error);
+    console.error('Webhook verification error:', error?.message || error);
     return false;
   }
 };
@@ -134,11 +146,13 @@ exports.verifyWebhookSignature = (body, signature, secret) => {
  */
 exports.getPaymentDetails = async (paymentId) => {
   try {
+    const razorpay = getRazorpay();
+    if (!razorpay) return { success: false, error: 'Razorpay not configured' };
     const payment = await razorpay.payments.fetch(paymentId);
     return { success: true, payment };
   } catch (error) {
-    console.error('Fetch payment failed:', error);
-    return { success: false, error: error.message };
+    console.error('Fetch payment failed:', error?.message || error);
+    return { success: false, error: error?.message || 'Fetch failed' };
   }
 };
 
@@ -147,29 +161,35 @@ exports.getPaymentDetails = async (paymentId) => {
  */
 exports.getOrderDetails = async (orderId) => {
   try {
+    const razorpay = getRazorpay();
+    if (!razorpay) return { success: false, error: 'Razorpay not configured' };
     const order = await razorpay.orders.fetch(orderId);
     return { success: true, order };
   } catch (error) {
-    console.error('Fetch order failed:', error);
-    return { success: false, error: error.message };
+    console.error('Fetch order failed:', error?.message || error);
+    return { success: false, error: error?.message || 'Fetch failed' };
   }
 };
 
 /**
- * Create a refund
+ * Create a refund for a payment
+ * @param {string} paymentId - Razorpay payment ID (e.g. pay_xxx)
+ * @param {number} [amount] - in INR (optional; full refund if omitted)
+ * @param {object} [notes]
  */
 exports.createRefund = async (paymentId, amount, notes = {}) => {
   try {
-    const options = {
-      amount: amount ? Math.round(amount * 100) : undefined,
-      notes,
-    };
-
+    const razorpay = getRazorpay();
+    if (!razorpay) return { success: false, error: 'Razorpay not configured' };
+    const options = { notes };
+    if (amount && amount > 0) {
+      options.amount = Math.round(amount * 100); // Convert to paise
+    }
     const refund = await razorpay.payments.refund(paymentId, options);
     return { success: true, refund };
   } catch (error) {
-    console.error('Refund creation failed:', error);
-    return { success: false, error: error.message };
+    console.error('Refund creation failed:', error?.message || error);
+    return { success: false, error: error?.message || 'Refund failed' };
   }
 };
 
@@ -182,41 +202,6 @@ exports.generateTransactionId = (orderId) => {
   return `SH${orderId?.substring(0, 8).toUpperCase() || ''}${timestamp}${random}`;
 };
 
-/**
- * Verify Razorpay payment signature (used for client-side verification confirmation)
- */
-exports.verifyRazorpaySignature = (razorpayOrderId, razorpayPaymentId, razorpaySignature) => {
-  try {
-    const body = razorpayOrderId + '|' + razorpayPaymentId;
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(body)
-      .digest('hex');
-    return expectedSignature === razorpaySignature;
-  } catch (err) {
-    console.error('Signature verification error:', err.message);
-    return false;
-  }
-};
+// Export getter
+exports.getRazorpay = getRazorpay;
 
-/**
- * Create a refund for a payment
- * @param {string} razorpayPaymentId
- * @param {number} amount - in INR (not paise)
- * @param {object} notes
- */
-exports.createRefund = async (razorpayPaymentId, amount, notes = {}) => {
-  try {
-    const refund = await razorpay.payments.refund(razorpayPaymentId, {
-      amount: Math.round(amount * 100), // Convert to paise
-      notes,
-    });
-    return { success: true, refund };
-  } catch (err) {
-    console.error('Razorpay refund error:', err.message);
-    return { success: false, error: err.message };
-  }
-};
-
-// Also export razorpay instance for direct use
-exports.razorpay = razorpay;

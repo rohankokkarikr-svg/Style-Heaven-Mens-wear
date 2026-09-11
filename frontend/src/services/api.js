@@ -118,7 +118,10 @@ export const orderAPI = {
 
 // ─── Payments ─────────────────────────────────────────────────────
 export const paymentAPI = {
-  verify: (data) => api.post('/payments/verify', data),
+  createOrder: (data) => api.post('/payments/create-order', data),
+  verify:      (data) => api.post('/payments/verify', data),
+  refund:      (data) => api.post('/payments/refund', data),
+  getPayment:  (orderId) => api.get(`/payments/${orderId}`),
 };
 
 // ─── Sales / Barcode ─────────────────────────────

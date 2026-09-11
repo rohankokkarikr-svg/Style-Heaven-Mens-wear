@@ -4,7 +4,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret_key', {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL: JWT_SECRET environment variable is not set in production. Failing closed.');
+    }
+    console.warn('WARNING: JWT_SECRET is not set. Using dev fallback only.');
+    return jwt.sign({ id }, 'dev_secret_fallback_key', { expiresIn: '30d' });
+  }
+  return jwt.sign({ id }, secret, {
     expiresIn: '30d',
   });
 };

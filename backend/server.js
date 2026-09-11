@@ -44,19 +44,49 @@ const io = new Server(server, {
 
 initRealtime(io);
 
-// Webhook routes MUST be registered BEFORE express.json() so they receive raw body
-// Razorpay webhook signature verification requires the raw unparsed body
-app.use('/api/payments', require('./routes/payments'));
+// CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://kalastyle.netlify.app',
+  'https://kalastyle-ai.netlify.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      process.env.NODE_ENV !== 'production' ||
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.some(o => origin.endsWith('.netlify.app'))
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Permissive with credentials for mobile and client previews
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-razorpay-signature'],
+};
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(helmet({
   crossOriginResourcePolicy: false, // Important for showing images from Cloudinary/other domains
 }));
 app.use(compression());
 app.use(morgan('dev'));
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Payment routes (webhook uses req.rawBody, other endpoints use parsed req.body)
+app.use('/api/payments', require('./routes/payments'));
 
 // Fast HTTP caching headers ONLY on public catalog GET queries; NEVER cache private/user endpoints
 app.use((req, res, next) => {
