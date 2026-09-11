@@ -86,7 +86,10 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Payment routes (webhook uses req.rawBody, other endpoints use parsed req.body)
-app.use('/api/payments', require('./routes/payments'));
+const paymentsRouter = require('./routes/payments');
+app.use('/api/payments', paymentsRouter);
+app.post('/api/create-order', paymentsRouter.createOrderDirect);
+app.post('/api/verify-payment', paymentsRouter.verifyPaymentDirect);
 
 // Fast HTTP caching headers ONLY on public catalog GET queries; NEVER cache private/user endpoints
 app.use((req, res, next) => {

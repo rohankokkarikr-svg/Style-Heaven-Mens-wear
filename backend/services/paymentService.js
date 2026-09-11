@@ -22,8 +22,12 @@ const MERCHANT_NAME = process.env.MERCHANT_NAME || 'KalaStyle AI Artisan Marketp
 
 /**
  * Create a Razorpay order
+ * @param {number} amount - in INR (or in paise if isPaise is true)
+ * @param {string} [receipt]
+ * @param {object} [notes]
+ * @param {boolean} [isPaise=false]
  */
-exports.createRazorpayOrder = async (amount, receipt, notes = {}) => {
+exports.createRazorpayOrder = async (amount, receipt, notes = {}, isPaise = false) => {
   try {
     const razorpay = getRazorpay();
     if (!razorpay) {
@@ -31,8 +35,13 @@ exports.createRazorpayOrder = async (amount, receipt, notes = {}) => {
       return { success: false, error: 'Razorpay keys not configured' };
     }
 
+    const amountInPaise = isPaise ? Math.round(Number(amount)) : Math.round(Number(amount) * 100);
+    if (isNaN(amountInPaise) || amountInPaise < 100) {
+      return { success: false, error: 'Amount must be at least 100 paise (₹1)' };
+    }
+
     const options = {
-      amount: Math.round(amount * 100), // Convert to paise
+      amount: amountInPaise,
       currency: 'INR',
       receipt: String(receipt || Date.now()).substring(0, 40),
       notes,

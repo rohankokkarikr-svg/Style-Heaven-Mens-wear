@@ -547,12 +547,146 @@ router.get('/:orderId', protect, async (req, res) => {
         payment_method: order.payment_method,
         payment_status: order.payment_status,
       },
-      payment: payment || null,
+// ─── 6. DIRECT / STANDALONE RAZORPAY ENDPOINTS ─────────────────────────────
+/**
+ * Direct Razorpay order creation
+ * Request: { amount (paise), currency, receipt, notes }
+ * Return: { order_id, amount, currency, key_id }
+ * Validates: amount >= 100 paise
+ */
+const createOrderDirect = async (req, res) => {
+  try {
+    const { amount, currency = 'INR', receipt, notes } = req.body;
+
+    if (!amount) {
+      return res.status(400).json({ error: 'amount is required (in paise)' });
+    }
+
+    const amountInPaise = Math.round(Number(amount));
+    if (isNaN(amountInPaise) || amountInPaise < 100) {
+      return res.status(400).json({ error: 'Amount must be at least 100 paise (₹1)' });
+    }
+
+    const rzpResult = await createRazorpayOrder(
+      amountInPaise,
+      receipt || `rcpt_${Date.now()}`,
+      notes || {},
+      true // isPaise = true
+    );
+
+    if (!rzpResult.success) {
+      console.error('[create-order-direct] Razorpay error:', rzpResult.error);
+      return res.status(500).json({ error: rzpResult.error || 'Failed to create Razorpay order' });
+    }
+
+    const order = rzpResult.order;
+    res.status(200).json({
+      order_id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      key_id: process.env.RAZORPAY_KEY_ID || '',
     });
   } catch (err) {
-    console.error('[get-payment] Error:', err.message);
-    res.status(500).json({ error: 'Failed to retrieve payment details' });
+    console.error('[create-order-direct] Exception:', err.message);
+    res.status(500).json({ error: 'Internal server error while creating Razorpay order' });
   }
-});
+};
+
+/**
+ * Direct Razorpay signature verification
+ * Request: { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId }
+ * Algorithm: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+ * Returns success only if signatures match
+ */
+const verifyPaymentDirect = async (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      order_id,
+      payment_id,
+      signature,
+      orderId,
+    } = req.body;
+
+    const finalOrderId = razorpay_order_id || order_id;
+    const finalPaymentId = razorpay_payment_id || payment_id;
+    const finalSignature = razorpay_signature || signature;
+
+    if (!finalOrderId || !finalPaymentId || !finalSignature) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: razorpay_order_id, razorpay_payment_id, and razorpay_signature are required',
+      });
+    }
+
+    const isValid = verifyRazorpaySignature(finalOrderId, finalPaymentId, finalSignature);
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Signature verification failed',
+      });
+    }
+
+    // If orderId is provided, update internal records
+    const targetOrderId = orderId || req.body.order_id_internal;
+    if (targetOrderId) {
+      try {
+        const now = new Date().toISOString();
+        await supabase
+          .from('orders')
+          .update({
+            payment_status: 'paid',
+            order_status: 'confirmed',
+            status: 'confirmed',
+            razorpay_order_id: finalOrderId,
+            razorpay_payment_id: finalPaymentId,
+            razorpay_signature: finalSignature,
+            updated_at: now,
+          })
+          .eq('id', targetOrderId);
+
+        await supabase
+          .from('payments')
+          .update({
+            provider_order_id: finalOrderId,
+            provider_payment_id: finalPaymentId,
+            status: 'paid',
+            signature_verified: true,
+            paid_at: now,
+            updated_at: now,
+          })
+          .eq('order_id', targetOrderId);
+
+        await supabase
+          .from('artisan_orders')
+          .update({ status: 'pending', updated_at: now })
+          .eq('order_id', targetOrderId);
+
+        broadcastSync('PAYMENTS_UPDATED', { orderId: targetOrderId, status: 'paid' });
+        broadcastSync('ORDERS_UPDATED', { orderId: targetOrderId, order_status: 'confirmed' });
+      } catch (dbErr) {
+        console.warn('[verify-payment-direct] DB sync error:', dbErr.message);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment verified successfully',
+      order_id: finalOrderId,
+      payment_id: finalPaymentId,
+    });
+  } catch (err) {
+    console.error('[verify-payment-direct] Exception:', err.message);
+    res.status(500).json({ success: false, error: 'Internal server error during verification' });
+  }
+};
+
+router.post('/verify-payment', verifyPaymentDirect);
 
 module.exports = router;
+module.exports.createOrderDirect = createOrderDirect;
+module.exports.verifyPaymentDirect = verifyPaymentDirect;
+
