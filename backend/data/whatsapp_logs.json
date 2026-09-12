@@ -1,5 +1,54 @@
 [
   {
+    "order_id": "daf414ca-1128-4642-88d4-470b11e28b5d",
+    "artisan_id": "696b51d3-f74c-4040-bf00-254485c83531",
+    "phone_number": "+917892470438",
+    "message_type": "NEW_ORDER",
+    "idempotency_key": "daf414ca-1128-4642-88d4-470b11e28b5d_696b51d3-f74c-4040-bf00-254485c83531_NEW_ORDER",
+    "template_sid": "HX1ded5f1d3925f4aeac7f9845edeebc55",
+    "twilio_message_sid": "SMae2f1b8b8a9dc11cc407ad553c4887a5",
+    "status": "queued",
+    "error_code": null,
+    "error_message": null,
+    "retry_count": 0,
+    "payload_snapshot": {
+      "orderNumber": "KALA-202647831",
+      "artisanName": "Sagar's Shop",
+      "artisanSubtotal": "1,220",
+      "itemsCount": 1,
+      "channel": "sms",
+      "twilio_body": "Thank you! Order #ORD87254 confirmed. You'll get a message when it ships. Test message from Twilio.",
+      "whatsapp_note": "ContentSid Required"
+    },
+    "sent_at": "2026-09-12T15:28:29.384Z",
+    "updated_at": "2026-09-12T15:28:29.386Z",
+    "id": "local_1789226909384",
+    "created_at": "2026-09-12T15:28:29.386Z"
+  },
+  {
+    "order_id": "872157a8-5334-4e7e-93d5-eb8a09c0947a",
+    "artisan_id": "696b51d3-f74c-4040-bf00-254485c83531",
+    "phone_number": "+917892470438",
+    "message_type": "NEW_ORDER",
+    "idempotency_key": "872157a8-5334-4e7e-93d5-eb8a09c0947a_696b51d3-f74c-4040-bf00-254485c83531_NEW_ORDER",
+    "template_sid": "HX1ded5f1d3925f4aeac7f9845edeebc55",
+    "twilio_message_sid": null,
+    "status": "failed",
+    "error_code": "572002",
+    "error_message": "No Twilio trial phone number is assigned for messaging to this destination number. Please add the 'to' number as a verified recipient.",
+    "retry_count": 0,
+    "payload_snapshot": {
+      "orderNumber": "KALA-202629133",
+      "artisanName": "Sagar's Shop",
+      "artisanSubtotal": "1,220",
+      "itemsCount": 1
+    },
+    "sent_at": null,
+    "updated_at": "2026-09-12T15:09:27.525Z",
+    "id": "local_1789225767524",
+    "created_at": "2026-09-12T15:09:27.525Z"
+  },
+  {
     "order_id": "kala-test-ord-001",
     "artisan_id": "artisan-A",
     "phone_number": "+919876543210",

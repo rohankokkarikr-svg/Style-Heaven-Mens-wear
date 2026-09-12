@@ -136,6 +136,11 @@ const getFromSender = () => {
   return `whatsapp:${clean}`;
 };
 
+const getSmsSender = () => {
+  const rawFrom = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_WHATSAPP_FROM || '+17372508034';
+  return rawFrom.replace(/\s+/g, '').replace(/^whatsapp:/, '');
+};
+
 // ── Idempotency Check & Logging ───────────────────────────────────────────────
 
 /**
@@ -334,7 +339,68 @@ const dispatchTwilioWhatsApp = async ({
       status: messageResult.status,
     };
   } catch (sendErr) {
-    console.error(`❌ [Twilio WhatsApp Error] Failed sending to ${maskPhone(e164)}:`, sendErr.message);
+    console.error(`❌ [Twilio WhatsApp Notice] WhatsApp channel restriction for ${maskPhone(e164)}: ${sendErr.message}`);
+
+    // ── Resilient Channel Fallback: Attempt Direct Twilio SMS Dispatch ──
+    try {
+      const smsFrom = getSmsSender();
+      if (smsFrom && client) {
+        console.log(`📡 [Twilio Fallback] Dispatching SMS alert to ${maskPhone(e164)} from ${smsFrom}...`);
+        let smsResult = null;
+
+        // Try custom SMS body first
+        try {
+          smsResult = await client.messages.create({
+            from: smsFrom,
+            to: e164,
+            body: fallbackBodyText ? fallbackBodyText.replace(/\*/g, '') : 'sms_order_confirmation',
+          });
+        } catch (customErr) {
+          // If Twilio trial account enforces predefined SMS template (Code 572006)
+          if (customErr.code === 572006 || /predefined SMS template/i.test(customErr.message)) {
+            console.log(`📡 [Twilio Fallback] Applying Twilio approved template 'sms_order_confirmation'...`);
+            smsResult = await client.messages.create({
+              from: smsFrom,
+              to: e164,
+              body: 'sms_order_confirmation',
+            });
+          } else {
+            throw customErr;
+          }
+        }
+
+        if (smsResult && smsResult.sid) {
+          console.log(`✅ [Twilio SMS Fallback Success] Sent to ${maskPhone(e164)} | SID: ${smsResult.sid} | Status: ${smsResult.status}`);
+
+          await persistNotificationRecord({
+            order_id: orderId,
+            artisan_id: artisanId,
+            phone_number: e164,
+            message_type: messageType,
+            idempotency_key: idempotencyKey,
+            template_sid: templateSid || null,
+            twilio_message_sid: smsResult.sid,
+            status: smsResult.status || 'sent',
+            sent_at: new Date().toISOString(),
+            payload_snapshot: {
+              ...snapshotData,
+              channel: 'sms',
+              twilio_body: smsResult.body || 'sms_order_confirmation',
+              whatsapp_note: sendErr.message,
+            },
+          });
+
+          return {
+            success: true,
+            channel: 'sms',
+            messageSid: smsResult.sid,
+            status: smsResult.status,
+          };
+        }
+      }
+    } catch (smsFallbackErr) {
+      console.error(`❌ [Twilio SMS Fallback Error] Could not send SMS to ${maskPhone(e164)}:`, smsFallbackErr.message);
+    }
 
     await persistNotificationRecord({
       order_id: orderId,
