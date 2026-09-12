@@ -23,7 +23,6 @@ const {
   restoreInventory,
   finalizeCODDelivery,
   createArtisanEarning,
-  routeAndNotifyArtisans,
 } = require('../services/orderService');
 const { isValidArtisanTransition, getEcomSettings } = require('../config/ecommerce');
 const { checkAndGrantReward, reverseRewardIfNeeded } = require('../services/rewardService');
@@ -122,32 +121,54 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // Notifications
+    // Notifications (Dispatches full order details to Admin WhatsApp)
     let whatsappLink = null;
     try {
       const settings = getSiteSettings();
-      if (settings.orderNotifications && normalizedMethod === 'cod') {
+      if (settings.orderNotifications !== false) {
+        const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER || process.env.ADMIN_PHONE || settings.whatsappNumber || '917349083982';
+        
+        // Fetch full order with products and items to guarantee complete order slips
         const { data: fullOrder } = await supabase
           .from('orders')
-          .select('*, items:order_items(quantity, price_at_time, size, product:products(id, name, image_url, category))')
+          .select('*, items:order_items(quantity, price_at_time, size, product_name_snapshot, unit_price_snapshot, product:products(id, name, image_url, category, price))')
           .eq('id', order.id)
           .single();
+
+        const orderForNotice = fullOrder || order;
+        if (!orderForNotice.items || orderForNotice.items.length === 0) {
+          orderForNotice.items = items;
+        }
+
         const wsRes = await sendOrderWhatsappNotification(
-          settings.whatsappNumber, fullOrder || order, req.user?.name || 'Customer'
+          adminPhone,
+          orderForNotice,
+          shipping_name || req.user?.name || 'Customer'
         );
         if (wsRes) whatsappLink = wsRes.directLink;
       }
     } catch (wsErr) {
-      console.error('[createOrder] WhatsApp notification error:', wsErr.message);
+      console.error('[createOrder] Admin WhatsApp notification error:', wsErr.message);
     }
 
-    // Multi-Artisan Order Routing & WhatsApp Notification (for COD orders)
-    if (normalizedMethod === 'cod') {
-      try {
-        await routeAndNotifyArtisans(order, 'NEW_ORDER');
-      } catch (artNotifyErr) {
-        console.warn('[createOrder] Artisan multi-routing notice:', artNotifyErr.message);
+    // Artisan notifications
+    try {
+      const { sendArtisanOrderNotification } = require('../utils/whatsapp');
+      for (const artOrder of (artisanOrders || [])) {
+        if (!artOrder.artisan_id) continue;
+        const { data: artProfile } = await supabase
+          .from('artisan_profiles')
+          .select('id, store_name, user_id, users(name, phone)')
+          .eq('id', artOrder.artisan_id)
+          .maybeSingle();
+        const artPhone = artProfile?.users?.phone;
+        if (artPhone) {
+          const artItems = (await supabase.from('order_items').select('*, products(id,name,price,image_url)').eq('order_id', order.id).eq('artisan_id', artOrder.artisan_id)).data || [];
+          await sendArtisanOrderNotification(artPhone, artProfile?.store_name || 'Artisan', order, artItems, { name: req.user?.name, phone: order.phone, email: req.user?.email });
+        }
       }
+    } catch (artNotifyErr) {
+      console.error('[createOrder] Artisan notify error:', artNotifyErr.message);
     }
 
     // Real-time In-App Notifications for Customer, Artisans, and Admin
@@ -201,6 +222,7 @@ exports.createOrder = async (req, res) => {
       ...order,
       artisan_orders: artisanOrders,
       payment,
+      whatsapp_direct_link: whatsappLink,
       // Razorpay checkout data (only if applicable)
       razorpay: razorpayOrderId ? {
         order_id: razorpayOrderId,
@@ -571,14 +593,7 @@ exports.cancelOrder = async (req, res) => {
     // Reverse reward if applicable
     await reverseRewardIfNeeded(user_id);
 
-    // Multi-Artisan Cancellation Notification
-    try {
-      await routeAndNotifyArtisans(order, 'ORDER_CANCELLED', { reason: 'Cancelled by customer' });
-    } catch (routeErr) {
-      console.warn('[cancelOrder] Artisan cancellation routing notice:', routeErr.message);
-    }
-
-    // WhatsApp notification (Admin / Customer)
+    // WhatsApp notification
     let whatsappLink = null;
     try {
       const settings2 = getSiteSettings();
