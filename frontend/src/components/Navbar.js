@@ -18,6 +18,7 @@ import {
 import { FaTrophy } from 'react-icons/fa';
 import UserAvatar from './UserAvatar';
 import LanguageSelector from './LanguageSelector';
+import NotificationCenter from './NotificationCenter';
 
 const POPULAR_SEARCHES = [
   'Banarasi Silk Saree',
@@ -186,7 +187,8 @@ export default function Navbar() {
                   </span>
                 )}
               </Link>
-
+              {/* Notification Center */}
+              <NotificationCenter />
 
               {/* User Avatar / Sign In */}
               {user ? (

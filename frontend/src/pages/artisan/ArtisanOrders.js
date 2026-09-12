@@ -16,13 +16,17 @@ import {
   HiMap,
   HiCheck,
   HiX,
-  HiShieldCheck
+  HiShieldCheck,
+  HiChatAlt2
 } from 'react-icons/hi';
 import { FaWhatsapp } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { extractOrderLocation } from '../../utils/locationHelper';
+import SendMessageModal from '../../components/SendMessageModal';
 
 export default function ArtisanOrders() {
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
+  const [messageTarget, setMessageTarget] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -427,8 +431,25 @@ export default function ArtisanOrders() {
                       )}
                     </div>
 
-                    {/* Quick WhatsApp & Map contact */}
+                    {/* Quick WhatsApp, In-App Message & Map contact */}
                     <div className="mt-3 pt-2.5 border-t border-dark-700/60 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMessageTarget({
+                            recipientId: orderObj.user_id,
+                            recipientName: customerName,
+                            recipientRole: 'customer',
+                            defaultTitle: `Regarding Order #${orderObj.id?.substring(0, 8)}`,
+                            orderContext: orderObj
+                          });
+                          setMessageModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300 font-bold py-1 px-2.5 rounded-lg bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 transition-all cursor-pointer"
+                      >
+                        <HiChatAlt2 className="w-3.5 h-3.5" /> Message Customer
+                      </button>
+
                       {customerPhone && (
                         <a
                           href={`https://wa.me/91${customerPhone.replace(/\D/g, '')}?text=Hello%20${encodeURIComponent(customerName)},%20this%20is%20regarding%20your%20order%20%23${encodeURIComponent(orderObj.id?.substring(0, 8))}%20for%20"${encodeURIComponent(item.products?.name || 'craft item')}".%20We%20are%20preparing%20it%20for%20dispatch!`}
@@ -709,6 +730,21 @@ export default function ArtisanOrders() {
             {search ? `No orders matched "${search}".` : 'When customers purchase your handcrafted creations, their complete details and delivery addresses will appear here automatically!'}
           </p>
         </div>
+      )}
+      {/* Send Message Modal */}
+      {messageModalOpen && messageTarget && (
+        <SendMessageModal
+          isOpen={messageModalOpen}
+          onClose={() => {
+            setMessageModalOpen(false);
+            setMessageTarget(null);
+          }}
+          initialRecipientId={messageTarget.recipientId}
+          initialRecipientName={messageTarget.recipientName}
+          initialRecipientRole={messageTarget.recipientRole}
+          defaultTitle={messageTarget.defaultTitle}
+          orderContext={messageTarget.orderContext}
+        />
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { HiChartPie, HiCollection, HiSparkles, HiShoppingBag, HiCurrencyRupee, HiUser, HiLogout, HiMenu, HiX, HiLightBulb } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import { artisanAPI } from '../../services/api';
+import NotificationCenter from '../../components/NotificationCenter';
 import toast from 'react-hot-toast';
 
 export default function ArtisanLayout() {
@@ -114,9 +115,17 @@ export default function ArtisanLayout() {
         </div>
       </aside>
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 md:hidden border-b border-dark-600 bg-dark-800 flex items-center px-4 shrink-0">
-          <button onClick={() => setSidebarOpen(true)} className="text-gray-400 p-2"><HiMenu className="w-6 h-6" /></button>
-          <span className="ml-3 font-serif font-bold gold-text">Artisan Studio</span>
+        <header className="h-16 border-b border-dark-600 bg-dark-800/90 backdrop-blur-md flex items-center justify-between px-4 md:px-8 shrink-0 sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-400 p-2"><HiMenu className="w-6 h-6" /></button>
+            <span className="font-serif font-bold text-white text-base md:text-lg">Artisan Workshop Studio</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationCenter />
+            <Link to="/products" className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-gold-400 bg-dark-700/60 border border-dark-600 px-3 py-1.5 rounded-xl transition-all">
+              Live Shop →
+            </Link>
+          </div>
         </header>
         <div className="flex-1 overflow-auto p-4 md:p-8"><Outlet /></div>
       </main>

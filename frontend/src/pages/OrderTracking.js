@@ -5,9 +5,11 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import {
   HiCheckCircle, HiClock, HiExclamationCircle, HiTruck,
-  HiLocationMarker, HiShoppingBag, HiArrowLeft, HiRefresh
+  HiLocationMarker, HiShoppingBag, HiArrowLeft, HiRefresh,
+  HiChatAlt2
 } from 'react-icons/hi';
 import { motion } from 'framer-motion';
+import SendMessageModal from '../components/SendMessageModal';
 
 const ARTISAN_STEPS = [
   { key: 'pending',           label: 'Order Received',     icon: '📦' },
@@ -119,6 +121,7 @@ export default function OrderTracking() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
 
   const fetchOrder = async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -419,19 +422,36 @@ export default function OrderTracking() {
         )}
 
         {/* Need Help */}
-        <div className="bg-dark-800/50 border border-dark-700/40 rounded-xl p-4 text-center">
-          <p className="text-gray-500 text-xs">
-            Need help with this order?{' '}
+        <div className="bg-dark-800/50 border border-dark-700/40 rounded-xl p-4 text-center space-y-2">
+          <p className="text-gray-400 text-xs">
+            Need help or have questions about this order?
+          </p>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setMessageModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500/15 hover:bg-gold-500/25 border border-gold-500/30 text-gold-400 font-bold text-xs transition-all cursor-pointer"
+            >
+              <HiChatAlt2 className="w-4 h-4" /> Message Support / Artisan
+            </button>
             <a
               href={`https://wa.me/917676558335?text=Hi, I need help with my order ${order.order_number || id?.substring(0, 8)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-green-400 hover:underline"
+              className="text-green-400 hover:text-green-300 text-xs font-medium border border-green-500/20 bg-green-500/10 px-3 py-1.5 rounded-lg inline-flex items-center gap-1"
             >
-              Chat on WhatsApp
+              WhatsApp Support
             </a>
-          </p>
+          </div>
         </div>
+
+        {/* Send Message Modal */}
+        <SendMessageModal
+          isOpen={messageModalOpen}
+          onClose={() => setMessageModalOpen(false)}
+          initialRecipientRole="admin"
+          orderContext={order}
+        />
       </div>
     </div>
   );

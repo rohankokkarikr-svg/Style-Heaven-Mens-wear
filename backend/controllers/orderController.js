@@ -28,6 +28,7 @@ const { isValidArtisanTransition, getEcomSettings } = require('../config/ecommer
 const { checkAndGrantReward, reverseRewardIfNeeded } = require('../services/rewardService');
 const { broadcastSync } = require('../utils/realtime');
 const { createRazorpayOrder: createRzpOrder, verifyRazorpaySignature } = require('../services/paymentService');
+const { createSystemNotification } = require('./notificationController');
 
 // ── Site Settings (local JSON for WhatsApp toggle) ───────────────────────────
 const getSiteSettings = () => {
@@ -157,6 +158,49 @@ exports.createOrder = async (req, res) => {
       }
     } catch (artNotifyErr) {
       console.error('[createOrder] Artisan notify error:', artNotifyErr.message);
+    }
+
+    // Real-time In-App Notifications for Customer, Artisans, and Admin
+    try {
+      const orderNum = order.order_number || String(order.id).substring(0, 8);
+      // 1. Customer Notification
+      await createSystemNotification({
+        title: `Order #${orderNum} Confirmed! 🎉`,
+        message: `Your order for ₹${order.total_amount || order.total_price} has been successfully placed. Artisans are preparing your handcrafted items.`,
+        target_audience: 'specific',
+        target_user_id: user_id,
+        sender_id: null,
+      });
+
+      // 2. Admin Notification
+      await createSystemNotification({
+        title: `New Order Placed: #${orderNum}`,
+        message: `Customer ${req.user?.name || 'User'} placed order #${orderNum} worth ₹${order.total_amount || order.total_price} (${normalizedMethod.toUpperCase()}).`,
+        target_audience: 'admins',
+        sender_id: user_id,
+      });
+
+      // 3. Artisans Notifications
+      for (const artOrder of (artisanOrders || [])) {
+        if (!artOrder.artisan_id) continue;
+        const { data: artProfile } = await supabase
+          .from('artisan_profiles')
+          .select('user_id, store_name')
+          .eq('id', artOrder.artisan_id)
+          .maybeSingle();
+
+        if (artProfile?.user_id) {
+          await createSystemNotification({
+            title: `New Order #${orderNum} for ${artProfile.store_name || 'Your Workshop'}!`,
+            message: `You have received an order for your handcrafted products (Subtotal: ₹${artOrder.subtotal || artOrder.total_amount || 0}). Please prepare for dispatch.`,
+            target_audience: 'specific',
+            target_user_id: artProfile.user_id,
+            sender_id: user_id,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.warn('[createOrder] In-app notification creation error:', notifErr.message);
     }
 
     // Realtime broadcast
@@ -421,6 +465,21 @@ exports.updateOrderStatus = async (req, res) => {
     broadcastSync('ARTISAN_ORDERS_UPDATED', { orderId: id, status });
     broadcastSync('PAYMENTS_UPDATED', { id, status, payment_status });
     broadcastSync('EARNINGS_UPDATED', { orderId: id, status });
+
+    if (data?.user_id && status) {
+      try {
+        const orderNum = data.order_number || String(id).substring(0, 8);
+        await createSystemNotification({
+          title: `Order #${orderNum} Status: ${status.toUpperCase()}`,
+          message: `Your order #${orderNum} has been updated to "${status}". Thank you for supporting authentic Indian artisans.`,
+          target_audience: 'specific',
+          target_user_id: data.user_id,
+          sender_id: req.user?.id || null,
+        });
+      } catch (e) {
+        console.warn('Notification error on order status update:', e.message);
+      }
+    }
 
     if (status === 'cancelled') {
       try {

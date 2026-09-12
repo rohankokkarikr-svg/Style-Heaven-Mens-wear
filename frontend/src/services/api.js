@@ -239,5 +239,14 @@ export const adminAPI = {
   updateSettings:       (data)     => api.put('/admin/settings', data),
 };
 
+export const notificationAPI = {
+  getMyNotifications: () => api.get('/notifications'),
+  sendMessage: (data) => api.post('/notifications/send', data),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.post('/notifications/read-all'),
+  getRecipients: () => api.get('/notifications/recipients'),
+};
+
 export default api;
 export { apiCache };
+

@@ -22,6 +22,7 @@ import {
   HiExternalLink
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+import NotificationCenter from '../../components/NotificationCenter';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -214,14 +215,7 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              to="/admin/notifications"
-              className="p-2 rounded-lg bg-dark-700/60 border border-dark-600 text-gray-300 hover:text-gold-400 hover:border-gold-500/40 transition-colors relative"
-              title="Broadcast Notifications"
-            >
-              <HiBell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold-500" />
-            </Link>
+            <NotificationCenter />
             <Link
               to="/admin/ai"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500/10 border border-gold-500/30 text-gold-400 text-xs font-semibold hover:bg-gold-500/20 transition-all"

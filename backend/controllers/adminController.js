@@ -1070,7 +1070,10 @@ exports.getAnalytics = async (req, res) => {
 exports.getNotifications = async (req, res) => {
   try {
     const { data, error } = await safeQuery(() =>
-      supabase.from('notifications').select('*').order('created_at', { ascending: false })
+      supabase
+        .from('notifications')
+        .select('*, sender:sender_id(id, name, email, role), target_user:target_user_id(id, name, email, role)')
+        .order('created_at', { ascending: false })
     );
 
     if (data && data.length > 0) return res.json(data);
@@ -1082,27 +1085,50 @@ exports.getNotifications = async (req, res) => {
 
 exports.sendNotification = async (req, res) => {
   try {
-    const { title, message, target_audience, target_user_id } = req.body;
+    let { title, message, target_audience, target_user_id } = req.body;
     if (!title || !message) {
       return res.status(400).json({ error: 'Title and message are required' });
+    }
+
+    // If target_user_id is an artisan_profile id, resolve to user_id
+    if (target_user_id) {
+      try {
+        const { data: artProfile } = await supabase
+          .from('artisan_profiles')
+          .select('user_id')
+          .eq('id', target_user_id)
+          .maybeSingle();
+        if (artProfile && artProfile.user_id) {
+          target_user_id = artProfile.user_id;
+        }
+      } catch {}
     }
 
     const notif = {
       title,
       message,
-      target_audience: target_audience || 'all',
+      target_audience: target_audience || (target_user_id ? 'specific' : 'all'),
       target_user_id: target_user_id || null,
       sender_id: req.user?.id || null,
+      is_read: false,
       created_at: new Date().toISOString()
     };
 
     try {
-      const { data, error } = await supabase.from('notifications').insert([notif]).select().single();
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert([notif])
+        .select('*, sender:sender_id(id, name, email, role), target_user:target_user_id(id, name, email, role)')
+        .single();
       if (error) throw error;
       await logActivity(req, `Sent Notification: "${title}" to ${target_audience}`, 'Notification', data?.id);
       return res.status(201).json(data);
     } catch {
-      const newNotif = { ...notif, id: String(Date.now()) };
+      const newNotif = { 
+        ...notif, 
+        id: String(Date.now()),
+        sender: { id: req.user?.id, name: req.user?.name || 'Admin', role: 'admin' }
+      };
       inMemoryNotifications.unshift(newNotif);
       await logActivity(req, `Sent Notification: "${title}" to ${target_audience}`, 'Notification', newNotif.id);
       return res.status(201).json(newNotif);

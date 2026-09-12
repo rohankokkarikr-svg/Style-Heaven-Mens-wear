@@ -21,8 +21,10 @@ import {
   HiCheckCircle,
   HiBadgeCheck,
   HiPencilAlt,
-  HiSparkles
+  HiSparkles,
+  HiChatAlt2
 } from 'react-icons/hi';
+import SendMessageModal from '../components/SendMessageModal';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -39,6 +41,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
   const [productReviews, setProductReviews] = useState([]);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
@@ -626,6 +629,14 @@ export default function ProductDetail() {
                       <p className="text-gray-300 text-xs mt-2.5 italic leading-relaxed">
                         "{displayedArtisanBio}"
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => setMessageModalOpen(true)}
+                        className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gold-500/15 hover:bg-gold-500/25 border border-gold-500/40 text-gold-400 hover:text-gold-300 font-bold text-xs shadow-gold shadow-gold/5 transition-all cursor-pointer"
+                      >
+                        <HiChatAlt2 className="w-4 h-4" />
+                        <span>Message Artisan Directly</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -995,6 +1006,16 @@ export default function ProductDetail() {
         product={product}
         productName={product.name}
         onReviewSubmitted={handleReviewSubmitted}
+      />
+
+      {/* Message Artisan Modal */}
+      <SendMessageModal
+        isOpen={messageModalOpen}
+        onClose={() => setMessageModalOpen(false)}
+        initialRecipientId={product?.artisan_id || product?.artisan_profiles?.user_id || product?.artisan_profiles?.id}
+        initialRecipientName={artisanName}
+        initialRecipientRole="artisan"
+        productContext={product}
       />
     </div>
   );
