@@ -21,39 +21,6 @@
       "buttonText": "Explore Handlooms",
       "buttonLink": "/products?category=Handloom+%26+Textiles",
       "align": "left"
-    },
-    {
-      "id": 2,
-      "image": "https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047566/kalastyle-artisan-marketplace/xtzypfezplersfalej58.jpg",
-      "badgeText": "★ 22K Gold Heritage",
-      "badgeType": "sale",
-      "headline": "Traditional Indian Art & Paintings",
-      "subtitle": "Royal Tanjore gold foil art, Madhubani folk paintings, and Pattachitra scrolls straight from artisan guilds.",
-      "buttonText": "Discover Art",
-      "buttonLink": "/products?category=Traditional+Paintings+%26+Wall+Art",
-      "align": "center"
-    },
-    {
-      "id": 3,
-      "image": "https://res.cloudinary.com/dcmmxmikz/image/upload/v1789047399/kalastyle-artisan-marketplace/m4z3g3pnrgfwpaixwlbg.jpg",
-      "badgeText": "✦ Hand-Carved Teak",
-      "badgeType": "new",
-      "headline": "Artisanal Wooden Handicrafts",
-      "subtitle": "Intricate Saharanpur woodcrafts, ornate jharokha mirrors, and vibrant Channapatna organic toy craft.",
-      "buttonText": "Shop Wooden Crafts",
-      "buttonLink": "/products?category=Wooden+Handicrafts",
-      "align": "left"
-    },
-    {
-      "id": 4,
-      "image": "https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048918/kalastyle-artisan-marketplace/jkjs1hgqonmbq9h3eizd.jpg",
-      "badgeText": "★ 100% Handmade",
-      "badgeType": "sale",
-      "headline": "Timeless Indian Home Décor",
-      "subtitle": "Hand-knotted rugs, brass hanging lamps, and natural river clay terracotta pottery for elegant spaces.",
-      "buttonText": "Explore Home Décor",
-      "buttonLink": "/products?category=Home+D%C3%A9cor+%26+Furnishings",
-      "align": "center"
     }
   ],
   "discountBanner": {
@@ -65,5 +32,24 @@
     "buttonText": "Grab the Deal",
     "buttonLink": "/products",
     "isActive": true
-  }
+  },
+  "delivery_fee": 50,
+  "free_delivery_above": 500,
+  "shipping_estimated_days": "3 - 5 Business Days",
+  "cod_enabled": true,
+  "cod_min_order_value": 100,
+  "cod_max_order_value": 5000,
+  "hero_slides": [
+    {
+      "id": 1,
+      "image": "https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg",
+      "badgeText": "✦ Heritage Handlooms",
+      "badgeType": "new",
+      "headline": "Pure Handloom & Heritage Silks",
+      "subtitle": "Authentic Banarasi, Kanchipuram, and Pashmina handwoven by master generational weavers across India.",
+      "buttonText": "Explore Handlooms",
+      "buttonLink": "/products?category=Handloom+%26+Textiles",
+      "align": "left"
+    }
+  ]
 }

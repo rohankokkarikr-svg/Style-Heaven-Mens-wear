@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { settingsAPI } from '../services/api';
 import { supabase } from '../lib/supabase';
+import { apiCache } from '../utils/apiCache';
 
-const SETTINGS_CACHE_KEY = 'sh_settings_v6_shipping';
+const SETTINGS_CACHE_KEY = 'sh_settings_v8_hero_slides';
 
 // Clean up old legacy keys that cause stale demo data on mobile and desktop browsers
 try {
@@ -13,6 +14,8 @@ try {
   localStorage.removeItem('sh_settings_v3');
   localStorage.removeItem('sh_settings_v4_synced');
   localStorage.removeItem('sh_settings_v5_synced');
+  localStorage.removeItem('sh_settings_v6_shipping');
+  localStorage.removeItem('sh_settings_v7_slides');
 } catch {}
 
 export const DEFAULT_HERO_SLIDES = [
@@ -125,11 +128,29 @@ export const SettingsProvider = ({ children }) => {
     return DEFAULT_SETTINGS;
   });
 
-  const refreshSettings = useCallback(async () => {
+  const refreshSettings = useCallback(async (force = false) => {
     let loadedData = null;
+    let cloudHeroSlides = null;
 
-    // 1. Try Backend API first
+    // 0. Instant fetch from persistent Supabase Storage CDN (public bucket site-config)
     try {
+      const storageCdnUrl = 'https://fwuhlhaadhhveuljsqbh.supabase.co/storage/v1/object/public/site-config/hero_slides.json?t=' + Date.now();
+      const cdnRes = await fetch(storageCdnUrl);
+      if (cdnRes.ok) {
+        const cdnSlides = await cdnRes.json();
+        if (Array.isArray(cdnSlides) && cdnSlides.length > 0) {
+          cloudHeroSlides = cdnSlides;
+        }
+      }
+    } catch (e) {
+      // Storage CDN fallback
+    }
+
+    // 1. Try Backend API
+    try {
+      if (force) {
+        apiCache.invalidateSettings();
+      }
       const { data } = await settingsAPI.get();
       if (data && typeof data === 'object') {
         loadedData = data;
@@ -139,7 +160,7 @@ export const SettingsProvider = ({ children }) => {
     }
 
     // 2. Fallback to Supabase platform_settings / custom settings
-    if (!loadedData || !loadedData.heroSlides) {
+    if (!loadedData) {
       try {
         const { data: supaData } = await supabase
           .from('platform_settings')
@@ -150,18 +171,21 @@ export const SettingsProvider = ({ children }) => {
         if (supaData) {
           loadedData = {
             ...DEFAULT_SETTINGS,
-            ...loadedData,
             ...supaData,
-            heroSlides: Array.isArray(supaData.hero_slides) && supaData.hero_slides.length > 0
-              ? supaData.hero_slides
-              : (Array.isArray(supaData.heroSlides) && supaData.heroSlides.length > 0 ? supaData.heroSlides : (loadedData?.heroSlides || DEFAULT_HERO_SLIDES)),
-            discountBanner: supaData.discount_banner || supaData.discountBanner || loadedData?.discountBanner || DEFAULT_DISCOUNT_BANNER,
           };
         }
       } catch (e) {
         // Silently use defaults if offline
       }
     }
+
+    const activeHeroSlides = (Array.isArray(cloudHeroSlides) && cloudHeroSlides.length > 0)
+      ? cloudHeroSlides
+      : (Array.isArray(loadedData?.heroSlides) && loadedData.heroSlides.length > 0
+          ? loadedData.heroSlides
+          : (Array.isArray(loadedData?.hero_slides) && loadedData.hero_slides.length > 0
+              ? loadedData.hero_slides
+              : DEFAULT_HERO_SLIDES));
 
     const merged = {
       ...DEFAULT_SETTINGS,
@@ -172,9 +196,7 @@ export const SettingsProvider = ({ children }) => {
       contact_email: loadedData?.contact_email || loadedData?.supportEmail || DEFAULT_SETTINGS.supportEmail,
       supportPhone: loadedData?.supportPhone || loadedData?.contact_phone || DEFAULT_SETTINGS.supportPhone,
       contact_phone: loadedData?.contact_phone || loadedData?.supportPhone || DEFAULT_SETTINGS.supportPhone,
-      heroSlides: Array.isArray(loadedData?.heroSlides) && loadedData.heroSlides.length > 0
-        ? loadedData.heroSlides
-        : (Array.isArray(loadedData?.hero_slides) && loadedData.hero_slides.length > 0 ? loadedData.hero_slides : DEFAULT_HERO_SLIDES),
+      heroSlides: activeHeroSlides,
       discountBanner: loadedData?.discountBanner || loadedData?.discount_banner
         ? { ...DEFAULT_DISCOUNT_BANNER, ...(loadedData?.discountBanner || loadedData?.discount_banner) }
         : DEFAULT_DISCOUNT_BANNER,
@@ -199,6 +221,9 @@ export const SettingsProvider = ({ children }) => {
         ...partialUpdates,
       };
 
+      // Invalidate frontend cache so any subsequent fetch immediately gets fresh data
+      apiCache.invalidateSettings();
+
       // 1. Optimistic local update
       setSettings(updated);
       try {
@@ -212,21 +237,7 @@ export const SettingsProvider = ({ children }) => {
         console.warn('Backend API update failed, syncing with Supabase directly:', apiErr.message);
       }
 
-      // 3. Persist to Supabase platform_settings for direct mobile & global reach
-      try {
-        const supaPayload = {
-          id: 'main',
-          ...partialUpdates,
-          hero_slides: partialUpdates.heroSlides || updated.heroSlides,
-          discount_banner: partialUpdates.discountBanner || updated.discountBanner,
-          updated_at: new Date().toISOString(),
-        };
-        await supabase.from('platform_settings').upsert([supaPayload]);
-      } catch (supaErr) {
-        console.warn('Supabase platform_settings update warning:', supaErr.message);
-      }
-
-      // 4. Multi-device live broadcast across all tabs and devices
+      // 3. Multi-device live broadcast across all tabs and devices
       try {
         if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
           const bc = new BroadcastChannel('kalastyle_device_sync');
@@ -241,6 +252,9 @@ export const SettingsProvider = ({ children }) => {
             payload: { type: 'SETTINGS_UPDATED', data: updated },
           }).catch(() => {});
         }
+        window.dispatchEvent(new CustomEvent('kala:sync:settings_updated', {
+          detail: { payload: updated }
+        }));
       } catch (bcErr) {}
 
       return { success: true };

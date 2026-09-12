@@ -1151,12 +1151,35 @@ exports.getActivityLogs = async (req, res) => {
 
 exports.getSettings = async (req, res) => {
   try {
-    const { data, error } = await safeQuery(() =>
+    let cloudSlides = null;
+    try {
+      const { data: fileData, error: fileErr } = await supabase.storage
+        .from('site-config')
+        .download('hero_slides.json');
+      if (fileData && !fileErr) {
+        const text = await fileData.text();
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cloudSlides = parsed;
+        }
+      }
+    } catch {
+      // Storage fallback
+    }
+
+    const { data } = await safeQuery(() =>
       supabase.from('platform_settings').select('*').eq('id', 'main').single()
     );
 
-    if (data) return res.json(data);
-    res.json(inMemorySettings);
+    const merged = {
+      ...inMemorySettings,
+      ...(data || {}),
+      heroSlides: (Array.isArray(cloudSlides) && cloudSlides.length > 0)
+        ? cloudSlides
+        : (inMemorySettings.heroSlides || []),
+    };
+
+    res.json(merged);
   } catch {
     res.json(inMemorySettings);
   }
@@ -1215,17 +1238,46 @@ exports.updateSettings = async (req, res) => {
       // Ignore local file error
     }
 
+    // Sync hero slides to Supabase Storage 'site-config' bucket
+    const activeHeroSlides = normalizedUpdates.heroSlides || updates.heroSlides || updates.hero_slides;
+    if (Array.isArray(activeHeroSlides) && activeHeroSlides.length > 0) {
+      try {
+        await supabase.storage
+          .from('site-config')
+          .upload('hero_slides.json', Buffer.from(JSON.stringify(activeHeroSlides, null, 2)), {
+            contentType: 'application/json',
+            upsert: true,
+          });
+      } catch (storageErr) {
+        console.warn('Failed to upload hero_slides.json to Supabase storage:', storageErr.message);
+      }
+    }
+
+    // Filter platform_settings columns
+    const validPlatformCols = [
+      'platform_name', 'contact_email', 'contact_phone', 'currency', 'currency_symbol',
+      'tax_rate', 'platform_commission', 'ai_features_enabled', 'daily_ai_limit_per_artisan',
+      'auto_approve_products', 'maintenance_mode', 'delivery_fee', 'free_delivery_above',
+      'cod_enabled', 'cod_max_order_value', 'cod_min_order_value', 'cancellation_window_hours',
+      'reward_eligible_count'
+    ];
+    const platformPayload = { id: 'main', updated_at: new Date().toISOString() };
+    for (const key of validPlatformCols) {
+      if (normalizedUpdates[key] !== undefined) {
+        platformPayload[key] = normalizedUpdates[key];
+      }
+    }
+
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('platform_settings')
-        .upsert([{ id: 'main', ...normalizedUpdates, updated_at: new Date().toISOString() }])
+        .upsert([platformPayload])
         .select()
         .single();
-      if (error) throw error;
       inMemorySettings = { ...inMemorySettings, ...normalizedUpdates };
       broadcastSync('SETTINGS_UPDATED', inMemorySettings);
       await logActivity(req, 'Updated Platform Settings', 'Settings', 'main');
-      return res.json(data);
+      return res.json(data || inMemorySettings);
     } catch {
       inMemorySettings = { ...inMemorySettings, ...normalizedUpdates };
       broadcastSync('SETTINGS_UPDATED', inMemorySettings);

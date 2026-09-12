@@ -186,6 +186,9 @@ export default function HeroSlider() {
             alt={slide.headline}
             className="w-full h-full object-cover object-center"
             loading="eager"
+            onError={(e) => {
+              e.target.src = 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg';
+            }}
           />
           {/* Multi-layer dark gradient overlay for optimal readability */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />

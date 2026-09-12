@@ -122,7 +122,24 @@ exports.getSettings = async (req, res) => {
   try {
     const local = readSettings();
 
-    // Query Supabase platform_settings for persistent cloud data
+    // 1. Fetch persistent cloud hero slides from Supabase Storage
+    let cloudSlides = null;
+    try {
+      const { data: fileData, error: fileErr } = await supabase.storage
+        .from('site-config')
+        .download('hero_slides.json');
+      if (fileData && !fileErr) {
+        const text = await fileData.text();
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cloudSlides = parsed;
+        }
+      }
+    } catch (storageErr) {
+      // Storage fallback
+    }
+
+    // 2. Query Supabase platform_settings for persistent cloud data
     const { data: supaData } = await safeQuery(() =>
       supabase.from('platform_settings').select('*').eq('id', 'main').single()
     );
@@ -141,11 +158,13 @@ exports.getSettings = async (req, res) => {
       tax_rate: supaData?.tax_rate !== undefined ? Number(supaData.tax_rate) : (supaData?.taxRate !== undefined ? Number(supaData.taxRate) : Number(local.taxRate)),
       maintenanceMode: supaData?.maintenanceMode !== undefined ? supaData.maintenanceMode : (supaData?.maintenance_mode !== undefined ? supaData.maintenance_mode : local.maintenanceMode),
       maintenance_mode: supaData?.maintenance_mode !== undefined ? supaData.maintenance_mode : (supaData?.maintenanceMode !== undefined ? supaData.maintenanceMode : local.maintenanceMode),
-      heroSlides: (Array.isArray(supaData?.hero_slides) && supaData.hero_slides.length > 0)
-        ? supaData.hero_slides
-        : ((Array.isArray(supaData?.heroSlides) && supaData.heroSlides.length > 0)
-            ? supaData.heroSlides
-            : local.heroSlides),
+      heroSlides: (Array.isArray(cloudSlides) && cloudSlides.length > 0)
+        ? cloudSlides
+        : ((Array.isArray(local.heroSlides) && local.heroSlides.length > 0)
+            ? local.heroSlides
+            : ((Array.isArray(supaData?.hero_slides) && supaData.hero_slides.length > 0)
+                ? supaData.hero_slides
+                : DEFAULT_HERO_SLIDES)),
       discountBanner: supaData?.discount_banner || supaData?.discountBanner || local.discountBanner || DEFAULT_DISCOUNT_BANNER,
       delivery_fee: supaData?.delivery_fee !== undefined ? Number(supaData.delivery_fee) : (local.delivery_fee !== undefined ? Number(local.delivery_fee) : DEFAULT_SETTINGS.delivery_fee),
       free_delivery_above: supaData?.free_delivery_above !== undefined ? Number(supaData.free_delivery_above) : (local.free_delivery_above !== undefined ? Number(local.free_delivery_above) : DEFAULT_SETTINGS.free_delivery_above),
@@ -205,11 +224,40 @@ exports.updateSettings = async (req, res) => {
     const updated = { ...current, ...normalizedUpdates };
     writeSettings(updated);
 
-    // Also persist to Supabase platform_settings
+    // Persist hero slides to Supabase Storage 'site-config' bucket for permanent cloud persistence
+    const activeHeroSlides = normalizedUpdates.heroSlides || updates.heroSlides || updates.hero_slides;
+    if (Array.isArray(activeHeroSlides) && activeHeroSlides.length > 0) {
+      try {
+        await supabase.storage
+          .from('site-config')
+          .upload('hero_slides.json', Buffer.from(JSON.stringify(activeHeroSlides, null, 2)), {
+            contentType: 'application/json',
+            upsert: true,
+          });
+      } catch (storageErr) {
+        console.warn('Failed to upload hero_slides.json to Supabase storage:', storageErr.message);
+      }
+    }
+
+    // Persist only valid columns to Supabase platform_settings to avoid schema errors
+    const validPlatformCols = [
+      'platform_name', 'contact_email', 'contact_phone', 'currency', 'currency_symbol',
+      'tax_rate', 'platform_commission', 'ai_features_enabled', 'daily_ai_limit_per_artisan',
+      'auto_approve_products', 'maintenance_mode', 'delivery_fee', 'free_delivery_above',
+      'cod_enabled', 'cod_max_order_value', 'cod_min_order_value', 'cancellation_window_hours',
+      'reward_eligible_count'
+    ];
+    const platformPayload = { id: 'main', updated_at: new Date().toISOString() };
+    for (const key of validPlatformCols) {
+      if (normalizedUpdates[key] !== undefined) {
+        platformPayload[key] = normalizedUpdates[key];
+      }
+    }
+
     try {
       await supabase
         .from('platform_settings')
-        .upsert([{ id: 'main', ...normalizedUpdates, updated_at: new Date().toISOString() }]);
+        .upsert([platformPayload]);
     } catch (e) {
       console.warn('Failed to upsert to Supabase platform_settings:', e.message);
     }
