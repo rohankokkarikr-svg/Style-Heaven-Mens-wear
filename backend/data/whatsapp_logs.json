@@ -1,5 +1,31 @@
 [
   {
+    "order_id": "af31c41a-8a2d-4817-a391-9e3de6dd664c",
+    "artisan_id": "696b51d3-f74c-4040-bf00-254485c83531",
+    "phone_number": "+917892470438",
+    "message_type": "NEW_ORDER",
+    "idempotency_key": "af31c41a-8a2d-4817-a391-9e3de6dd664c_696b51d3-f74c-4040-bf00-254485c83531_NEW_ORDER",
+    "template_sid": "HX1ded5f1d3925f4aeac7f9845edeebc55",
+    "twilio_message_sid": "SM55b816426beda9bb23948fd887e7c1ea",
+    "status": "queued",
+    "error_code": null,
+    "error_message": null,
+    "retry_count": 0,
+    "payload_snapshot": {
+      "orderNumber": "KALA-202694181",
+      "artisanName": "Sagar's Shop",
+      "artisanSubtotal": "1,220",
+      "itemsCount": 1,
+      "channel": "sms",
+      "twilio_body": "Thank you! Order #ORD87254 confirmed. You'll get a message when it ships. Test message from Twilio.",
+      "whatsapp_note": "ContentSid Required"
+    },
+    "sent_at": "2026-09-12T15:35:30.627Z",
+    "updated_at": "2026-09-12T15:35:30.629Z",
+    "id": "local_1789227330627",
+    "created_at": "2026-09-12T15:35:30.629Z"
+  },
+  {
     "order_id": "daf414ca-1128-4642-88d4-470b11e28b5d",
     "artisan_id": "696b51d3-f74c-4040-bf00-254485c83531",
     "phone_number": "+917892470438",
