@@ -83,6 +83,7 @@ https://kalastyle.ai/artisan/orders
     console.log(`   Direction:   ${res.direction}`);
     console.log('\n✅ Sagar will now see the complete order slip inside WhatsApp.\n');
   } catch (err) {
+    console.log('DEBUG EXACT TWILIO ERROR:', err.message, '| Code:', err.code);
     if (err.code === 21654 || err.code === 63016 || /ContentSid/i.test(err.message)) {
       console.log('⚠️ [Action Required on Sagar\'s Phone]');
       console.log('Sagar has not joined the Twilio WhatsApp Sandbox yet.\n');
