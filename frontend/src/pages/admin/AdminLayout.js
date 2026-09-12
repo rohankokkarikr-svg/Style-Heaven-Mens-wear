@@ -19,8 +19,7 @@ import {
   HiLogout, 
   HiMenu, 
   HiX,
-  HiExternalLink,
-  HiTruck
+  HiExternalLink
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 
@@ -52,7 +51,6 @@ export default function AdminLayout() {
         { name: 'Categories', path: '/admin/categories', icon: HiFolder },
         { name: 'Orders', path: '/admin/orders', icon: HiShoppingBag },
         { name: 'Payments', path: '/admin/payments', icon: HiCurrencyRupee },
-        { name: 'Shipping Cost', path: '/admin/shipping', icon: HiTruck, highlight: true, badge: 'NEW' },
       ]
     },
     {
@@ -66,7 +64,6 @@ export default function AdminLayout() {
     {
       group: 'Platform & Content',
       items: [
-        { name: 'Shipping Cost', path: '/admin/shipping', icon: HiTruck },
         { name: 'Notifications', path: '/admin/notifications', icon: HiBell },
         { name: 'Content & Banners', path: '/admin/content', icon: HiTemplate },
         { name: 'Activity Logs', path: '/admin/activity', icon: HiClipboardList },
@@ -217,14 +214,6 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              to="/admin/shipping"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500/10 border border-gold-500/30 text-gold-400 text-xs font-semibold hover:bg-gold-500/20 transition-all shadow-sm"
-              title="Manage Shipping Cost & Delivery Rates"
-            >
-              <HiTruck className="w-4 h-4 text-gold-400" />
-              <span>Shipping Cost</span>
-            </Link>
             <Link
               to="/admin/notifications"
               className="p-2 rounded-lg bg-dark-700/60 border border-dark-600 text-gray-300 hover:text-gold-400 hover:border-gold-500/40 transition-colors relative"

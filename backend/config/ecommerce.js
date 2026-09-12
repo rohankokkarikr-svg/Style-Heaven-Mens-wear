@@ -11,8 +11,8 @@ const supabase = require('./supabase');
 
 // ── Sensible in-code defaults (overridden by DB row) ──────────────
 const DEFAULTS = {
-  delivery_fee: 50,
-  free_delivery_above: 500,
+  delivery_fee: 0,
+  free_delivery_above: 0,
   cod_enabled: true,
   cod_max_order_value: 5000,
   cod_min_order_value: 100,
@@ -65,9 +65,8 @@ function invalidateEcomCache() {
  * Uses centralized business rule — never call this from the frontend.
  */
 async function calculateDeliveryFee(subtotal) {
-  const settings = await getEcomSettings();
-  if (subtotal >= settings.free_delivery_above) return 0;
-  return settings.delivery_fee;
+  // Delivery is completely FREE (₹0) across all products and orders
+  return 0;
 }
 
 /**

@@ -9,7 +9,6 @@ import {
   HiX,
   HiCheckCircle,
   HiClock,
-  HiTruck,
   HiLocationMarker,
   HiExternalLink
 } from 'react-icons/hi';
@@ -149,13 +148,6 @@ export default function Orders() {
           </p>
         </div>
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <Link
-            to="/admin/shipping"
-            className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-3 border border-gold-500/40 text-gold-400 hover:text-white"
-          >
-            <HiTruck className="w-4 h-4" />
-            <span>Shipping Cost Rules</span>
-          </Link>
           <button
             onClick={fetchOrders}
             className="btn-secondary flex items-center gap-2 text-xs py-2"

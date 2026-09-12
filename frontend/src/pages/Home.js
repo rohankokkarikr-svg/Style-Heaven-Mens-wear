@@ -57,7 +57,7 @@ export default function Home() {
   }, [fetchData]);
 
   const features = [
-    { icon: HiTruck, title: 'Free Shipping', desc: `On orders over ₹${settings?.free_delivery_above || 500}` },
+    { icon: HiTruck, title: '100% Free Shipping', desc: 'Zero delivery charge on all products' },
     { icon: HiShieldCheck, title: 'Authentic Handmade', desc: '100% artisan-crafted products' },
     { icon: HiRefresh, title: 'Easy Returns', desc: '7 days return policy' },
   ];

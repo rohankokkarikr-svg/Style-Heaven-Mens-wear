@@ -328,10 +328,10 @@ export default function Checkout() {
 
   if (items.length === 0) return null;
 
-  const deliveryFee = Number(settings?.delivery_fee !== undefined ? settings.delivery_fee : 50);
-  const freeAbove = Number(settings?.free_delivery_above !== undefined ? settings.free_delivery_above : 500);
-  const isFreeShipping = totalPrice >= freeAbove || (isCouponApplied && discountType === 'free_shipping');
-  const shipping = isFreeShipping ? 0 : deliveryFee;
+  const deliveryFee = 0;
+  const freeAbove = 0;
+  const isFreeShipping = true;
+  const shipping = 0;
   let discountAmount = 0;
 
   if (isCouponApplied) {
@@ -608,8 +608,8 @@ export default function Checkout() {
           </div>
           <div className="flex justify-between text-sm text-gray-400">
             <span>Shipping</span>
-            <span className={shipping === 0 ? 'text-green-400 font-medium' : ''}>
-              {shipping === 0 ? '✓ FREE' : `₹${shipping}`}
+            <span className="text-emerald-400 font-semibold flex items-center gap-1">
+              ✓ FREE (₹0)
             </span>
           </div>
           {appliedDiscount > 0 && discountType !== 'free_shipping' && (
@@ -627,7 +627,7 @@ export default function Checkout() {
       <div className="bg-dark-800/50 border border-dark-600 rounded-xl p-4 space-y-3">
         {[
           { icon: HiShieldCheck, label: '100% Secure Checkout', sub: 'Your data is encrypted & protected' },
-          { icon: HiTruck,       label: 'Free Delivery on ₹2000+', sub: '2-3 business days delivery' },
+          { icon: HiTruck,       label: '100% Free Express Delivery', sub: '₹0 delivery charge on all products across India' },
           { icon: HiCash,        label: 'Cash on Delivery', sub: 'Pay when your order arrives' },
         ].map(({ icon: Icon, label, sub }) => (
           <div key={label} className="flex items-start gap-3">
