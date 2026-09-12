@@ -1,5 +1,28 @@
 [
   {
+    "order_id": "74a9996f-d599-466a-b502-6c3670f9c6a6",
+    "artisan_id": "696b51d3-f74c-4040-bf00-254485c83531",
+    "phone_number": "+918495946644",
+    "message_type": "NEW_ORDER",
+    "idempotency_key": "74a9996f-d599-466a-b502-6c3670f9c6a6_696b51d3-f74c-4040-bf00-254485c83531_NEW_ORDER",
+    "template_sid": "HXfe5ab5f00277942d4d4200328b4d403c",
+    "twilio_message_sid": "MMa7a2407261d6f1ee33f674a30c7b071a",
+    "status": "queued",
+    "error_code": null,
+    "error_message": null,
+    "retry_count": 0,
+    "payload_snapshot": {
+      "orderNumber": "KALA-202654452",
+      "artisanName": "Sagar's Shop",
+      "artisanSubtotal": "1,220",
+      "itemsCount": 1
+    },
+    "sent_at": "2026-09-12T16:23:31.086Z",
+    "updated_at": "2026-09-12T16:23:31.087Z",
+    "id": "local_1789230211086",
+    "created_at": "2026-09-12T16:23:31.087Z"
+  },
+  {
     "order_id": "af31c41a-8a2d-4817-a391-9e3de6dd664c",
     "artisan_id": "696b51d3-f74c-4040-bf00-254485c83531",
     "phone_number": "+917892470438",
