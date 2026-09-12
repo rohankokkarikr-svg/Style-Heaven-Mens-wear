@@ -110,10 +110,16 @@ export default function SendMessageModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="bg-dark-850 border border-gold-500/40 rounded-2xl max-w-lg w-full shadow-2xl shadow-gold/10 overflow-hidden relative">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+      <div 
+        style={{ backgroundColor: '#141414' }}
+        className="bg-[#141414] border border-gold-500/40 rounded-2xl max-w-lg w-full shadow-2xl shadow-black overflow-hidden relative"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-600 bg-gradient-to-r from-dark-800 to-dark-850">
+        <div 
+          style={{ backgroundColor: '#1c1c1c' }}
+          className="flex items-center justify-between px-6 py-4 border-b border-dark-600 bg-[#1c1c1c]"
+        >
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-gold-400">
               <HiChatAlt2 className="w-5 h-5" />
