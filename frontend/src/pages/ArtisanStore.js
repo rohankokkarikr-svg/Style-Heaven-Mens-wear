@@ -39,8 +39,27 @@ export default function ArtisanStore() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <Link to="/products" className="inline-flex items-center gap-2 text-gray-400 hover:text-gold-400 text-sm mb-8 transition-colors"><HiArrowLeft className="w-4 h-4" /> Back to Products</Link>
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-4xl md:text-5xl ring-4 ring-gold-500/40 shrink-0">
-              {(profile.store_name || 'A')[0].toUpperCase()}
+            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden ring-4 ring-gold-500/40 shrink-0 bg-dark-800 flex items-center justify-center shadow-xl">
+              {profile.profile_image ? (
+                <img
+                  src={profile.profile_image}
+                  alt={profile.store_name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextSibling) {
+                      e.currentTarget.nextSibling.style.display = 'flex';
+                    }
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-full h-full bg-gradient-luxury items-center justify-center text-dark-900 font-bold text-4xl md:text-5xl ${
+                  profile.profile_image ? 'hidden' : 'flex'
+                }`}
+              >
+                {(profile.store_name || 'A')[0].toUpperCase()}
+              </div>
             </div>
             <div className="text-center sm:text-left flex-1">
               <div className="flex items-center justify-center sm:justify-start gap-3 flex-wrap">

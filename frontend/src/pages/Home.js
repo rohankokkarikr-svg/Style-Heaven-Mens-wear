@@ -127,15 +127,36 @@ export default function Home() {
               <div className="h-1 w-20 bg-gold-500 mx-auto rounded-full" />
               <p className="text-gray-400 mt-4 text-sm">The people behind every beautiful handcrafted product</p>
             </motion.div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {artisans.map((a, i) => (
                 <motion.div key={a.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                  <Link to={'/artisans/' + a.id} className="card p-6 text-center hover:border-gold-500/50 block group">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-luxury flex items-center justify-center text-dark-900 font-bold text-2xl ring-2 ring-gold-500/40 group-hover:ring-gold-500 transition-all">{(a.store_name || 'A')[0].toUpperCase()}</div>
-                    <h3 className="font-semibold text-white group-hover:text-gold-400 transition-colors">{a.store_name}</h3>
-                    <p className="text-gold-500 text-xs mt-1">{a.specialization || a.artisan_type}</p>
-                    <p className="text-gray-500 text-xs mt-1">📍 {a.location || 'India'}</p>
-                    <span className="mt-3 inline-block text-xs text-gold-400 font-medium">View Store →</span>
+                  <Link to={'/artisans/' + a.id} className="card p-6 text-center hover:border-gold-500/50 block group transition-all duration-300 shadow-card hover:shadow-gold">
+                    <div className="relative w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden ring-3 ring-gold-500/50 group-hover:ring-gold-400 group-hover:scale-105 transition-all duration-300 shadow-md bg-dark-800 flex items-center justify-center">
+                      {a.profile_image ? (
+                        <img
+                          src={a.profile_image}
+                          alt={a.store_name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextSibling) {
+                              e.currentTarget.nextSibling.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className={`w-full h-full bg-gradient-luxury items-center justify-center text-dark-900 font-bold text-3xl ${
+                          a.profile_image ? 'hidden' : 'flex'
+                        }`}
+                      >
+                        {(a.store_name || 'A')[0].toUpperCase()}
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-white text-base group-hover:text-gold-400 transition-colors">{a.store_name}</h3>
+                    <p className="text-gold-500 text-xs mt-1 font-medium">{a.specialization || a.artisan_type || 'Master Craftsman'}</p>
+                    <p className="text-gray-400 text-xs mt-1">📍 {a.location || 'India'}</p>
+                    <span className="mt-3 inline-block text-xs text-gold-400 font-semibold group-hover:underline">View Store →</span>
                   </Link>
                 </motion.div>
               ))}
