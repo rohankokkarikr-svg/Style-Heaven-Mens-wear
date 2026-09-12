@@ -5,6 +5,8 @@ import { HiX, HiStar, HiShoppingCart, HiHeart, HiCheck, HiShieldCheck, HiArrowRi
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from './LanguageSelector';
 import toast from 'react-hot-toast';
 
 export default function QuickViewModal({ product, isOpen, onClose }) {
@@ -14,6 +16,28 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // AI Language Translation Integration
+  const { currentLang, translateProductDetails, currentLangMeta } = useLanguage();
+  const [translatedData, setTranslatedData] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!product || currentLang === 'en' || !isOpen) {
+      setTranslatedData(null);
+      return;
+    }
+
+    translateProductDetails(product, currentLang).then((res) => {
+      if (isMounted && res) {
+        setTranslatedData(res);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [product, currentLang, isOpen, translateProductDetails]);
 
   useEffect(() => {
     if (product) {
@@ -47,6 +71,13 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
     : [product.image_url || product.image].filter(Boolean);
 
   const isFavorited = isInWishlist(product.id);
+
+  // Multilingual Display Overrides (powered by Gemini AI)
+  const displayedTitle = translatedData?.name || product.name;
+  const displayedShortDesc = translatedData?.short_description || product.short_description || product.description;
+  const displayedMaterial = translatedData?.material || product.material;
+  const displayedCraft = translatedData?.craft_technique || product.craft_technique;
+  const displayedOrigin = translatedData?.state_of_origin || product.state_of_origin;
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
@@ -93,7 +124,7 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
               <div className="relative aspect-square rounded-xl overflow-hidden bg-dark-900 border border-dark-700">
                 <img
                   src={selectedImage || 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg'}
-                  alt={product.name}
+                  alt={displayedTitle}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.src = 'https://res.cloudinary.com/dcmmxmikz/image/upload/v1789048652/kalastyle-artisan-marketplace/wesedw9fpem0032yfsmk.jpg';
@@ -130,18 +161,22 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
             {/* Product Details Section */}
             <div className="flex flex-col justify-between space-y-4">
               <div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-gold-400 uppercase tracking-wider mb-1">
-                  <span>{product.category || 'Handicrafts'}</span>
-                  {product.subcategory && (
-                    <>
-                      <span>•</span>
-                      <span className="text-gray-400">{product.subcategory}</span>
-                    </>
-                  )}
+                {/* Category & Language Switcher */}
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gold-400 uppercase tracking-wider">
+                    <span>{product.category || 'Handicrafts'}</span>
+                    {product.subcategory && (
+                      <>
+                        <span>•</span>
+                        <span className="text-gray-400">{product.subcategory}</span>
+                      </>
+                    )}
+                  </div>
+                  <LanguageSelector variant="compact" />
                 </div>
 
                 <h2 className="text-xl sm:text-2xl font-serif font-bold text-white leading-snug">
-                  {product.name}
+                  {displayedTitle}
                 </h2>
 
                 {/* Rating & Reviews */}
@@ -183,27 +218,27 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
 
                 {/* Description */}
                 <p className="text-gray-300 text-sm mt-3 leading-relaxed line-clamp-3">
-                  {product.short_description || product.description}
+                  {displayedShortDesc}
                 </p>
 
                 {/* Key Attributes Specs */}
                 <div className="grid grid-cols-2 gap-2 mt-4 text-xs bg-dark-900/60 p-3 rounded-xl border border-dark-700">
-                  {product.material && (
+                  {displayedMaterial && (
                     <div>
                       <span className="text-gray-500">Material:</span>{' '}
-                      <span className="text-gray-200 font-medium">{product.material}</span>
+                      <span className="text-gray-200 font-medium">{displayedMaterial}</span>
                     </div>
                   )}
-                  {product.craft_technique && (
+                  {displayedCraft && (
                     <div>
                       <span className="text-gray-500">Craft:</span>{' '}
-                      <span className="text-gray-200 font-medium">{product.craft_technique}</span>
+                      <span className="text-gray-200 font-medium">{displayedCraft}</span>
                     </div>
                   )}
-                  {product.state_of_origin && (
+                  {displayedOrigin && (
                     <div>
                       <span className="text-gray-500">Origin:</span>{' '}
-                      <span className="text-gray-200 font-medium">{product.state_of_origin}</span>
+                      <span className="text-gray-200 font-medium">{displayedOrigin}</span>
                     </div>
                   )}
                   {(product.artisan_name || product.artisan_profiles?.store_name) && (

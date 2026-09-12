@@ -19,18 +19,17 @@ const { GoogleGenAI } = require('@google/genai');
 
 // ── Model Configuration ──────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'gemini-3.5-flash';
+const DEFAULT_MODEL = 'gemini-3.6-flash';
 const CANDIDATE_FLASH_MODELS = [
-  'gemini-3.5-flash',
-  'gemini-flash-lite-latest',
   'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-flash-latest',
   'gemini-3.7-flash',
   'gemini-3.5-flash-lite',
-  'gemini-3.1-flash-lite',
-  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
 ];
 
-let activeWorkingModel = 'gemini-3.5-flash';
+let activeWorkingModel = 'gemini-3.6-flash';
 
 const SEVEN_CATEGORIES = [
   'Handloom & Textiles',

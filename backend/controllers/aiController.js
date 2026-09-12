@@ -385,56 +385,169 @@ Return ONLY valid JSON:
   }
 };
 
-// ════════════════════════════════════════════════════════════════════════════
-// 5. TRANSLATE PRODUCT — EN/HI/KN/MR multilingual catalog
-// ════════════════════════════════════════════════════════════════════════════
+// In-memory cache for live product translations: cacheKey -> { English, Hindi, Kannada, Marathi }
+const productTranslationCache = new Map();
 
 exports.translateProduct = async (req, res) => {
   try {
-    const { productName, description, targetLanguages = ['Hindi', 'Kannada', 'Marathi'] } = req.body;
-    if (!productName && !description) {
-      return res.status(400).json({ error: 'Provide productName or description to translate.' });
+    const {
+      productId,
+      targetLanguage,
+      targetLanguages = ['Hindi', 'Kannada', 'Marathi'],
+      productName,
+      description,
+      productData = {},
+    } = req.body;
+
+    const name = productData.name || productName || '';
+    const desc = productData.description || description || '';
+    const shortDesc = productData.short_description || productData.shortDescription || '';
+    const material = productData.material || (Array.isArray(productData.materials) ? productData.materials[0] : '') || '';
+    const craftTechnique = productData.craft_technique || productData.craftTechnique || '';
+    const artisanBio = productData.artisan_bio || productData.bio || '';
+    const careInstructions = productData.care_instructions || (Array.isArray(productData.careInstructions) ? productData.careInstructions.join('. ') : '') || '';
+    const stateOfOrigin = productData.state_of_origin || productData.originState || '';
+    const category = productData.category || '';
+
+    if (!name && !desc) {
+      return res.status(400).json({ error: 'Provide product name or description to translate.' });
     }
 
-    const langList = targetLanguages.join(', ');
-    const prompt = `You are a multilingual Indian handicrafts product listing assistant.
+    // Cache key based on productId or name
+    const cacheKey = productId ? String(productId) : `${name.slice(0, 40)}_${(material || '').slice(0, 20)}`;
+    const cached = productTranslationCache.get(cacheKey);
 
-Translate and adapt this product listing for Indian artisan markets.
-Product Name: "${productName}"
-Description: "${description}"
+    // Normalize target language code to full language name
+    const normalizeLang = (l) => {
+      if (!l) return null;
+      const lower = String(l).toLowerCase().trim();
+      if (lower === 'hi' || lower === 'hindi') return 'Hindi';
+      if (lower === 'kn' || lower === 'kannada') return 'Kannada';
+      if (lower === 'mr' || lower === 'marathi') return 'Marathi';
+      if (lower === 'en' || lower === 'english') return 'English';
+      return l;
+    };
 
-Return ONLY valid JSON with keys for each requested language:
+    const requestedSingleLang = normalizeLang(targetLanguage);
+
+    if (cached) {
+      if (requestedSingleLang && cached[requestedSingleLang]) {
+        return res.json({
+          translations: cached,
+          translation: cached[requestedSingleLang],
+          language: requestedSingleLang,
+          cached: true,
+          isAIGenerated: true,
+        });
+      }
+      if (!requestedSingleLang && cached.Hindi && cached.Kannada && cached.Marathi) {
+        return res.json({
+          translations: cached,
+          cached: true,
+          isAIGenerated: true,
+        });
+      }
+    }
+
+    const payloadToTranslate = {
+      name,
+      description: desc,
+      ...(shortDesc ? { short_description: shortDesc } : {}),
+      ...(material ? { material } : {}),
+      ...(craftTechnique ? { craft_technique: craftTechnique } : {}),
+      ...(artisanBio ? { artisan_bio: artisanBio } : {}),
+      ...(careInstructions ? { care_instructions: careInstructions } : {}),
+      ...(stateOfOrigin ? { state_of_origin: stateOfOrigin } : {}),
+      ...(category ? { category } : {}),
+    };
+
+    const prompt = `You are an expert Indian handicrafts multilingual translator and cultural linguist.
+Translate all product details into Hindi (हिन्दी), Kannada (ಕನ್ನಡ), and Marathi (मराठी).
+Maintain cultural dignity, handicraft authenticity, and natural regional phrasing (not robotic translation).
+Keep proper names (e.g. Varanasi, Banarasi, Kanchipuram) phonetically accurate in Indian scripts.
+
+Product to translate:
+${JSON.stringify(payloadToTranslate, null, 2)}
+
+Return ONLY valid JSON matching this exact structure:
 {
-  "English": { "productName": "...", "description": "..." },
-  "Hindi":   { "productName": "...", "description": "..." },
-  "Kannada": { "productName": "...", "description": "..." },
-  "Marathi": { "productName": "...", "description": "..." }
-}
-
-Only include these languages: ${langList}
-Translations must be natural and culturally appropriate — not literal machine translations.
-Return ONLY valid JSON.`;
+  "Hindi": {
+    "name": "...",
+    "description": "...",
+    "short_description": "...",
+    "material": "...",
+    "craft_technique": "...",
+    "artisan_bio": "...",
+    "care_instructions": "...",
+    "state_of_origin": "..."
+  },
+  "Kannada": {
+    "name": "...",
+    "description": "...",
+    "short_description": "...",
+    "material": "...",
+    "craft_technique": "...",
+    "artisan_bio": "...",
+    "care_instructions": "...",
+    "state_of_origin": "..."
+  },
+  "Marathi": {
+    "name": "...",
+    "description": "...",
+    "short_description": "...",
+    "material": "...",
+    "craft_technique": "...",
+    "artisan_bio": "...",
+    "care_instructions": "...",
+    "state_of_origin": "..."
+  }
+}`;
 
     const fallbackTranslations = {
-      English: { productName, description },
-      Hindi:   { productName: `${productName} (हिंदी अनुवाद उपलब्ध नहीं)`, description: description },
-      Kannada: { productName: `${productName} (ಕನ್ನಡ ಅನುವಾದ ಲಭ್ಯವಿಲ್ಲ)`, description: description },
-      Marathi: { productName: `${productName} (मराठी अनुवाद उपलब्ध नाही)`, description: description },
+      English: { ...payloadToTranslate },
+      Hindi: {
+        ...payloadToTranslate,
+        name: `${name} (हिंदी)`,
+        description: `${desc}`,
+      },
+      Kannada: {
+        ...payloadToTranslate,
+        name: `${name} (ಕನ್ನಡ)`,
+        description: `${desc}`,
+      },
+      Marathi: {
+        ...payloadToTranslate,
+        name: `${name} (मराठी)`,
+        description: `${desc}`,
+      },
     };
 
     const result = await gemini.generateStructuredJSON(prompt, fallbackTranslations);
+
+    const fullTranslations = {
+      English: { ...payloadToTranslate },
+      ...(result.data || {}),
+    };
+
+    // Store in cache
+    productTranslationCache.set(cacheKey, fullTranslations);
 
     logAIUsage({
       userId: req.user?.id,
       feature: 'translation',
       model: gemini.getModelName(),
       status: 'success',
-      promptLength: (description || '').length,
-      responseLength: JSON.stringify(result.data).length,
-      metadata: { languages: targetLanguages }
+      promptLength: JSON.stringify(payloadToTranslate).length,
+      responseLength: JSON.stringify(fullTranslations).length,
+      metadata: { languages: ['Hindi', 'Kannada', 'Marathi'], productId }
     });
 
-    return res.json({ translations: result.data, isAIGenerated: result.isAI });
+    return res.json({
+      translations: fullTranslations,
+      translation: requestedSingleLang ? fullTranslations[requestedSingleLang] || fullTranslations.Hindi : null,
+      language: requestedSingleLang || 'all',
+      isAIGenerated: result.isAI,
+    });
   } catch (err) {
     console.error('[translateProduct] Error:', err.message);
     res.status(500).json({ error: 'Translation failed. Please try again.' });

@@ -11,6 +11,7 @@ import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { RealtimeSyncProvider } from './context/RealtimeSyncContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 // Core layout components (immediate paint)
 import Navbar from './components/Navbar';
@@ -97,7 +98,8 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-            <RealtimeSyncProvider>
+            <LanguageProvider>
+              <RealtimeSyncProvider>
               <Router>
                 {/* Global Toast Notifications */}
                 <Toaster 
@@ -190,7 +192,8 @@ function App() {
                 </Suspense>
               </Router>
             </RealtimeSyncProvider>
-          </WishlistProvider>
+          </LanguageProvider>
+        </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </SettingsProvider>

@@ -9,6 +9,8 @@ import ReviewModal from '../components/ReviewModal';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from '../components/LanguageSelector';
 import {
   HiShoppingCart,
   HiStar,
@@ -18,7 +20,8 @@ import {
   HiChevronRight,
   HiCheckCircle,
   HiBadgeCheck,
-  HiPencilAlt
+  HiPencilAlt,
+  HiSparkles
 } from 'react-icons/hi';
 
 export default function ProductDetail() {
@@ -42,6 +45,28 @@ export default function ProductDetail() {
   const [productReviews, setProductReviews] = useState([]);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
+
+  // AI Language Translation Integration
+  const { currentLang, setLanguage, translateProductDetails, currentLangMeta } = useLanguage();
+  const [translatedData, setTranslatedData] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!product || currentLang === 'en') {
+      setTranslatedData(null);
+      return;
+    }
+
+    translateProductDetails(product, currentLang).then((res) => {
+      if (isMounted && res) {
+        setTranslatedData(res);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [product, currentLang, translateProductDetails]);
 
   const fetchProduct = async () => {
     setLoading(true);
@@ -218,6 +243,16 @@ export default function ProductDetail() {
   const artisanLocation = artisanProfile.location || product?.artisan_location || 'Varanasi';
   const artisanHeritage = artisanProfile.years_of_experience || product?.years_of_experience || 20;
 
+  // Multilingual Display Overrides (powered by Gemini AI)
+  const displayedTitle = translatedData?.name || product.name;
+  const displayedDescription = translatedData?.description || product.description || product.short_description || '';
+  const displayedShortDescription = translatedData?.short_description || product.short_description || product.description || '';
+  const displayedMaterial = translatedData?.material || product.material || 'Authentic Handcrafted';
+  const displayedCraftTechnique = translatedData?.craft_technique || product.craft_technique || 'Traditional Indian Handicrafts';
+  const displayedArtisanBio = translatedData?.artisan_bio || cleanArtisanBio;
+  const displayedCareInstructions = translatedData?.care_instructions || product.care_instructions || 'Store in dry place. Wipe gently with dry cloth. Avoid exposure to harsh chemicals.';
+  const displayedStateOfOrigin = translatedData?.state_of_origin || product.state_of_origin || 'India';
+
   const handleAddToCart = () => {
     if (!isAuthenticated) {
       toast.error('Please log in to add items to your cart');
@@ -255,7 +290,7 @@ export default function ProductDetail() {
               {product.category}
             </Link>
             <HiChevronRight className="w-3.5 h-3.5 text-gray-600" />
-            <span className="text-gray-200 truncate max-w-[200px]">{product.name}</span>
+            <span className="text-gray-200 truncate max-w-[200px]">{displayedTitle}</span>
           </nav>
         </div>
       </div>
@@ -364,6 +399,27 @@ export default function ProductDetail() {
 
           {/* Right: Info & Purchase (7 cols) */}
           <div className="lg:col-span-6 space-y-6">
+            {/* AI Regional Language Translator */}
+            <LanguageSelector variant="banner" />
+
+            {translatedData && (
+              <div className="flex items-center justify-between gap-2 p-3 px-4 rounded-2xl bg-gradient-to-r from-gold-500/15 via-gold-500/10 to-transparent border border-gold-500/40 text-xs text-gold-400 shadow-lg">
+                <div className="flex items-center gap-2 font-medium">
+                  <HiSparkles className="w-4 h-4 text-gold-400 shrink-0 animate-spin" />
+                  <span>
+                    Product details translated to <strong className="text-white font-bold">{currentLangMeta.native}</strong> via Gemini AI
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  className="px-2.5 py-1 rounded-lg bg-dark-900/80 hover:bg-dark-700 text-[11px] font-bold text-gray-200 hover:text-white border border-dark-600 transition-colors cursor-pointer"
+                >
+                  Show Original (English)
+                </button>
+              </div>
+            )}
+
             <div>
               {/* Category & State */}
               <div className="flex items-center justify-between text-xs font-semibold text-gold-400 uppercase tracking-wider mb-2">
@@ -373,9 +429,9 @@ export default function ProductDetail() {
                 >
                   {product.category} {product.subcategory && `• ${product.subcategory}`}
                 </Link>
-                {product.state_of_origin && (
+                {displayedStateOfOrigin && (
                   <span className="text-gray-400 text-xs font-normal">
-                    📍 {product.state_of_origin}, India
+                    📍 {displayedStateOfOrigin}, India
                   </span>
                 )}
               </div>
@@ -383,7 +439,7 @@ export default function ProductDetail() {
               {/* Title & Admin Edit Action */}
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-white leading-tight">
-                  {product.name}
+                  {displayedTitle}
                 </h1>
                 {isAdmin && (
                   <Link
@@ -466,21 +522,21 @@ export default function ProductDetail() {
 
               {/* Short Summary Description */}
               <p className="text-gray-300 text-sm leading-relaxed mt-4">
-                {product.short_description || product.description}
+                {displayedShortDescription}
               </p>
 
               {/* Specifications Snapshot */}
               <div className="grid grid-cols-2 gap-3 mt-6 p-4 rounded-2xl bg-dark-800/50 border border-dark-700/80 text-xs">
-                {product.material && (
+                {displayedMaterial && (
                   <div>
                     <span className="text-gray-400 block mb-0.5">Material</span>
-                    <span className="font-semibold text-white">{product.material}</span>
+                    <span className="font-semibold text-white">{displayedMaterial}</span>
                   </div>
                 )}
-                {product.craft_technique && (
+                {displayedCraftTechnique && (
                   <div>
                     <span className="text-gray-400 block mb-0.5">Craft Technique</span>
-                    <span className="font-semibold text-white">{product.craft_technique}</span>
+                    <span className="font-semibold text-white">{displayedCraftTechnique}</span>
                   </div>
                 )}
                 {product.dimensions && (
@@ -566,8 +622,8 @@ export default function ProductDetail() {
                       <div className="flex flex-wrap gap-y-1 gap-x-3 text-xs text-gray-400 mt-1">
                         <span>
                           📍 Based in {artisanLocation}
-                          {product.state_of_origin && product.state_of_origin !== artisanLocation
-                            ? `, ${product.state_of_origin}`
+                          {displayedStateOfOrigin && displayedStateOfOrigin !== artisanLocation
+                            ? `, ${displayedStateOfOrigin}`
                             : ''}
                         </span>
                         {artisanHeritage && (
@@ -575,7 +631,7 @@ export default function ProductDetail() {
                         )}
                       </div>
                       <p className="text-gray-300 text-xs mt-2.5 italic leading-relaxed">
-                        "{cleanArtisanBio}"
+                        "{displayedArtisanBio}"
                       </p>
                     </div>
                   </div>
@@ -609,7 +665,7 @@ export default function ProductDetail() {
             {activeTab === 'description' && (
               <div className="space-y-4">
                 <h3 className="text-xl font-serif font-bold text-white">Product Overview</h3>
-                <p>{product.description || product.short_description}</p>
+                <p>{displayedDescription}</p>
                 <div className="pt-4 border-t border-dark-700/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700">
                     <h4 className="font-semibold text-gold-400 mb-2">✨ Authentic Heritage</h4>
@@ -633,7 +689,7 @@ export default function ProductDetail() {
                   <div>
                     <h3 className="text-xl font-serif font-bold text-white">Customer Reviews & Ratings</h3>
                     <p className="text-xs text-gray-400 mt-1">
-                      Genuine ratings & verified feedback for {product.name}
+                      Genuine ratings & verified feedback for {displayedTitle}
                     </p>
                   </div>
                   <button
@@ -712,7 +768,7 @@ export default function ProductDetail() {
               <div className="space-y-4">
                 <h3 className="text-xl font-serif font-bold text-white">Craftsmanship & Process</h3>
                 <p>
-                  This {product.name} is handcrafted using traditional <span className="text-gold-400 font-semibold">{product.craft_technique || 'Indian Handicrafts'}</span> techniques practiced in {product.state_of_origin || 'India'}.
+                  This {displayedTitle} is handcrafted using traditional <span className="text-gold-400 font-semibold">{displayedCraftTechnique}</span> techniques practiced in {displayedStateOfOrigin}.
                 </p>
                 <ul className="space-y-2 list-disc pl-5 text-gray-300 text-xs sm:text-sm">
                   <li>Hand-processed raw materials sourced ethically and sustainably.</li>
@@ -734,10 +790,10 @@ export default function ProductDetail() {
                   <div className="space-y-2">
                     <h4 className="text-lg font-bold text-white">{artisanName}</h4>
                     <p className="text-xs text-gold-400 font-medium">
-                      Based in {artisanLocation}{product.state_of_origin && product.state_of_origin !== artisanLocation ? `, ${product.state_of_origin}` : ''} • {artisanHeritage}+ Years of Heritage
+                      Based in {artisanLocation}{displayedStateOfOrigin && displayedStateOfOrigin !== artisanLocation ? `, ${displayedStateOfOrigin}` : ''} • {artisanHeritage}+ Years of Heritage
                     </p>
                     <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                      {cleanArtisanBio}
+                      {displayedArtisanBio}
                     </p>
                   </div>
                 </div>
@@ -750,7 +806,7 @@ export default function ProductDetail() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
                   <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700">
                     <span className="text-gray-500 block">Material</span>
-                    <span className="font-semibold text-white">{product.material || 'Authentic Handcrafted'}</span>
+                    <span className="font-semibold text-white">{displayedMaterial}</span>
                   </div>
                   <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700">
                     <span className="text-gray-500 block">Dimensions</span>
@@ -762,7 +818,7 @@ export default function ProductDetail() {
                   </div>
                   <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700">
                     <span className="text-gray-500 block">Origin State</span>
-                    <span className="font-semibold text-white">{product.state_of_origin || 'India'}</span>
+                    <span className="font-semibold text-white">{displayedStateOfOrigin}</span>
                   </div>
                 </div>
               </div>
@@ -771,7 +827,7 @@ export default function ProductDetail() {
             {activeTab === 'care' && (
               <div className="space-y-4">
                 <h3 className="text-xl font-serif font-bold text-white">Care & Maintenance</h3>
-                <p>{product.care_instructions || 'Store in dry place. Wipe gently with dry cloth. Avoid exposure to harsh chemicals.'}</p>
+                <p>{displayedCareInstructions}</p>
                 <div className="p-4 rounded-xl bg-dark-900/60 border border-dark-700 text-xs text-gray-400">
                   💡 <span className="font-semibold text-gray-200">Artisan Tip:</span> Handcrafted items gain deeper natural character over time when stored with love and care.
                 </div>
