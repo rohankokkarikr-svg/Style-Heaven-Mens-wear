@@ -82,8 +82,8 @@ export const AuthProvider = ({ children }) => {
     return normalizedUser;
   };
 
-  const signup = async (name, phone, password, role = 'user', store_name, artisan_type, upi_id, upi_qr_code) => {
-    const { data } = await authAPI.signup({ name, phone, password, role, store_name, artisan_type, upi_id, upi_qr_code });
+  const signup = async (name, phone, password, role = 'user', store_name, artisan_type) => {
+    const { data } = await authAPI.signup({ name, phone, password, role, store_name, artisan_type });
     const normalizedUser = {
       ...data.user,
       role: (data.user?.role || 'user').trim().toLowerCase(),
