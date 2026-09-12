@@ -1,5 +1,6 @@
 const { safeQuery, formatSupabaseError } = require('../config/supabase');
 const supabase = require('../config/supabase');
+const { HANDICRAFT_CATEGORIES } = require('../data/handicraftsData');
 
 let productCache = {
   all: { data: null, timestamp: 0 },
@@ -12,6 +13,33 @@ const invalidateCache = () => {
   productCache.featured = { data: null, timestamp: 0 };
 };
 exports.invalidateCache = invalidateCache;
+
+// Canonical category mappings (slugs, variations, and lowercase names -> exact DB category name)
+const CATEGORY_MAP = {
+  'handloom-textiles': 'Handloom & Textiles',
+  'handloom & textiles': 'Handloom & Textiles',
+  'textiles': 'Handloom & Textiles',
+  'home-decor-furnishings': 'Home Décor & Furnishings',
+  'home-decor': 'Home Décor & Furnishings',
+  'home decor & furnishings': 'Home Décor & Furnishings',
+  'home décor & furnishings': 'Home Décor & Furnishings',
+  'handmade-jewelry-accessories': 'Handmade Jewelry & Accessories',
+  'handmade jewelry & accessories': 'Handmade Jewelry & Accessories',
+  'jewelry': 'Handmade Jewelry & Accessories',
+  'pottery-terracotta': 'Pottery & Terracotta',
+  'pottery & terracotta': 'Pottery & Terracotta',
+  'pottery': 'Pottery & Terracotta',
+  'wooden-handicrafts': 'Wooden Handicrafts',
+  'wooden handicrafts': 'Wooden Handicrafts',
+  'woodcraft': 'Wooden Handicrafts',
+  'traditional-paintings-wall-art': 'Traditional Paintings & Wall Art',
+  'traditional paintings & wall art': 'Traditional Paintings & Wall Art',
+  'traditional-paintings': 'Traditional Paintings & Wall Art',
+  'paintings': 'Traditional Paintings & Wall Art',
+  'eco-friendly-natural-products': 'Eco-Friendly & Natural Products',
+  'eco-friendly & natural products': 'Eco-Friendly & Natural Products',
+  'eco-friendly': 'Eco-Friendly & Natural Products',
+};
 
 exports.getCategories = async (req, res) => {
   try {
@@ -47,10 +75,10 @@ exports.getCategories = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { category, search, material, is_handmade, artisan_id, min_price, max_price } = req.query;
+    const { category, subcategory, search, material, is_handmade, artisan_id, min_price, max_price } = req.query;
     
     // Check cache for basic requests (no search/filter)
-    const isBasicRequest = (!category || category === 'all') && !search && !material && !is_handmade && !artisan_id && !min_price && !max_price;
+    const isBasicRequest = (!category || category === 'all') && (!subcategory || subcategory === 'all') && !search && !material && !is_handmade && !artisan_id && !min_price && !max_price;
     if (isBasicRequest && productCache.all.data && (Date.now() - productCache.all.timestamp < CACHE_TTL)) {
       return res.json(productCache.all.data);
     }
@@ -65,8 +93,21 @@ exports.getProducts = async (req, res) => {
       }
 
       if (category && category !== 'all') {
-        query = query.eq('category', category);
+        const cleanCat = category.trim().toLowerCase();
+        const canonical = CATEGORY_MAP[cleanCat];
+        if (canonical) {
+          query = query.eq('category', canonical);
+        } else {
+          // If not in canonical map, search category or subcategory
+          query = query.or(`category.ilike.%${category.trim()}%,subcategory.ilike.%${category.trim()}%`);
+        }
       }
+
+      if (subcategory && subcategory !== 'all') {
+        const cleanSub = subcategory.trim();
+        query = query.ilike('subcategory', `%${cleanSub}%`);
+      }
+
       if (search) {
         query = query.ilike('name', `%${search}%`);
       }

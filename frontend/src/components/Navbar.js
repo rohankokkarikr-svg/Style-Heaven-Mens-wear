@@ -83,7 +83,9 @@ export default function Navbar() {
     if (href.includes('?category=')) {
       const catParam = new URLSearchParams(href.split('?')[1]).get('category');
       const curParam = new URLSearchParams(location.search).get('category');
-      return curParam === catParam;
+      if (!curParam || !catParam) return false;
+      const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return clean(curParam) === clean(catParam);
     }
     return false;
   };

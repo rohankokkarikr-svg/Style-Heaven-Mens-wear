@@ -7,11 +7,10 @@ import { HANDICRAFT_CATEGORIES } from '../constants/handicraftsData';
 import {
   HiFilter,
   HiX,
-  HiSearch,
-  HiStar,
   HiSparkles,
   HiRefresh,
   HiChevronRight,
+  HiChevronDown,
   HiShieldCheck
 } from 'react-icons/hi';
 
@@ -44,6 +43,7 @@ export default function ProductList() {
   }, []);
 
   const activeCategory = searchParams.get('category') || 'all';
+  const activeSubcategory = searchParams.get('subcategory') || 'all';
   const searchQuery = searchParams.get('search') || '';
 
   // Local Filter States
@@ -66,6 +66,7 @@ export default function ProductList() {
     try {
       const params = {};
       if (activeCategory && activeCategory !== 'all') params.category = activeCategory;
+      if (activeSubcategory && activeSubcategory !== 'all') params.subcategory = activeSubcategory;
       if (searchQuery) params.search = searchQuery;
 
       const { data } = await productAPI.getAll(params);
@@ -80,7 +81,7 @@ export default function ProductList() {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, activeSubcategory, searchQuery]);
 
   useEffect(() => {
     fetchProducts();
@@ -116,11 +117,38 @@ export default function ProductList() {
 
     // 1. Category Filter
     if (activeCategory && activeCategory !== 'all') {
-      list = list.filter(
-        (p) =>
-          (p.category || '').toLowerCase() === activeCategory.toLowerCase() ||
-          (p.subcategory || '').toLowerCase() === activeCategory.toLowerCase()
+      const catLower = activeCategory.toLowerCase();
+      const catObj = categories.find(
+        (c) =>
+          (c.name || '').toLowerCase() === catLower ||
+          (c.slug || '').toLowerCase() === catLower
       );
+      const targetName = catObj ? catObj.name.toLowerCase() : catLower;
+
+      list = list.filter((p) => {
+        const pCat = (p.category || '').toLowerCase();
+        const pSub = (p.subcategory || '').toLowerCase();
+        return (
+          pCat === targetName ||
+          pCat.includes(catLower) ||
+          pSub === catLower ||
+          pSub.includes(catLower)
+        );
+      });
+    }
+
+    // 1b. Subcategory Filter
+    if (activeSubcategory && activeSubcategory !== 'all') {
+      const subLower = activeSubcategory.toLowerCase();
+      list = list.filter((p) => {
+        const pSub = (p.subcategory || '').toLowerCase();
+        const pName = (p.name || '').toLowerCase();
+        return (
+          pSub.includes(subLower) ||
+          subLower.includes(pSub) ||
+          pName.includes(subLower)
+        );
+      });
     }
 
     // 2. Search Query (Name, Category, Material, Craft technique, Artisan name, State of Origin)
@@ -207,6 +235,8 @@ export default function ProductList() {
   }, [
     products,
     activeCategory,
+    activeSubcategory,
+    categories,
     searchQuery,
     internalSearch,
     selectedPriceRange,
@@ -217,12 +247,25 @@ export default function ProductList() {
     sort
   ]);
 
-  const handleCategorySelect = (slug) => {
-    if (slug === 'all') {
+  const handleCategorySelect = (categoryName) => {
+    if (categoryName === 'all') {
       navigate('/products');
     } else {
-      navigate(`/products?category=${encodeURIComponent(slug)}`);
+      navigate(`/products?category=${encodeURIComponent(categoryName)}`);
     }
+  };
+
+  const handleSubcategorySelect = (subName, categoryName) => {
+    const params = new URLSearchParams(location.search);
+    if (categoryName) {
+      params.set('category', categoryName);
+    }
+    if (!subName || subName === 'all') {
+      params.delete('subcategory');
+    } else {
+      params.set('subcategory', subName);
+    }
+    navigate(`/products?${params.toString()}`);
   };
 
   const handleSearchSubmit = (e) => {
@@ -258,9 +301,18 @@ export default function ProductList() {
             {activeCategory && activeCategory !== 'all' && (
               <>
                 <HiChevronRight className="w-3.5 h-3.5 text-gray-600" />
-                <span className="text-gold-400 font-medium">
+                <button
+                  onClick={() => handleSubcategorySelect('all', currentCategoryInfo ? currentCategoryInfo.name : activeCategory)}
+                  className={`transition-colors ${activeSubcategory && activeSubcategory !== 'all' ? 'hover:text-gold-400' : 'text-gold-400 font-medium'}`}
+                >
                   {currentCategoryInfo ? currentCategoryInfo.name : activeCategory}
-                </span>
+                </button>
+              </>
+            )}
+            {activeSubcategory && activeSubcategory !== 'all' && (
+              <>
+                <HiChevronRight className="w-3.5 h-3.5 text-gray-600" />
+                <span className="text-gold-400 font-semibold">{activeSubcategory}</span>
               </>
             )}
             {searchQuery && (
@@ -290,6 +342,11 @@ export default function ProductList() {
                 </span>
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-white tracking-tight">
                   {currentCategoryInfo.name}
+                  {activeSubcategory && activeSubcategory !== 'all' && (
+                    <span className="text-gold-400 text-2xl sm:text-3xl md:text-4xl font-light ml-2">
+                      / {activeSubcategory}
+                    </span>
+                  )}
                 </h1>
                 <p className="text-gray-300 text-sm sm:text-base mt-2.5 leading-relaxed">
                   {currentCategoryInfo.shortDesc}
@@ -354,12 +411,12 @@ export default function ProductList() {
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8">
         {/* Results count & Sort Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-800 p-4 rounded-2xl border border-dark-700 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-800 p-4 rounded-2xl border border-dark-700 mb-6">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-white">
               Showing <span className="text-gold-400">{filteredAndSortedProducts.length}</span> Products
             </span>
-            {(activeCategory !== 'all' || searchQuery || selectedPriceRange !== 'all' || selectedMaterial !== 'all') && (
+            {(activeCategory !== 'all' || activeSubcategory !== 'all' || searchQuery || selectedPriceRange !== 'all' || selectedMaterial !== 'all') && (
               <button
                 onClick={clearAllFilters}
                 className="text-xs text-gold-400 hover:text-gold-300 flex items-center gap-1 font-medium underline"
@@ -399,6 +456,41 @@ export default function ProductList() {
           </div>
         </div>
 
+        {/* Quick Subcategory Pills / Filter Chips */}
+        {currentCategoryInfo && Array.isArray(currentCategoryInfo.subcategories) && currentCategoryInfo.subcategories.length > 0 && (
+          <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-dark-700">
+            <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1.5">
+              <span>Subcategories:</span>
+            </span>
+            <button
+              onClick={() => handleSubcategorySelect('all', currentCategoryInfo.name)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                activeSubcategory === 'all'
+                  ? 'bg-gold-500 text-dark-950 shadow-gold font-bold'
+                  : 'bg-dark-800 text-gray-300 hover:text-white hover:bg-dark-700 border border-dark-700'
+              }`}
+            >
+              All {currentCategoryInfo.name.split('&')[0].trim()}
+            </button>
+            {currentCategoryInfo.subcategories.map((sub) => {
+              const isSubActive = activeSubcategory.toLowerCase() === sub.toLowerCase();
+              return (
+                <button
+                  key={sub}
+                  onClick={() => handleSubcategorySelect(sub, currentCategoryInfo.name)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                    isSubActive
+                      ? 'bg-gold-500 text-dark-950 shadow-gold font-bold'
+                      : 'bg-dark-800 text-gray-300 hover:text-white hover:bg-dark-700 border border-dark-700'
+                  }`}
+                >
+                  {sub}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Layout: Sidebar Filter + Responsive Product Grid */}
         <div className="flex gap-8 items-start">
           {/* Filter Sidebar (Desktop Sticky + Mobile Drawer) */}
@@ -434,28 +526,73 @@ export default function ProductList() {
                       onClick={() => handleCategorySelect('all')}
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                         activeCategory === 'all'
-                          ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40'
+                          ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 font-semibold'
                           : 'text-gray-300 hover:bg-dark-700/60'
                       }`}
                     >
                       All Categories
                     </button>
                   </li>
-                  {categories.map((cat) => (
-                    <li key={cat.id || cat.slug || cat.name}>
-                      <button
-                        onClick={() => handleCategorySelect(cat.slug || cat.name)}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-all ${
-                          activeCategory.toLowerCase() === (cat.slug || cat.name).toLowerCase()
-                            ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40'
-                            : 'text-gray-300 hover:bg-dark-700/60'
-                        }`}
-                      >
-                        <span className="truncate">{cat.name}</span>
-                        {cat.productCount ? <span className="text-[10px] text-gray-500">({cat.productCount})</span> : null}
-                      </button>
-                    </li>
-                  ))}
+                  {categories.map((cat) => {
+                    const isCatActive =
+                      activeCategory.toLowerCase() === (cat.name || '').toLowerCase() ||
+                      activeCategory.toLowerCase() === (cat.slug || '').toLowerCase();
+
+                    return (
+                      <li key={cat.id || cat.slug || cat.name} className="space-y-1">
+                        <button
+                          onClick={() => handleCategorySelect(cat.name)}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-all ${
+                            isCatActive
+                              ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 font-semibold'
+                              : 'text-gray-300 hover:bg-dark-700/60'
+                          }`}
+                        >
+                          <span className="truncate">{cat.name}</span>
+                          <div className="flex items-center gap-1 shrink-0 ml-2">
+                            {cat.productCount ? <span className="text-[10px] text-gray-500">({cat.productCount})</span> : null}
+                            {Array.isArray(cat.subcategories) && cat.subcategories.length > 0 && (
+                              <HiChevronDown className={`w-3 h-3 transition-transform ${isCatActive ? 'rotate-180 text-gold-400' : 'text-gray-500'}`} />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Subcategories Accordion under Active Category */}
+                        {isCatActive && Array.isArray(cat.subcategories) && cat.subcategories.length > 0 && (
+                          <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-gold-500/40 ml-3">
+                            <button
+                              onClick={() => handleSubcategorySelect('all', cat.name)}
+                              className={`w-full text-left px-2.5 py-1 rounded-lg text-[11px] transition-colors flex items-center gap-2 ${
+                                activeSubcategory === 'all'
+                                  ? 'text-gold-400 font-bold bg-gold-500/10'
+                                  : 'text-gray-400 hover:text-gray-200 hover:bg-dark-700/40'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${activeSubcategory === 'all' ? 'bg-gold-400' : 'bg-gray-600'}`} />
+                              <span>All {cat.name.split('&')[0].trim()}</span>
+                            </button>
+                            {cat.subcategories.map((sub) => {
+                              const isSubActive = activeSubcategory.toLowerCase() === sub.toLowerCase();
+                              return (
+                                <button
+                                  key={sub}
+                                  onClick={() => handleSubcategorySelect(sub, cat.name)}
+                                  className={`w-full text-left px-2.5 py-1 rounded-lg text-[11px] transition-colors flex items-center gap-2 ${
+                                    isSubActive
+                                      ? 'text-gold-400 font-bold bg-gold-500/15'
+                                      : 'text-gray-400 hover:text-gray-200 hover:bg-dark-700/40'
+                                  }`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-gold-400 ring-2 ring-gold-400/30' : 'bg-gray-600'}`} />
+                                  <span className="truncate">{sub}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 
