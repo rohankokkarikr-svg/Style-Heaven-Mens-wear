@@ -7,8 +7,12 @@ import {
   HiX,
   HiChatAlt2,
   HiReply,
-  HiInbox
+  HiInbox,
+  HiSearch,
+  HiCheckCircle,
+  HiExclamationCircle
 } from 'react-icons/hi';
+import { FaWhatsapp } from 'react-icons/fa';
 import { adminAPI, notificationAPI } from '../../services/api';
 import SendMessageModal from '../../components/SendMessageModal';
 import toast from 'react-hot-toast';
@@ -16,7 +20,7 @@ import toast from 'react-hot-toast';
 export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('incoming'); // 'incoming' | 'broadcast'
+  const [activeView, setActiveView] = useState('incoming'); // 'incoming' | 'broadcast' | 'whatsapp'
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [targetAudience, setTargetAudience] = useState('all');
@@ -27,6 +31,13 @@ export default function Notifications() {
   const [replyModalOpen, setReplyModalOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState(null);
 
+  // WhatsApp delivery logs state
+  const [whatsappLogs, setWhatsappLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [logSearch, setLogSearch] = useState('');
+  const [logStatusFilter, setLogStatusFilter] = useState('all');
+  const [retryingId, setRetryingId] = useState(null);
+
   const fetchNotifications = async () => {
     setLoading(true);
     try {
@@ -36,6 +47,37 @@ export default function Notifications() {
       toast.error('Failed to load notifications history');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWhatsAppLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const { data } = await adminAPI.getWhatsAppLogs({ status: logStatusFilter });
+      setWhatsappLogs(data?.logs || []);
+    } catch (err) {
+      console.warn('Failed to load WhatsApp logs:', err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  const handleRetryWhatsApp = async (id) => {
+    if (!id || retryingId) return;
+    setRetryingId(id);
+    const toastId = toast.loading('Retrying WhatsApp message dispatch via Twilio...');
+    try {
+      const res = await adminAPI.retryWhatsAppLog(id);
+      if (res.data?.success) {
+        toast.success(`Message resent successfully! (SID: ${res.data.messageSid || 'Done'})`, { id: toastId });
+        fetchWhatsAppLogs();
+      } else {
+        toast.error(res.data?.error || 'Retry failed', { id: toastId });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to retry WhatsApp notification', { id: toastId });
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -54,8 +96,12 @@ export default function Notifications() {
   useEffect(() => {
     fetchNotifications();
     fetchRecipients();
+    fetchWhatsAppLogs();
 
-    const handleRefresh = () => fetchNotifications();
+    const handleRefresh = () => {
+      fetchNotifications();
+      fetchWhatsAppLogs();
+    };
     window.addEventListener('kala:notification:refresh', handleRefresh);
     return () => window.removeEventListener('kala:notification:refresh', handleRefresh);
   }, []);
@@ -168,6 +214,26 @@ export default function Notifications() {
           <HiPaperAirplane className="w-4 h-4 rotate-90" />
           <span>Broadcast & Direct Dispatch</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => { setActiveView('whatsapp'); fetchWhatsAppLogs(); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeView === 'whatsapp'
+              ? 'bg-emerald-500 text-dark-950 shadow-lg'
+              : 'bg-dark-800 text-gray-400 hover:text-white border border-dark-600'
+          }`}
+        >
+          <FaWhatsapp className="w-4 h-4" />
+          <span>Twilio WhatsApp Logs</span>
+          {whatsappLogs.length > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeView === 'whatsapp' ? 'bg-dark-900 text-emerald-400' : 'bg-emerald-500/20 text-emerald-400'
+            }`}>
+              {whatsappLogs.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {activeView === 'incoming' ? (
@@ -242,6 +308,196 @@ export default function Notifications() {
               <p className="text-white font-medium">No incoming user inquiries yet.</p>
               <p>When customers or artisans send a message to Admin, it will appear here in real time.</p>
             </div>
+          )}
+        </div>
+      ) : activeView === 'whatsapp' ? (
+        /* Twilio WhatsApp Delivery Logs View */
+        <div className="card p-6 space-y-5 border border-dark-600">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="font-bold text-white text-base flex items-center gap-2">
+                <FaWhatsapp className="text-emerald-400 w-5 h-5" />
+                Twilio WhatsApp Multi-Artisan Delivery Logs
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Automated order routing, subtotal isolation, and WhatsApp delivery audit records.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchWhatsAppLogs}
+                className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
+              >
+                <HiRefresh className={`w-4 h-4 ${loadingLogs ? 'animate-spin' : ''}`} /> Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-dark-900/60 p-3 rounded-xl border border-dark-700">
+            <div className="relative w-full sm:w-72">
+              <HiSearch className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search order #, artisan, phone..."
+                value={logSearch}
+                onChange={e => setLogSearch(e.target.value)}
+                className="w-full bg-dark-800 border border-dark-600 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-xs text-gray-400 font-medium whitespace-nowrap">Filter Status:</label>
+              <select
+                value={logStatusFilter}
+                onChange={e => {
+                  setLogStatusFilter(e.target.value);
+                  setTimeout(fetchWhatsAppLogs, 50);
+                }}
+                className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="sent">Sent / Delivered</option>
+                <option value="failed">Failed</option>
+                <option value="skipped">Skipped</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Logs Table */}
+          {loadingLogs ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map(i => <div key={i} className="h-16 shimmer rounded-xl" />)}
+            </div>
+          ) : (
+            (() => {
+              const filtered = whatsappLogs.filter(l => {
+                if (logStatusFilter !== 'all' && l.status !== logStatusFilter) return false;
+                if (!logSearch.trim()) return true;
+                const q = logSearch.toLowerCase();
+                const ord = (l.order?.order_number || l.payload_snapshot?.orderNumber || l.order_id || '').toLowerCase();
+                const art = (l.artisan?.store_name || l.payload_snapshot?.artisanName || '').toLowerCase();
+                const ph = (l.masked_phone || l.phone_number || '').toLowerCase();
+                return ord.includes(q) || art.includes(q) || ph.includes(q);
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="text-center py-14 text-gray-500 text-xs space-y-2">
+                    <FaWhatsapp className="w-10 h-10 text-gray-600 mx-auto" />
+                    <p className="text-white font-medium">No WhatsApp notifications recorded yet.</p>
+                    <p>When customers place orders, real-time Twilio logs and artisan slips will be displayed here.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="overflow-x-auto rounded-xl border border-dark-700">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-dark-900/90 text-gray-400 uppercase tracking-wider font-semibold border-b border-dark-700">
+                      <tr>
+                        <th className="py-3 px-4">Order & Artisan</th>
+                        <th className="py-3 px-4">Recipient Phone</th>
+                        <th className="py-3 px-4">Notification Type</th>
+                        <th className="py-3 px-4">Delivery Status</th>
+                        <th className="py-3 px-4">Details / Twilio SID</th>
+                        <th className="py-3 px-4">Timestamp</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-750 bg-dark-800/60">
+                      {filtered.map((log, idx) => {
+                        const orderNum = log.order?.order_number || log.payload_snapshot?.orderNumber || (log.order_id ? `#${log.order_id.substring(0, 8).toUpperCase()}` : 'N/A');
+                        const artisanName = log.artisan?.store_name || log.payload_snapshot?.artisanName || 'Artisan Partner';
+                        const isSuccess = log.status === 'sent' || log.status === 'delivered';
+                        const isFailed = log.status === 'failed' || log.status === 'undelivered';
+                        const isSkipped = log.status === 'skipped';
+
+                        return (
+                          <tr key={log.id || idx} className="hover:bg-dark-750/70 transition-colors">
+                            <td className="py-3 px-4">
+                              <span className="font-bold text-white block">{orderNum}</span>
+                              <span className="text-[11px] text-gold-400 font-medium">{artisanName}</span>
+                              {log.payload_snapshot?.artisanSubtotal && (
+                                <span className="text-[10px] text-gray-400 block">Subtotal: ₹{log.payload_snapshot.artisanSubtotal}</span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-4">
+                              <span className="font-mono text-gray-300 font-medium">
+                                {log.masked_phone || log.phone_number || 'N/A'}
+                              </span>
+                              <span className="text-[10px] text-gray-500 block">E.164 Protected</span>
+                            </td>
+
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-dark-700 text-gray-300 border border-dark-600">
+                                {log.message_type?.replace(/_/g, ' ') || 'ORDER ALERT'}
+                              </span>
+                            </td>
+
+                            <td className="py-3 px-4">
+                              {isSuccess && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                  <HiCheckCircle className="w-3.5 h-3.5" /> Sent
+                                </span>
+                              )}
+                              {isFailed && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/30">
+                                  <HiExclamationCircle className="w-3.5 h-3.5" /> Failed
+                                </span>
+                              )}
+                              {isSkipped && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
+                                  Skipped
+                                </span>
+                              )}
+                              {!isSuccess && !isFailed && !isSkipped && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                                  {log.status}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-4">
+                              {log.twilio_message_sid ? (
+                                <span className="font-mono text-[11px] text-gray-400 select-all">
+                                  {log.twilio_message_sid.substring(0, 16)}...
+                                </span>
+                              ) : log.error_message ? (
+                                <span className="text-[11px] text-red-400 block max-w-xs truncate" title={log.error_message}>
+                                  {log.error_message}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-gray-500">Standard Delivery</span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-4 text-gray-400 text-[11px] whitespace-nowrap">
+                              {log.sent_at || log.created_at ? new Date(log.sent_at || log.created_at).toLocaleString('en-IN') : 'Recently'}
+                            </td>
+
+                            <td className="py-3 px-4 text-right">
+                              {isFailed && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRetryWhatsApp(log.id)}
+                                  disabled={retryingId === log.id}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-semibold inline-flex items-center gap-1 transition-all"
+                                >
+                                  <HiRefresh className={`w-3 h-3 ${retryingId === log.id ? 'animate-spin' : ''}`} />
+                                  Retry
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()
           )}
         </div>
       ) : (

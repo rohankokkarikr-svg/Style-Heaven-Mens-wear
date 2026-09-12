@@ -523,3 +523,194 @@ exports.restoreInventory = async (orderId) => {
     console.error('[orderService] restoreInventory error:', err.message);
   }
 };
+
+// ── Multi-Artisan Order Routing & WhatsApp Dispatcher ─────────────────────────
+
+const {
+  sendArtisanOrderWhatsApp,
+  sendArtisanPaymentWhatsApp,
+  sendArtisanCancellationWhatsApp,
+} = require('./twilioWhatsAppService');
+const { createSystemNotification } = require('../controllers/notificationController');
+
+/**
+ * Authoritative Multi-Artisan Order Router & Notification Engine
+ *
+ * 1. Fetches authoritative order items and owning artisans from database.
+ * 2. Groups items strictly by artisan_id.
+ * 3. Calculates individual artisan subtotals (never exposes another artisan's earnings or customer total).
+ * 4. Creates in-app dashboard notifications for each artisan.
+ * 5. Dispatches personalized WhatsApp messages via Twilio to each artisan's registered WhatsApp number.
+ * 6. Guarantees idempotency — preventing duplicate messages on retries or webhooks.
+ *
+ * @param {Object} order - The full order object
+ * @param {string} eventType - 'NEW_ORDER' | 'PAYMENT_CONFIRMED' | 'ORDER_CANCELLED'
+ * @param {Object} extraData - { reason, customerName }
+ */
+exports.routeAndNotifyArtisans = async (order, eventType = 'NEW_ORDER', extraData = {}) => {
+  if (!order || !order.id) {
+    console.warn('[routeAndNotifyArtisans] Skipped: Invalid order');
+    return { success: false, reason: 'Invalid order' };
+  }
+
+  try {
+    // 1. Fetch order items with product and artisan details
+    let { data: items, error: itemsErr } = await supabase
+      .from('order_items')
+      .select('*, product:products(id, name, price, image_url, artisan_id)')
+      .eq('order_id', order.id);
+
+    if (itemsErr || !items || items.length === 0) {
+      console.warn('[routeAndNotifyArtisans] No order items found for order:', order.id);
+      return { success: false, reason: 'No order items found' };
+    }
+
+    // 2. Fetch customer info if not present on order
+    let customerName = order.shipping_name;
+    let customerPhone = order.phone;
+    let customerEmail = '';
+
+    if (!customerName && order.user_id) {
+      const { data: userRecord } = await supabase
+        .from('users')
+        .select('name, phone, email')
+        .eq('id', order.user_id)
+        .maybeSingle();
+
+      if (userRecord) {
+        customerName = userRecord.name;
+        customerPhone = customerPhone || userRecord.phone;
+        customerEmail = userRecord.email;
+      }
+    }
+    customerName = customerName || 'Valued Customer';
+
+    // 3. Group items by artisan_id
+    const grouped = {};
+    for (const item of items) {
+      const artisanId = item.artisan_id || item.product?.artisan_id;
+      if (!artisanId) {
+        console.warn(`[routeAndNotifyArtisans] Item ${item.id} has no artisan_id assigned, skipping grouping`);
+        continue;
+      }
+
+      if (!grouped[artisanId]) {
+        grouped[artisanId] = {
+          artisanId,
+          items: [],
+          subtotal: 0,
+        };
+      }
+
+      const itemTotal = Number(item.total_price || (item.price_at_time * item.quantity) || 0);
+      grouped[artisanId].items.push(item);
+      grouped[artisanId].subtotal += itemTotal;
+    }
+
+    const artisanIds = Object.keys(grouped);
+    if (artisanIds.length === 0) {
+      console.log(`[routeAndNotifyArtisans] Order ${order.id} has no artisan assignments.`);
+      return { success: true, count: 0 };
+    }
+
+    console.log(`[routeAndNotifyArtisans] Routing order ${order.id} (${eventType}) to ${artisanIds.length} artisan(s)...`);
+
+    // 4. Dispatch for each artisan independently
+    const results = [];
+    for (const [artId, group] of Object.entries(grouped)) {
+      try {
+        // Fetch artisan profile
+        const { data: artisanProfile } = await supabase
+          .from('artisan_profiles')
+          .select('*, user:users(id, name, email, phone)')
+          .eq('id', artId)
+          .maybeSingle();
+
+        if (!artisanProfile) {
+          console.warn(`[routeAndNotifyArtisans] Artisan profile not found for ID: ${artId}`);
+          continue;
+        }
+
+        // Ensure phone/whatsapp resolution
+        const effectiveWhatsApp = artisanProfile.whatsapp_number || artisanProfile.phone || artisanProfile.user?.phone;
+        const resolvedArtisan = {
+          ...artisanProfile,
+          whatsapp_number: effectiveWhatsApp,
+        };
+
+        const orderNum = order.order_number || String(order.id).substring(0, 8).toUpperCase();
+
+        // A. In-App Dashboard Notification
+        if (artisanProfile.user_id) {
+          try {
+            let notifTitle = `New Order #${orderNum} Received! 🎨`;
+            let notifMsg = `You have received an order for your handcrafted products (Your Subtotal: ₹${group.subtotal.toLocaleString('en-IN')}). Please prepare for dispatch.`;
+
+            if (eventType === 'PAYMENT_CONFIRMED') {
+              notifTitle = `Payment Confirmed: Order #${orderNum} 💳`;
+              notifMsg = `UPI payment for order #${orderNum} has been verified and marked Paid. Your subtotal: ₹${group.subtotal.toLocaleString('en-IN')}.`;
+            } else if (eventType === 'ORDER_CANCELLED') {
+              notifTitle = `Order #${orderNum} Cancelled 🚨`;
+              notifMsg = `Order #${orderNum} was cancelled (${extraData.reason || 'Customer request'}). Inventory has been restored.`;
+            }
+
+            await createSystemNotification({
+              title: notifTitle,
+              message: notifMsg,
+              target_audience: 'specific',
+              target_user_id: artisanProfile.user_id,
+              sender_id: order.user_id || null,
+            });
+          } catch (notifErr) {
+            console.warn('[routeAndNotifyArtisans] In-app notification error:', notifErr.message);
+          }
+        }
+
+        // B. Twilio WhatsApp Dispatch
+        let waResult = null;
+        if (eventType === 'NEW_ORDER') {
+          waResult = await sendArtisanOrderWhatsApp({
+            artisan: resolvedArtisan,
+            order: { ...order, shipping_name: customerName, phone: customerPhone },
+            items: group.items,
+            subtotal: group.subtotal,
+            paymentMethod: order.payment_method,
+            paymentStatus: order.payment_status,
+          });
+        } else if (eventType === 'PAYMENT_CONFIRMED') {
+          waResult = await sendArtisanPaymentWhatsApp({
+            artisan: resolvedArtisan,
+            order: { ...order, shipping_name: customerName, phone: customerPhone },
+            items: group.items,
+            subtotal: group.subtotal,
+            paymentMethod: order.payment_method,
+          });
+        } else if (eventType === 'ORDER_CANCELLED') {
+          waResult = await sendArtisanCancellationWhatsApp({
+            artisan: resolvedArtisan,
+            order: { ...order, shipping_name: customerName },
+            items: group.items,
+            reason: extraData.reason,
+          });
+        }
+
+        results.push({
+          artisanId: artId,
+          storeName: artisanProfile.store_name,
+          itemsCount: group.items.length,
+          subtotal: group.subtotal,
+          whatsapp: waResult,
+        });
+      } catch (artisanErr) {
+        console.error(`[routeAndNotifyArtisans] Error processing artisan ${artId}:`, artisanErr.message);
+        results.push({ artisanId: artId, error: artisanErr.message });
+      }
+    }
+
+    return { success: true, eventType, orderId: order.id, results };
+  } catch (err) {
+    console.error('[routeAndNotifyArtisans] Unhandled error:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+

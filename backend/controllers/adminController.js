@@ -1387,3 +1387,40 @@ exports.getAdminArtisanEarnings = async (req, res) => {
   }
 };
 
+// ════════════════════════════════════════════════════════════════════════════
+// 16. WHATSAPP NOTIFICATION LOGS & RETRY
+// ════════════════════════════════════════════════════════════════════════════
+
+exports.getWhatsAppLogs = async (req, res) => {
+  try {
+    const { limit, offset, status, search } = req.query;
+    const { getWhatsAppLogs } = require('../services/twilioWhatsAppService');
+    const logs = await getWhatsAppLogs({
+      limit: parseInt(limit) || 50,
+      offset: parseInt(offset) || 0,
+      status,
+      search,
+    });
+    res.json({ success: true, logs });
+  } catch (err) {
+    console.error('getWhatsAppLogs error:', err);
+    res.status(500).json({ error: 'Failed to retrieve WhatsApp notification logs' });
+  }
+};
+
+exports.retryWhatsAppLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { retryFailedWhatsAppNotification } = require('../services/twilioWhatsAppService');
+    const result = await retryFailedWhatsAppNotification(id);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('retryWhatsAppLog error:', err);
+    res.status(500).json({ error: 'Failed to retry WhatsApp notification: ' + err.message });
+  }
+};
+
+

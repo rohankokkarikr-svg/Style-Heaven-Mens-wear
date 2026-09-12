@@ -5,6 +5,7 @@ const { isValidArtisanTransition } = require('../config/ecommerce');
 const { syncMasterOrderStatus, finalizeCODDelivery, createArtisanEarning } = require('../services/orderService');
 const { checkAndGrantReward } = require('../services/rewardService');
 const { broadcastSync } = require('../utils/realtime');
+const { formatE164 } = require('../services/twilioWhatsAppService');
 
 // GET /api/artisans - all verified artisans (public)
 exports.getArtisans = async (req, res) => {
@@ -85,8 +86,14 @@ exports.getMyProfile = async (req, res) => {
 // PUT /api/artisans/me - update own profile
 exports.updateMyProfile = async (req, res) => {
   try {
-    const { store_name, artisan_type, specialization, location, bio, profile_image, preferred_language, upi_id, upi_qr_code, years_of_experience } = req.body;
+    const { 
+      store_name, artisan_type, specialization, location, bio, 
+      profile_image, preferred_language, upi_id, upi_qr_code, 
+      years_of_experience, phone, whatsapp_number, whatsapp_notifications_enabled 
+    } = req.body;
     const bioWithUpi = formatBioWithUpi(bio, upi_id, upi_qr_code);
+
+    const normalizedWhatsapp = whatsapp_number ? formatE164(whatsapp_number) : (phone ? formatE164(phone) : null);
 
     const updateFields = { 
       store_name, 
@@ -96,6 +103,9 @@ exports.updateMyProfile = async (req, res) => {
       bio: bioWithUpi, 
       profile_image, 
       preferred_language,
+      phone: phone || undefined,
+      whatsapp_number: normalizedWhatsapp || undefined,
+      whatsapp_notifications_enabled: whatsapp_notifications_enabled !== undefined ? Boolean(whatsapp_notifications_enabled) : true,
       years_of_experience: years_of_experience !== undefined && years_of_experience !== '' ? Number(years_of_experience) : undefined
     };
 
@@ -106,8 +116,13 @@ exports.updateMyProfile = async (req, res) => {
       .select()
       .maybeSingle();
 
-    if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('years_of_experience')))) {
+    // Fallback if newly added columns don't exist yet in Supabase schema cache
+    if (error && (error.code === 'PGRST204' || error.message?.includes('column') || error.message?.includes('schema'))) {
       delete updateFields.years_of_experience;
+      delete updateFields.whatsapp_number;
+      delete updateFields.whatsapp_notifications_enabled;
+      delete updateFields.phone;
+
       const resFallback = await supabase
         .from('artisan_profiles')
         .update(updateFields)
@@ -129,12 +144,22 @@ exports.updateMyProfile = async (req, res) => {
           bio: bioWithUpi,
           profile_image,
           preferred_language,
+          phone: phone || null,
+          whatsapp_number: normalizedWhatsapp || null,
+          whatsapp_notifications_enabled: whatsapp_notifications_enabled !== undefined ? Boolean(whatsapp_notifications_enabled) : true,
           verification_status: 'pending'
         }])
         .select()
         .single();
       if (insError) throw insError;
       data = newProfile;
+    }
+
+    // Also update users.phone if provided
+    if (phone) {
+      try {
+        await supabase.from('users').update({ phone }).eq('id', req.user.id);
+      } catch (e) {}
     }
 
     const { broadcastSync } = require('../utils/realtime');
@@ -393,11 +418,6 @@ exports.getMyArtisanOrders = async (req, res) => {
           shipping_address, shipping_name, shipping_city, shipping_state, shipping_pincode,
           phone, created_at, order_status, status, coupon_code,
           user:users (id, name, email, phone)
-        ),
-        items:order_items (
-          id, quantity, price_at_time, unit_price_snapshot, total_price, size,
-          product_name_snapshot, product_image_snapshot, artisan_id,
-          product:products (id, name, image_url, price, category)
         )
       `)
       .eq('artisan_id', profile.id)
@@ -405,10 +425,31 @@ exports.getMyArtisanOrders = async (req, res) => {
 
     if (error) throw error;
 
-    // Filter order_items to only this artisan's items
+    // Fetch order items belonging specifically to this order & artisan
+    const orderIds = (artisanOrders || []).map(ao => ao.order_id).filter(Boolean);
+    let orderItems = [];
+    if (orderIds.length > 0) {
+      const { data: fetchedItems } = await supabase
+        .from('order_items')
+        .select(`
+          id, order_id, quantity, price_at_time, unit_price_snapshot, total_price, size,
+          product_name_snapshot, product_image_snapshot, artisan_id,
+          product:products (id, name, image_url, price, category)
+        `)
+        .in('order_id', orderIds)
+        .eq('artisan_id', profile.id);
+      orderItems = fetchedItems || [];
+    }
+
+    const itemsByOrder = {};
+    for (const item of orderItems) {
+      if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+      itemsByOrder[item.order_id].push(item);
+    }
+
     const result = (artisanOrders || []).map(ao => ({
       ...ao,
-      items: (ao.items || []).filter(item => item.artisan_id === profile.id),
+      items: itemsByOrder[ao.order_id] || [],
     }));
 
     res.json(result);

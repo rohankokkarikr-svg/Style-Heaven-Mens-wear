@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { artisanAPI, productAPI, aiAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { HiCamera, HiSparkles, HiEye } from 'react-icons/hi';
+import { HiCamera, HiSparkles, HiEye, HiCheck } from 'react-icons/hi';
+import { FaWhatsapp } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const LANGUAGES = ['English', 'Hindi', 'Kannada', 'Tamil', 'Telugu', 'Marathi', 'Bengali'];
@@ -253,6 +254,73 @@ export default function ArtisanProfile() {
               onChange={e => set('years_of_experience', e.target.value)}
               placeholder="e.g. 20"
             />
+          </div>
+        </div>
+
+        {/* WhatsApp & Automated Multi-Artisan Order Notifications */}
+        <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/30">
+                <FaWhatsapp />
+              </span>
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  Twilio WhatsApp Order Alerts
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold uppercase">
+                    Automated
+                  </span>
+                </h4>
+                <p className="text-xs text-gray-400">
+                  Receive real-time packing slips & payment alerts on WhatsApp when customers order your crafts.
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle Switch */}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={field('whatsapp_notifications_enabled') !== false}
+                onChange={e => set('whatsapp_notifications_enabled', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">
+                WhatsApp Phone Number *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-gray-400 text-xs font-semibold">🇮🇳</span>
+                <input
+                  type="tel"
+                  className="input-field pl-9"
+                  value={field('whatsapp_number') || field('phone')}
+                  onChange={e => {
+                    const val = e.target.value;
+                    set('whatsapp_number', val);
+                    set('phone', val);
+                  }}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+              <p className="text-[11px] text-gray-500 mt-1">
+                Enter your WhatsApp mobile number with country code (+91).
+              </p>
+            </div>
+
+            <div className="flex flex-col justify-center bg-dark-900/60 p-3 rounded-xl border border-dark-700/60 text-xs text-gray-300 space-y-1">
+              <p className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                <HiCheck className="w-4 h-4" /> Multi-Artisan Isolation
+              </p>
+              <p className="text-gray-400 text-[11px] leading-relaxed">
+                When an order contains items from multiple artisans, you will only receive WhatsApp alerts for your own products and your own calculated subtotal.
+              </p>
+            </div>
           </div>
         </div>
 

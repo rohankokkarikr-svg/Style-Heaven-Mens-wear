@@ -236,6 +236,19 @@ router.post('/verify', protect, async (req, res) => {
       payment_status: 'paid',
     });
 
+    // 7. Multi-artisan order routing & Twilio WhatsApp notifications (Post-Payment)
+    try {
+      const { routeAndNotifyArtisans } = require('../services/orderService');
+      await routeAndNotifyArtisans({
+        ...order,
+        payment_status: 'paid',
+        payment_method: 'razorpay',
+        razorpay_payment_id,
+      }, 'PAYMENT_CONFIRMED');
+    } catch (routeErr) {
+      console.error('[verify] Artisan WhatsApp routing notice:', routeErr.message);
+    }
+
     console.log(`[verify] ✅ Payment successfully verified for order ${order.id}`);
     res.json({
       success: true,
@@ -326,6 +339,20 @@ router.post('/webhook', async (req, res) => {
 
           broadcastSync('PAYMENTS_UPDATED', { orderId: order.id, status: 'paid' });
           broadcastSync('ORDERS_UPDATED', { orderId: order.id, order_status: 'confirmed' });
+
+          // Multi-artisan routing & WhatsApp dispatch
+          try {
+            const { routeAndNotifyArtisans } = require('../services/orderService');
+            await routeAndNotifyArtisans({
+              ...order,
+              payment_status: 'paid',
+              payment_method: 'razorpay',
+              razorpay_payment_id: razorpayPaymentId,
+            }, 'PAYMENT_CONFIRMED');
+          } catch (routeErr) {
+            console.warn('[webhook] Artisan WhatsApp routing notice:', routeErr.message);
+          }
+
           console.log(`[webhook] ✅ Processed payment.captured for order ${order.id}`);
         }
       } catch (err) {
@@ -745,6 +772,22 @@ const verifyPaymentDirect = async (req, res) => {
 
         broadcastSync('PAYMENTS_UPDATED', { orderId: targetOrderId, status: 'paid' });
         broadcastSync('ORDERS_UPDATED', { orderId: targetOrderId, order_status: 'confirmed' });
+
+        // Multi-artisan routing & WhatsApp dispatch
+        try {
+          const { routeAndNotifyArtisans } = require('../services/orderService');
+          const { data: ord } = await supabase.from('orders').select('*').eq('id', targetOrderId).maybeSingle();
+          if (ord) {
+            await routeAndNotifyArtisans({
+              ...ord,
+              payment_status: 'paid',
+              payment_method: 'razorpay',
+              razorpay_payment_id: finalPaymentId,
+            }, 'PAYMENT_CONFIRMED');
+          }
+        } catch (routeErr) {
+          console.warn('[verify-payment-direct] Artisan WhatsApp routing notice:', routeErr.message);
+        }
       } catch (dbErr) {
         console.warn('[verify-payment-direct] DB sync error:', dbErr.message);
       }

@@ -77,4 +77,9 @@ router.get('/activity', adminController.getActivityLogs);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 
+// 16. WhatsApp Notification Logs & Retry
+router.get('/whatsapp-logs', adminController.getWhatsAppLogs);
+router.post('/whatsapp-logs/:id/retry', adminController.retryWhatsAppLog);
+
 module.exports = router;
+

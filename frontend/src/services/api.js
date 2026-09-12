@@ -237,6 +237,8 @@ export const adminAPI = {
   getActivityLogs:      ()         => api.get('/admin/activity'),
   getSettings:          ()         => api.get('/admin/settings'),
   updateSettings:       (data)     => api.put('/admin/settings', data),
+  getWhatsAppLogs:      (params)   => api.get('/admin/whatsapp-logs', { params }),
+  retryWhatsAppLog:     (id)       => api.post(`/admin/whatsapp-logs/${id}/retry`),
 };
 
 export const notificationAPI = {
