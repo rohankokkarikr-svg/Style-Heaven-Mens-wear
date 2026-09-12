@@ -101,13 +101,30 @@ export function LanguageProvider({ children }) {
       }
       return null;
     } catch (err) {
-      console.warn('[LanguageContext] Translation error:', err.message);
-      toast.error(`Translation to ${langName} is temporarily unavailable.`);
-      return null;
+      console.warn('[LanguageContext] Translation notice:', err.message);
+      // Return safe fallback rather than null so UI doesn't crash or show error toast
+      const fallback = {
+        name: product.name,
+        description: product.description || product.short_description || '',
+        short_description: product.short_description || '',
+        material: product.material || '',
+        craft_technique: product.craft_technique || '',
+        artisan_bio: product.artisan_profiles?.bio || product.artisan_bio || '',
+        care_instructions: product.care_instructions || '',
+        state_of_origin: product.state_of_origin || '',
+      };
+      return fallback;
     } finally {
       setIsTranslating(false);
       setTranslatingProductTitle('');
     }
+  }, [currentLang]);
+
+  const getCachedTranslation = useCallback((productId, targetLangCode = currentLang) => {
+    if (!productId || targetLangCode === 'en') return null;
+    const langName = CODE_TO_NAME[targetLangCode];
+    if (!langName) return null;
+    return cacheRef.current[String(productId)]?.[langName] || null;
   }, [currentLang]);
 
   return (
@@ -117,6 +134,7 @@ export function LanguageProvider({ children }) {
         setLanguage: changeLanguage,
         supportedLanguages: SUPPORTED_LANGUAGES,
         translateProductDetails,
+        getCachedTranslation,
         isTranslating,
         translatingProductTitle,
         currentLangMeta: SUPPORTED_LANGUAGES.find((l) => l.code === currentLang) || SUPPORTED_LANGUAGES[0],

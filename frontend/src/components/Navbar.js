@@ -17,7 +17,6 @@ import {
 } from 'react-icons/hi';
 import { FaTrophy } from 'react-icons/fa';
 import UserAvatar from './UserAvatar';
-import LanguageSelector from './LanguageSelector';
 import NotificationCenter from './NotificationCenter';
 
 const POPULAR_SEARCHES = [
@@ -138,11 +137,6 @@ export default function Navbar() {
 
             {/* 3. Right: Search, Wishlist, Cart & Account */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-
-              {/* Multilingual AI Language Selector */}
-              <div className="hidden sm:block">
-                <LanguageSelector variant="compact" />
-              </div>
 
               {/* Search Toggle Button */}
               <button
@@ -387,10 +381,6 @@ export default function Navbar() {
             ))}
 
             <div className="pt-3 border-t border-dark-800 mt-3 space-y-2">
-              <div className="px-3 py-1.5 flex items-center justify-between bg-dark-800/60 rounded-xl border border-dark-700/60">
-                <span className="text-xs text-gray-400 font-medium">✨ Language:</span>
-                <LanguageSelector variant="compact" />
-              </div>
 
               <Link
                 to="/leaderboard"

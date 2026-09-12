@@ -5,12 +5,14 @@ import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { HiShoppingCart, HiStar, HiHeart, HiEye } from 'react-icons/hi';
 import QuickViewModal from './QuickViewModal';
+import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
+  const { currentLang, getCachedTranslation } = useLanguage();
   const navigate = useNavigate();
   const [quickViewOpen, setQuickViewOpen] = useState(false);
 
@@ -41,6 +43,12 @@ export default function ProductCard({ product }) {
     : null);
 
   const isFavorited = isInWishlist(id);
+
+  // Regional Translation Support
+  const cachedTranslation = getCachedTranslation ? getCachedTranslation(id, currentLang) : null;
+  const displayName = cachedTranslation?.name || name;
+  const displayDesc = cachedTranslation?.short_description || cachedTranslation?.description || short_description || description || 'Authentic handcrafted product made by Indian artisans.';
+  const displayOrigin = cachedTranslation?.state_of_origin || state_of_origin;
 
   const handleQuickAdd = (e) => {
     e.preventDefault();
@@ -145,13 +153,13 @@ export default function ProductCard({ product }) {
             {/* Product Title */}
             <Link to={`/products/${id}`}>
               <h3 className="font-medium text-sm text-gray-100 group-hover:text-gold-400 transition-colors line-clamp-1 font-serif">
-                {name}
+                {displayName}
               </h3>
             </Link>
 
             {/* Short Description */}
             <p className="text-gray-400 text-xs mt-1 line-clamp-1">
-              {short_description || description || 'Authentic handcrafted product made by Indian artisans.'}
+              {displayDesc}
             </p>
 
             {/* Rating Stars */}

@@ -19,17 +19,15 @@ const { GoogleGenAI } = require('@google/genai');
 
 // ── Model Configuration ──────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'gemini-3.6-flash';
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 const CANDIDATE_FLASH_MODELS = [
-  'gemini-3.6-flash',
-  'gemini-3.5-flash',
-  'gemini-flash-latest',
-  'gemini-3.7-flash',
   'gemini-3.5-flash-lite',
   'gemini-flash-lite-latest',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
 ];
 
-let activeWorkingModel = 'gemini-3.6-flash';
+let activeWorkingModel = 'gemini-3.5-flash-lite';
 
 const SEVEN_CATEGORIES = [
   'Handloom & Textiles',
@@ -175,10 +173,9 @@ async function generateText(prompt, retries = 2) {
         }
 
         const isTransient = (msg.includes('503') || msg.includes('high demand') || err.status === 503);
-        if (isTransient && attempt < retries) {
-          console.warn(`[geminiService] Spike on ${model} (attempt ${attempt + 1}/${retries + 1}). Retrying in ${(attempt + 1) * 1000}ms...`);
-          await new Promise(r => setTimeout(r, (attempt + 1) * 1000));
-          continue;
+        if (isTransient) {
+          console.warn(`[geminiService] Model '${model}' experiencing high demand (503). Switching immediately to next candidate model...`);
+          break;
         }
 
         // On attempt exhaustion for this model, break out to try the next model

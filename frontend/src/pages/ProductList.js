@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import LanguageSelector from '../components/LanguageSelector';
+import { useLanguage } from '../context/LanguageContext';
 import { ProductCardSkeleton } from '../components/Skeleton';
 import { productAPI, categoryAPI } from '../services/api';
 import { HANDICRAFT_CATEGORIES } from '../constants/handicraftsData';
@@ -19,6 +21,7 @@ export default function ProductList() {
   const [categories, setCategories] = useState(HANDICRAFT_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
+  const { currentLang, currentLangMeta } = useLanguage();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -427,7 +430,10 @@ export default function ProductList() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+            {/* Multilingual Regional Language Selector */}
+            <LanguageSelector variant="compact" />
+
             {/* Mobile Filter Toggle */}
             <button
               onClick={() => setFilterOpen(true)}
@@ -744,6 +750,18 @@ export default function ProductList() {
 
           {/* Product Grid Area (4 cols desktop, 2-3 cols tablet, 2 cols mobile) */}
           <main className="flex-1">
+            {currentLang !== 'en' && (
+              <div className="mb-4 flex items-center justify-between gap-2 p-3 px-4 rounded-xl bg-gold-500/10 border border-gold-500/30 text-xs text-gold-400 backdrop-blur-sm shadow-sm">
+                <span className="flex items-center gap-2">
+                  <HiSparkles className="w-4 h-4 text-gold-400 shrink-0" />
+                  <span>
+                    Viewing handcrafted products in <strong className="text-white font-bold">{currentLangMeta?.native || 'Regional Language'}</strong> via Gemini AI
+                  </span>
+                </span>
+                <span className="text-[10px] text-gray-400 hidden sm:inline">Authentic Cultural Translation</span>
+              </div>
+            )}
+
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {Array.from({ length: 8 }).map((_, i) => (
