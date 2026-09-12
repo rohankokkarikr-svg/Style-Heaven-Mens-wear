@@ -544,26 +544,10 @@ export default function Checkout() {
         toast.success('Order placed successfully! 🎉');
         clearCart();
         
-        const defaultAdminPhone = '917349083982';
-        let waLink = createdOrder.whatsappLink;
-        if (!waLink) {
-          const itemsText = items.map(i => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${(i.product.price * i.quantity).toLocaleString()}`).join('\n');
-          const liveLocText = activeMapUrl ? `\n🗺️ *Customer Live Location:* ${activeMapUrl}` : '';
-          const msg = `🔔 *New COD Order Placed on KalaStyle AI!*\n----------------------------------------\n📦 *Order ID:* #${createdOrder.id?.substring(0, 8)}\n👤 *Customer Name:* ${form.fullName}\n📞 *Phone:* +91 ${form.phone}\n📍 *Address:* ${fullAddress}${liveLocText}\n\n🛒 *Items (${items.reduce((s,i)=>s+i.quantity,0)} items):*\n${itemsText}\n\n💰 *Payment Method:* COD (Cash on Delivery)\n💵 *Total Amount:* ₹${finalTotal.toLocaleString()}\n----------------------------------------\n✅ *Status:* CONFIRMED (COD)`;
-          waLink = `https://wa.me/${defaultAdminPhone}?text=${encodeURIComponent(msg)}`;
-        }
-
         setCodOrderSuccess({
           orderId: createdOrder.id,
-          total: finalTotal,
-          whatsappLink: waLink
+          total: finalTotal
         });
-
-        try {
-          window.open(waLink, '_blank', 'noopener,noreferrer');
-        } catch (e) {
-          console.warn('Auto open WhatsApp popup blocked by browser:', e);
-        }
       } else {
         clearCart();
         setShowLoadingPopup(true);
@@ -1317,36 +1301,36 @@ export default function Checkout() {
                 </p>
               </div>
 
-              <div className="bg-dark-900 border border-dark-600 rounded-2xl p-4 text-left space-y-3">
-                <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>📱 Send Details to Admin via WhatsApp</span>
-                </p>
+              <div className="bg-dark-900 border border-dark-600 rounded-2xl p-5 text-left space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                  <HiCheckCircle className="w-4 h-4" />
+                  <span>Order Confirmed & Sent to Artisans</span>
+                </div>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Click the button below to send your order details directly to the KalaStyle AI Admin WhatsApp for instant order processing!
+                  Your order has been safely placed. You can track preparation, artisan dispatch, and live location in real time.
                 </p>
-
-                <a
-                  href={codOrderSuccess.whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 px-4 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-green-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer no-underline"
-                >
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.143 4.174 4.29-1.125z" />
-                  </svg>
-                  Send Order to Admin WhatsApp 🚀
-                </a>
+                <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                  <button
+                    onClick={() => {
+                      const oId = codOrderSuccess.orderId;
+                      setCodOrderSuccess(null);
+                      navigate(`/orders/${oId}/tracking`);
+                    }}
+                    className="flex-1 py-3 px-4 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-dark-900 font-bold text-xs rounded-xl shadow-gold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <HiTruck className="w-4 h-4" /> Track Order
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCodOrderSuccess(null);
+                      navigate('/orders');
+                    }}
+                    className="flex-1 py-3 px-4 bg-dark-750 hover:bg-dark-700 text-white font-semibold text-xs rounded-xl border border-dark-600 transition-all cursor-pointer"
+                  >
+                    View All Orders
+                  </button>
+                </div>
               </div>
-
-              <button
-                onClick={() => {
-                  setCodOrderSuccess(null);
-                  navigate('/orders');
-                }}
-                className="w-full py-3 bg-dark-700 hover:bg-dark-600 text-white font-semibold text-xs rounded-xl transition-all border border-dark-500 cursor-pointer"
-              >
-                Go to My Orders Page
-              </button>
             </motion.div>
           </motion.div>
         )}

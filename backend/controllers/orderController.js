@@ -167,7 +167,6 @@ exports.createOrder = async (req, res) => {
       ...order,
       artisan_orders: artisanOrders,
       payment,
-      whatsappLink,
       // Razorpay checkout data (only if applicable)
       razorpay: razorpayOrderId ? {
         order_id: razorpayOrderId,
@@ -538,7 +537,7 @@ exports.cancelOrder = async (req, res) => {
 
     broadcastSync('ORDERS_UPDATED', { id, status: 'cancelled' });
 
-    res.json({ ...updatedOrder, whatsappLink, refund: refundInfo });
+    res.json({ ...updatedOrder, refund: refundInfo });
   } catch (error) {
     console.error('[cancelOrder] Error:', error);
     res.status(500).json({ error: 'Failed to cancel order' });
