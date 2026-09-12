@@ -264,12 +264,13 @@ export default function Notifications() {
                       setTargetAudience(e.target.value);
                       if (e.target.value !== 'specific') setSpecificUserId('');
                     }}
-                    className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+                    style={{ backgroundColor: '#202020', color: '#ffffff' }}
+                    className="w-full bg-[#202020] border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
                   >
-                    <option value="all">🌍 All Users (Artisans + Customers)</option>
-                    <option value="artisans">👨‍🎨 All Artisans</option>
-                    <option value="customers">👥 All Customers</option>
-                    <option value="specific">🎯 Specific Artisan or Customer</option>
+                    <option value="all" style={{ backgroundColor: '#202020' }}>🌍 All Users (Artisans + Customers)</option>
+                    <option value="artisans" style={{ backgroundColor: '#202020' }}>👨‍🎨 All Artisans</option>
+                    <option value="customers" style={{ backgroundColor: '#202020' }}>👥 All Customers</option>
+                    <option value="specific" style={{ backgroundColor: '#202020' }}>🎯 Specific Artisan or Customer</option>
                   </select>
                 </div>
 
@@ -279,23 +280,24 @@ export default function Notifications() {
                     <select
                       value={specificUserId}
                       onChange={e => setSpecificUserId(e.target.value)}
-                      className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+                      style={{ backgroundColor: '#202020', color: '#ffffff' }}
+                      className="w-full bg-[#202020] border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
                       required
                     >
-                      <option value="">-- Choose Artisan or Customer --</option>
+                      <option value="" style={{ backgroundColor: '#202020' }}>-- Choose Artisan or Customer --</option>
                       {recipients.artisans.length > 0 && (
-                        <optgroup label="Artisan Workshops">
+                        <optgroup label="Artisan Workshops" style={{ backgroundColor: '#202020' }}>
                           {recipients.artisans.map(a => (
-                            <option key={a.id} value={a.user_id || a.id}>
+                            <option key={a.id} value={a.user_id || a.id} style={{ backgroundColor: '#202020' }}>
                               🎨 {a.store_name} ({a.specialization || 'Artisan'})
                             </option>
                           ))}
                         </optgroup>
                       )}
                       {recipients.customers.length > 0 && (
-                        <optgroup label="Customers">
+                        <optgroup label="Customers" style={{ backgroundColor: '#202020' }}>
                           {recipients.customers.map(c => (
-                            <option key={c.id} value={c.id}>
+                            <option key={c.id} value={c.id} style={{ backgroundColor: '#202020' }}>
                               👤 {c.name || 'Customer'} ({c.email})
                             </option>
                           ))}
@@ -312,7 +314,8 @@ export default function Notifications() {
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder="e.g. Diwali Artisan Fair or Account Verification"
-                    className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500"
+                    style={{ backgroundColor: '#202020', color: '#ffffff' }}
+                    className="w-full bg-[#202020] border border-dark-500 rounded-lg p-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-gold-500"
                     required
                   />
                 </div>
@@ -324,7 +327,8 @@ export default function Notifications() {
                     value={message}
                     onChange={e => setMessage(e.target.value)}
                     placeholder="Type your message here..."
-                    className="w-full bg-dark-700 border border-dark-500 rounded-lg p-2.5 text-white focus:outline-none focus:border-gold-500 resize-none leading-relaxed"
+                    style={{ backgroundColor: '#202020', color: '#ffffff' }}
+                    className="w-full bg-[#202020] border border-dark-500 rounded-lg p-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-gold-500 resize-none leading-relaxed"
                     required
                   />
                 </div>

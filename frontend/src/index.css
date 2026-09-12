@@ -13,12 +13,17 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
   @apply bg-dark-900 text-gray-100 font-sans;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+input, textarea, select {
+  color-scheme: dark;
 }
 
 /* ─── Scrollbar ─── */
