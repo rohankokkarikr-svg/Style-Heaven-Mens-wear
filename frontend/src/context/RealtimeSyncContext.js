@@ -96,6 +96,28 @@ export const RealtimeSyncProvider = ({ children }) => {
               handleIncomingSync(payload.type, payload.data);
             }
           })
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            (change) => {
+              handleIncomingSync('ORDERS_UPDATED', change.new || change.old || {});
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'artisan_orders' },
+            (change) => {
+              handleIncomingSync('ORDERS_UPDATED', change.new || change.old || {});
+              handleIncomingSync('ARTISAN_ORDERS_UPDATED', change.new || change.old || {});
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'payments' },
+            (change) => {
+              handleIncomingSync('PAYMENTS_UPDATED', change.new || change.old || {});
+            }
+          )
           .subscribe();
 
         supabaseChannelRef.current = channel;

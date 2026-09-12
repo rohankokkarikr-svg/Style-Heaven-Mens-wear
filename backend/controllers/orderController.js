@@ -291,9 +291,21 @@ exports.getOrderTracking = async (req, res) => {
 
     const isBuyer = String(order.user_id) === String(req.user.id);
     const isAdmin = (req.user.role || '').toLowerCase() === 'admin';
-    const isArtisan = (order.artisan_orders || []).some(
+    let isArtisan = (order.artisan_orders || []).some(
       (ao) => String(ao.artisan_id) === String(req.user.id)
     );
+    if (!isArtisan && (req.user.role || '').toLowerCase() === 'artisan') {
+      const { data: prof } = await supabase
+        .from('artisan_profiles')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .maybeSingle();
+      if (prof?.id) {
+        isArtisan = (order.artisan_orders || []).some(
+          (ao) => String(ao.artisan_id) === String(prof.id)
+        );
+      }
+    }
 
     if (!isBuyer && !isAdmin && !isArtisan) {
       console.warn(`[getOrderTracking] User ${req.user.id} unauthorized for order ${id}`);

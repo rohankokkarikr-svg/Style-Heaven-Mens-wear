@@ -14,6 +14,7 @@ import {
   HiExternalLink
 } from 'react-icons/hi';
 import { adminAPI } from '../../services/api';
+import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { extractOrderLocation } from '../../utils/locationHelper';
 
@@ -25,13 +26,13 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updating, setUpdating] = useState(false);
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const { data } = await adminAPI.getOrders({ search, status: statusFilter });
       setOrders(data || []);
     } catch {
-      toast.error('Failed to load orders');
+      if (!quiet) toast.error('Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -41,14 +42,55 @@ export default function Orders() {
     fetchOrders();
   }, [statusFilter]);
 
-  // Real-time listener: auto-update when artisan or customer changes order status
+  // 1. Real-time DOM and multi-device sync
   useEffect(() => {
     const handleSync = () => {
-      fetchOrders();
+      fetchOrders(true);
     };
     window.addEventListener('kala:sync:orders_updated', handleSync);
-    return () => window.removeEventListener('kala:sync:orders_updated', handleSync);
-  }, []);
+    window.addEventListener('kala:sync:artisan_orders_updated', handleSync);
+    window.addEventListener('kala:sync:payments_updated', handleSync);
+    return () => {
+      window.removeEventListener('kala:sync:orders_updated', handleSync);
+      window.removeEventListener('kala:sync:artisan_orders_updated', handleSync);
+      window.removeEventListener('kala:sync:payments_updated', handleSync);
+    };
+  }, [statusFilter]);
+
+  // 2. Direct Supabase Realtime Edge listener for Admin orders
+  useEffect(() => {
+    if (!supabase || typeof supabase.channel !== 'function') return;
+
+    const channel = supabase
+      .channel('admin_orders_live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'artisan_orders' },
+        () => {
+          fetchOrders(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [statusFilter]);
+
+  // 3. Background heartbeat polling (every 8 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchOrders(true);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [statusFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();

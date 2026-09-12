@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { artisanAPI } from '../../services/api';
+import { supabase } from '../../lib/supabase';
 import { 
   HiLocationMarker, 
   HiPhone, 
@@ -29,8 +30,8 @@ export default function ArtisanOrders() {
   const [updatingId, setUpdatingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       // Try new artisan_orders based endpoint first (secure, uses artisan_id)
       const res = await artisanAPI.getArtisanOrders();
@@ -61,9 +62,9 @@ export default function ArtisanOrders() {
     fetchOrders();
   }, []);
 
-  // Real-time listener: instantly reflect when a customer places or updates an order
+  // 1. DOM Real-time listener: instantly reflect when a customer places or updates an order
   useEffect(() => {
-    const handleSync = () => { fetchOrders(); };
+    const handleSync = () => { fetchOrders(true); };
     window.addEventListener('kala:sync:orders_updated', handleSync);
     window.addEventListener('kala:sync:payments_updated', handleSync);
     window.addEventListener('kala:sync:artisan_orders_updated', handleSync);
@@ -72,6 +73,41 @@ export default function ArtisanOrders() {
       window.removeEventListener('kala:sync:payments_updated', handleSync);
       window.removeEventListener('kala:sync:artisan_orders_updated', handleSync);
     };
+  }, []);
+
+  // 2. Direct Supabase Realtime Edge listener for Artisan Orders
+  useEffect(() => {
+    if (!supabase || typeof supabase.channel !== 'function') return;
+
+    const channel = supabase
+      .channel('artisan_orders_live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'artisan_orders' },
+        () => {
+          fetchOrders(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // 3. Heartbeat polling (every 8 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchOrders(true);
+    }, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   // Exclusive Artisan UTR Confirmation & Order Acceptance Handler

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orderAPI } from '../services/api';
-import { HiShoppingBag, HiPencilAlt, HiLocationMarker, HiTruck } from 'react-icons/hi';
+import { supabase } from '../lib/supabase';
+import { HiShoppingBag, HiPencilAlt, HiLocationMarker, HiTruck, HiRefresh } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import EditOrderModal from '../components/EditOrderModal';
@@ -41,7 +42,7 @@ export default function Orders() {
       const targetOrder = orders.find(o => o.id === orderId);
       const res = await orderAPI.cancelOrder(orderId);
       toast.success('Order cancelled successfully! 🚫');
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', order_status: 'cancelled' } : o));
       
       const adminPhone = '917349083982';
       let waLink = res.data?.whatsappLink;
@@ -59,48 +60,128 @@ export default function Orders() {
     }
   };
 
+  const fetchOrders = async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const { data } = await orderAPI.getMyOrders();
+      setOrders(data || []);
+    } catch (err) {
+      if (!quiet) toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const { data } = await orderAPI.getMyOrders();
-        setOrders(data);
-      } catch (err) {
-        toast.error('Failed to load orders');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrders();
   }, []);
 
-  // Real-time listener: auto-update order status when Admin updates status
+  // 1. Real-time listener: auto-update order status when Admin or Artisan updates status
   useEffect(() => {
     const handleSync = (e) => {
       const payload = e.detail?.payload;
       if (payload?.id && payload?.status) {
-        setOrders(prev => prev.map(o => o.id === payload.id ? { ...o, status: payload.status, ...(payload.payment_status ? { payment_status: payload.payment_status } : {}) } : o));
-        toast.success(`Order #${payload.id.substring(0, 8)} status updated to ${payload.status}! 📦`);
+        setOrders(prev => prev.map(o => o.id === payload.id ? {
+          ...o,
+          status: payload.status,
+          order_status: payload.status,
+          ...(payload.payment_status ? { payment_status: payload.payment_status } : {})
+        } : o));
       } else {
-        orderAPI.getMyOrders().then(({ data }) => setOrders(data)).catch(() => {});
+        fetchOrders(true);
       }
     };
     window.addEventListener('kala:sync:orders_updated', handleSync);
-    return () => window.removeEventListener('kala:sync:orders_updated', handleSync);
+    window.addEventListener('kala:sync:artisan_orders_updated', handleSync);
+    window.addEventListener('kala:sync:payments_updated', handleSync);
+    return () => {
+      window.removeEventListener('kala:sync:orders_updated', handleSync);
+      window.removeEventListener('kala:sync:artisan_orders_updated', handleSync);
+      window.removeEventListener('kala:sync:payments_updated', handleSync);
+    };
+  }, []);
+
+  // 2. Direct Supabase Realtime Edge listener for Customer orders
+  useEffect(() => {
+    if (!supabase || typeof supabase.channel !== 'function') return;
+
+    const channel = supabase
+      .channel('customer_orders_live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'artisan_orders' },
+        () => {
+          fetchOrders(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // 3. Heartbeat polling (every 8 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchOrders(true);
+    }, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   const getStatusColor = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'delivered': return 'text-green-400 bg-green-500/10 border-green-500/20';
-      case 'shipped': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
-      case 'cancelled': return 'text-red-400 bg-red-500/10 border-red-500/20';
-      case 'payment_verification_pending': return 'text-amber-400 bg-amber-500/10 border-amber-500/30 animate-pulse';
-      default: return 'text-gold-400 bg-gold-500/10 border-gold-500/20'; // pending/processing
+    const s = (status || '').toLowerCase();
+    switch(s) {
+      case 'delivered':
+      case 'completed':
+        return 'text-green-400 bg-green-500/10 border-green-500/20';
+      case 'shipped':
+      case 'dispatched':
+      case 'out_for_delivery':
+        return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+      case 'preparing':
+      case 'processing':
+      case 'ready_for_pickup':
+        return 'text-purple-400 bg-purple-500/10 border-purple-500/20';
+      case 'accepted':
+      case 'confirmed':
+        return 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20';
+      case 'cancelled':
+      case 'rejected':
+        return 'text-red-400 bg-red-500/10 border-red-500/20';
+      case 'payment_verification_pending':
+        return 'text-amber-400 bg-amber-500/10 border-amber-500/30 animate-pulse';
+      default:
+        return 'text-gold-400 bg-gold-500/10 border-gold-500/20';
     }
   };
 
   const renderStatusText = (status) => {
-    if (status === 'payment_verification_pending') return '⏱️ Pending Verification';
-    return status;
+    const s = (status || '').toLowerCase();
+    const map = {
+      pending: 'Order Received',
+      accepted: 'Accepted by Artisan',
+      confirmed: 'Confirmed',
+      preparing: 'Preparing',
+      processing: 'In Preparation',
+      ready_for_pickup: 'Ready for Pickup',
+      dispatched: 'Dispatched',
+      shipped: 'Shipped',
+      out_for_delivery: 'Out for Delivery',
+      delivered: 'Delivered ✓',
+      completed: 'Completed ✓',
+      cancelled: 'Cancelled',
+      rejected: 'Rejected',
+      payment_verification_pending: '⏱️ Pending Verification',
+    };
+    return map[s] || status;
   };
 
   const getEffectivePaymentMethod = (order) => {

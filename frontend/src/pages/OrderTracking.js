@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { orderAPI } from '../services/api';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import {
   HiCheckCircle, HiClock, HiExclamationCircle, HiTruck,
   HiLocationMarker, HiShoppingBag, HiArrowLeft, HiRefresh
 } from 'react-icons/hi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const ARTISAN_STEPS = [
   { key: 'pending',           label: 'Order Received',     icon: '📦' },
@@ -20,55 +21,83 @@ const ARTISAN_STEPS = [
 
 const STATUS_ORDER = ARTISAN_STEPS.map(s => s.key);
 
+const STATUS_ALIASES = {
+  confirmed: 'accepted',
+  approved: 'accepted',
+  processing: 'preparing',
+  in_preparation: 'preparing',
+  packed: 'ready_for_pickup',
+  ready: 'ready_for_pickup',
+  shipped: 'dispatched',
+  on_the_way: 'out_for_delivery',
+  completed: 'delivered',
+};
+
+function normalizeStatus(st) {
+  if (!st) return 'pending';
+  const clean = String(st).toLowerCase().trim();
+  return STATUS_ALIASES[clean] || clean;
+}
+
 function getStepIndex(status) {
-  const idx = STATUS_ORDER.indexOf(status);
+  const normalized = normalizeStatus(status);
+  const idx = STATUS_ORDER.indexOf(normalized);
   return idx === -1 ? 0 : idx;
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, type = 'status' }) {
+  const norm = normalizeStatus(status);
   const map = {
-    pending:          { label: 'Pending',           color: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' },
-    accepted:         { label: 'Accepted',           color: 'bg-blue-500/20 text-blue-300 border border-blue-500/30' },
+    pending:          { label: type === 'payment' ? 'Payment Pending' : 'Order Received', color: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' },
+    accepted:         { label: 'Accepted by Artisan', color: 'bg-blue-500/20 text-blue-300 border border-blue-500/30' },
     preparing:        { label: 'Preparing',          color: 'bg-purple-500/20 text-purple-300 border border-purple-500/30' },
     ready_for_pickup: { label: 'Ready for Pickup',   color: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' },
     dispatched:       { label: 'Dispatched',         color: 'bg-orange-500/20 text-orange-300 border border-orange-500/30' },
     out_for_delivery: { label: 'Out for Delivery',   color: 'bg-amber-500/20 text-amber-300 border border-amber-500/30' },
-    delivered:        { label: 'Delivered ✓',        color: 'bg-green-500/20 text-green-300 border border-green-500/30' },
+    delivered:        { label: 'Delivered ✓',        color: 'bg-green-500/20 text-green-300 border border-green-500/30 font-bold' },
     cancelled:        { label: 'Cancelled',          color: 'bg-red-500/20 text-red-300 border border-red-500/30' },
     rejected:         { label: 'Rejected',           color: 'bg-red-600/20 text-red-400 border border-red-600/30' },
     cod_pending:      { label: 'Pay on Delivery',    color: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' },
-    paid:             { label: 'Paid ✓',             color: 'bg-green-500/20 text-green-300 border border-green-500/30' },
+    paid:             { label: 'Payment Paid ✓',     color: 'bg-green-500/20 text-green-300 border border-green-500/30 font-bold' },
     refunded:         { label: 'Refunded',           color: 'bg-blue-500/20 text-blue-300 border border-blue-500/30' },
   };
-  const cfg = map[status] || { label: status, color: 'bg-gray-500/20 text-gray-300 border border-gray-500/30' };
+  const cfg = map[norm] || map[status] || { label: status, color: 'bg-gray-500/20 text-gray-300 border border-gray-500/30' };
   return (
-    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${cfg.color}`}>{cfg.label}</span>
+    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>{cfg.label}</span>
   );
 }
 
-function ArtisanTimeline({ artisanOrder }) {
-  const currentIdx = getStepIndex(artisanOrder.status);
-  const isCancelled = ['cancelled', 'rejected'].includes(artisanOrder.status);
+function ArtisanTimeline({ artisanOrder, overallStatus }) {
+  const effectiveStatus = artisanOrder?.status || overallStatus;
+  const currentIdx = getStepIndex(effectiveStatus);
+  const isCancelled = ['cancelled', 'rejected'].includes(normalizeStatus(effectiveStatus));
 
   return (
     <div className="relative">
       {/* Vertical line */}
       <div className="absolute left-5 top-4 bottom-4 w-0.5 bg-dark-600/60" />
-      <div className="space-y-3">
+      <div className="space-y-3.5">
         {ARTISAN_STEPS.map((step, idx) => {
           const isDone = idx <= currentIdx && !isCancelled;
           const isCurrent = idx === currentIdx && !isCancelled;
           return (
             <div key={step.key} className="flex items-center gap-4 relative z-10">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all
-                ${isDone ? 'bg-green-500/20 border-2 border-green-500 text-green-300' :
-                  isCurrent ? 'bg-gold-500/20 border-2 border-gold-400 text-gold-300 animate-pulse' :
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all shadow-md
+                ${isDone ? 'bg-green-500/25 border-2 border-green-500 text-green-300' :
+                  isCurrent ? 'bg-gold-500/25 border-2 border-gold-400 text-gold-300 ring-2 ring-gold-500/20 animate-pulse' :
                   'bg-dark-700 border border-dark-600/60 text-gray-600'}`}>
                 {isDone ? '✓' : isCurrent ? step.icon : <span className="opacity-30">{idx + 1}</span>}
               </div>
-              <span className={`text-sm ${isDone ? 'text-white font-medium' : isCurrent ? 'text-gold-300 font-semibold' : 'text-gray-600'}`}>
-                {step.label}
-              </span>
+              <div className="flex flex-col">
+                <span className={`text-sm ${isDone ? 'text-white font-medium' : isCurrent ? 'text-gold-300 font-bold' : 'text-gray-500'}`}>
+                  {step.label}
+                </span>
+                {isCurrent && (
+                  <span className="text-[10px] text-gold-400/80 font-medium">
+                    Current Milestone
+                  </span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -77,7 +106,7 @@ function ArtisanTimeline({ artisanOrder }) {
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm bg-red-500/20 border-2 border-red-500 text-red-300 flex-shrink-0">
               ✕
             </div>
-            <span className="text-sm text-red-400 font-semibold capitalize">{artisanOrder.status}</span>
+            <span className="text-sm text-red-400 font-semibold capitalize">{effectiveStatus}</span>
           </div>
         )}
       </div>
@@ -110,7 +139,7 @@ export default function OrderTracking() {
       }
       console.error('Failed to load order tracking:', err);
       const msg = err.response?.data?.error || 'Failed to load order tracking';
-      toast.error(msg);
+      if (!quiet) toast.error(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -119,19 +148,82 @@ export default function OrderTracking() {
 
   useEffect(() => { fetchOrder(); }, [id]);
 
-  // Real-time update
+  // 1. Broad DOM & Multi-device Sync Listener
   useEffect(() => {
     const handler = (e) => {
-      const payload = e.detail?.payload;
-      if (payload?.orderId === id || payload?.id === id) fetchOrder(true);
+      const payload = e.detail?.payload || {};
+      const targetId = payload.id || payload.orderId || payload.order_id || payload.order_number;
+      if (
+        !targetId ||
+        targetId === id ||
+        (order && (targetId === order.id || targetId === order.order_number))
+      ) {
+        fetchOrder(true);
+      }
     };
     window.addEventListener('kala:sync:orders_updated', handler);
     window.addEventListener('kala:sync:artisan_orders_updated', handler);
+    window.addEventListener('kala:sync:payments_updated', handler);
     return () => {
       window.removeEventListener('kala:sync:orders_updated', handler);
       window.removeEventListener('kala:sync:artisan_orders_updated', handler);
+      window.removeEventListener('kala:sync:payments_updated', handler);
     };
-  }, [id]);
+  }, [id, order]);
+
+  // 2. Direct Supabase Realtime Edge Channel (PostgreSQL changes)
+  useEffect(() => {
+    if (!supabase || typeof supabase.channel !== 'function') return;
+
+    const channel = supabase
+      .channel(`tracking_edge_${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (change) => {
+          const rec = change.new || change.old || {};
+          if (
+            rec.id === id ||
+            rec.order_number === id ||
+            (order && (rec.id === order.id || rec.order_number === order.order_number))
+          ) {
+            fetchOrder(true);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'artisan_orders' },
+        (change) => {
+          const rec = change.new || change.old || {};
+          if (
+            rec.order_id === id ||
+            (order && rec.order_id === order.id)
+          ) {
+            fetchOrder(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, order]);
+
+  // 3. Continuous Background Live Heartbeat (every 5 seconds for non-terminal orders)
+  useEffect(() => {
+    const isTerminal = ['delivered', 'cancelled', 'rejected'].includes(
+      normalizeStatus(order?.order_status || order?.status)
+    );
+    if (isTerminal) return;
+
+    const interval = setInterval(() => {
+      fetchOrder(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [id, order?.order_status, order?.status]);
 
   if (loading) {
     return (
@@ -164,14 +256,20 @@ export default function OrderTracking() {
           <Link to="/orders" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
             <HiArrowLeft className="w-4 h-4" /> Back to Orders
           </Link>
-          <button
-            onClick={() => fetchOrder(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300 transition-colors"
-          >
-            <HiRefresh className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              Live Tracking
+            </span>
+            <button
+              onClick={() => fetchOrder(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300 transition-colors"
+            >
+              <HiRefresh className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Order Summary Card */}
@@ -190,8 +288,8 @@ export default function OrderTracking() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <StatusBadge status={order.order_status || order.status || 'pending'} />
-              <StatusBadge status={order.payment_status || 'pending'} />
+              <StatusBadge status={order.order_status || order.status || 'pending'} type="status" />
+              <StatusBadge status={order.payment_status || 'pending'} type="payment" />
             </div>
           </div>
 
@@ -275,11 +373,11 @@ export default function OrderTracking() {
                       </p>
                     </div>
                   </div>
-                  <StatusBadge status={ao.status} />
+                  <StatusBadge status={ao.status || order.order_status || order.status} type="status" />
                 </div>
 
                 {/* Timeline */}
-                <ArtisanTimeline artisanOrder={ao} />
+                <ArtisanTimeline artisanOrder={ao} overallStatus={order.order_status || order.status} />
 
                 {/* Delivery timestamps */}
                 <div className="mt-4 space-y-1">

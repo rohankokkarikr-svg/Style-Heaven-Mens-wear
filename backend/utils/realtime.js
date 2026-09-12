@@ -1,9 +1,7 @@
-/**
- * Realtime Synchronization Engine for KalaStyle AI
- * Broadcasts events across all connected devices (Admin, Artisan, Shopper)
- */
+const supabase = require('../config/supabase');
 
 let ioInstance = null;
+let supaChannel = null;
 
 const initRealtime = (io) => {
   ioInstance = io;
@@ -19,27 +17,46 @@ const initRealtime = (io) => {
     });
   });
 
+  try {
+    if (supabase && typeof supabase.channel === 'function') {
+      supaChannel = supabase.channel('kalastyle_live_sync');
+      supaChannel.subscribe();
+    }
+  } catch (supaErr) {
+    console.warn('Backend Supabase realtime channel init notice:', supaErr.message);
+  }
+
   console.log('⚡ KalaStyle Multi-Device Realtime Sync Engine Initialized');
 };
 
 const broadcastSync = (type, payload = {}) => {
-  if (!ioInstance) {
-    return;
-  }
-
   const eventData = {
     type,
     payload,
     timestamp: Date.now()
   };
 
+  // 1. Broadcast via Socket.IO
+  if (ioInstance) {
+    try {
+      ioInstance.emit('KALA_SYNC', eventData);
+      ioInstance.emit(`KALA_SYNC:${type}`, eventData);
+    } catch (err) {
+      console.error('❌ Error broadcasting realtime sync event via Socket.IO:', err.message);
+    }
+  }
+
+  // 2. Broadcast via Supabase Realtime Channel
   try {
-    // Broadcast to all connected clients across all devices
-    ioInstance.emit('KALA_SYNC', eventData);
-    // Also emit specific type for granular listeners
-    ioInstance.emit(`KALA_SYNC:${type}`, eventData);
-  } catch (err) {
-    console.error('❌ Error broadcasting realtime sync event:', err.message);
+    if (supaChannel && typeof supaChannel.send === 'function') {
+      supaChannel.send({
+        type: 'broadcast',
+        event: 'KALA_SYNC',
+        payload: { type, data: payload }
+      }).catch(() => {});
+    }
+  } catch (supaErr) {
+    // Non-blocking notice
   }
 };
 
