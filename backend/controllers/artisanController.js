@@ -532,18 +532,44 @@ exports.updateArtisanOrderStatus = async (req, res) => {
 
 /**
  * GET /api/artisans/earnings
- * Fetch artisan earnings from artisan_earnings table.
+ * Fetch artisan earnings from artisan_earnings table with auto-sync and real-time calculation.
  */
 exports.getMyEarnings = async (req, res) => {
   try {
     const { data: profile } = await supabase
       .from('artisan_profiles')
-      .select('id, earnings_total')
+      .select('id, earnings_total, user_id')
       .eq('user_id', req.user.id)
       .maybeSingle();
 
     if (!profile) return res.status(404).json({ error: 'Artisan profile not found' });
 
+    // 1. Fetch all artisan_orders for this artisan (matching profile.id or user.id)
+    const { data: artOrders } = await supabase
+      .from('artisan_orders')
+      .select('*, orders(id, status, order_status, total_amount, total_price, payment_status, payment_method, order_number, created_at, shipping_name)')
+      .or(`artisan_id.eq.${profile.id},artisan_id.eq.${req.user.id}`);
+
+    // Auto-sync any delivered orders that need artisan_earnings records
+    if (artOrders && artOrders.length > 0) {
+      for (const ao of artOrders) {
+        const isMasterDelivered = ao.orders?.status === 'delivered' || ao.orders?.order_status === 'delivered';
+        if (isMasterDelivered && ao.status !== 'delivered') {
+          const now = new Date().toISOString();
+          await supabase
+            .from('artisan_orders')
+            .update({ status: 'delivered', delivered_at: now, updated_at: now })
+            .eq('id', ao.id);
+          ao.status = 'delivered';
+        }
+
+        if (ao.status === 'delivered' || isMasterDelivered) {
+          await createArtisanEarning(ao.id, ao, profile.id);
+        }
+      }
+    }
+
+    // 2. Fetch all recorded earnings
     const { data: earnings, error } = await supabase
       .from('artisan_earnings')
       .select(`
@@ -556,18 +582,42 @@ exports.getMyEarnings = async (req, res) => {
 
     if (error) throw error;
 
-    const totals = (earnings || []).reduce(
+    let totals = (earnings || []).reduce(
       (acc, e) => ({
-        gross: acc.gross + (e.gross_amount || 0),
-        commission: acc.commission + (e.platform_commission || 0),
-        net: acc.net + (e.net_earning || 0),
-        settled: e.settlement_status === 'settled' ? acc.settled + (e.net_earning || 0) : acc.settled,
-        pending: e.settlement_status === 'pending' ? acc.pending + (e.net_earning || 0) : acc.pending,
+        gross: acc.gross + (Number(e.gross_amount) || 0),
+        commission: acc.commission + (Number(e.platform_commission) || 0),
+        net: acc.net + (Number(e.net_earning) || 0),
+        settled: e.settlement_status === 'settled' ? acc.settled + (Number(e.net_earning) || 0) : acc.settled,
+        pending: e.settlement_status === 'pending' ? acc.pending + (Number(e.net_earning) || 0) : acc.pending,
       }),
       { gross: 0, commission: 0, net: 0, settled: 0, pending: 0 }
     );
 
-    res.json({ earnings: earnings || [], totals });
+    // Calculate total orders for this artisan (count non-cancelled artisan_orders)
+    const validOrders = (artOrders || []).filter(o => o.status !== 'cancelled' && o.orders?.status !== 'cancelled');
+    const totalOrderCount = Math.max(earnings?.length || 0, validOrders.length);
+
+    // If earnings table has fewer records than valid orders, reflect expected totals
+    if (earnings.length === 0 && validOrders.length > 0) {
+      const grossVal = validOrders.reduce((sum, o) => sum + (Number(o.total_amount || o.subtotal) || 0), 0);
+      const commissionVal = Math.round(grossVal * 0.10);
+      const netVal = grossVal - commissionVal;
+      totals = {
+        gross: grossVal,
+        commission: commissionVal,
+        net: netVal,
+        settled: 0,
+        pending: netVal,
+      };
+    }
+
+    res.json({
+      earnings: earnings || [],
+      totals,
+      totalOrders: totalOrderCount,
+      activeOrders: validOrders,
+      success: true,
+    });
   } catch (err) {
     console.error('getMyEarnings error:', err);
     res.status(500).json({ error: 'Failed to fetch earnings' });

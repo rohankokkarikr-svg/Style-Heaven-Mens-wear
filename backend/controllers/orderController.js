@@ -379,8 +379,37 @@ exports.updateOrderStatus = async (req, res) => {
 
     if (error) throw error;
 
+    // Sync sub-orders and trigger earnings if delivered
+    if (status) {
+      try {
+        const aoUpdate = {
+          status,
+          updated_at: new Date().toISOString(),
+          ...(status === 'delivered' ? { delivered_at: new Date().toISOString() } : {}),
+          ...(status === 'cancelled' ? { cancelled_at: new Date().toISOString() } : {}),
+        };
+        await supabase.from('artisan_orders').update(aoUpdate).eq('order_id', id);
+
+        if (status === 'delivered') {
+          const { createArtisanEarning } = require('../services/orderService');
+          const { data: artOrders } = await supabase.from('artisan_orders').select('*').eq('order_id', id);
+          if (artOrders && artOrders.length > 0) {
+            for (const ao of artOrders) {
+              if (ao.artisan_id) {
+                await createArtisanEarning(ao.id, ao, ao.artisan_id);
+              }
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.warn('Sub-order sync error in orderController.updateOrderStatus:', syncErr.message);
+      }
+    }
+
     broadcastSync('ORDERS_UPDATED', { id, status, payment_status, order: data });
+    broadcastSync('ARTISAN_ORDERS_UPDATED', { orderId: id, status });
     broadcastSync('PAYMENTS_UPDATED', { id, status, payment_status });
+    broadcastSync('EARNINGS_UPDATED', { orderId: id, status });
 
     if (status === 'cancelled') {
       try {
